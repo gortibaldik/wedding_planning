@@ -4,7 +4,6 @@
       :nodes="nodes"
       :edges="edges"
       :node-types="nodeTypes"
-      @node-drag-stop="onNodeDragStop"
       fit-view-on-init
       :default-zoom="0.8"
     >
@@ -55,22 +54,23 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, markRaw } from 'vue'
 import { VueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
+import '@vue-flow/core/dist/style.css'
 
 import PersonNode from './PersonNode.vue'
 import { useGenealogyData } from '../composables/useGenealogyData'
 
 const nodeTypes = {
-  person: PersonNode
+  person: markRaw(PersonNode)
 }
 
 const genealogyData = useGenealogyData()
-const { nodes, edges, addChild, addParent, removePerson, updatePerson } = genealogyData
+const { nodes: rawNodes, edges, addChild, addParent, removePerson, updatePerson } = genealogyData
 
 const showEditModal = ref(false)
 const editingNodeId = ref(null)
@@ -85,7 +85,7 @@ const addModalTitle = ref('')
 
 
 const handleEdit = (nodeId) => {
-  const node = nodes.value.find(n => n.id === nodeId)
+  const node = rawNodes.value.find(n => n.id === nodeId)
   if (node) {
     editingNodeId.value = nodeId
     editForm.value = {
@@ -95,6 +95,19 @@ const handleEdit = (nodeId) => {
     showEditModal.value = true
   }
 }
+
+const nodes = computed(() => {
+  return rawNodes.value.map(node => ({
+    ...node,
+    data: {
+      ...node.data,
+      onAddChild: handleAddChild,
+      onAddParent: handleAddParent,
+      onRemove: handleRemove,
+      onEdit: handleEdit
+    }
+  }))
+})
 
 const saveEdit = () => {
   if (editingNodeId.value) {
@@ -146,26 +159,6 @@ const handleRemove = (nodeId) => {
     removePerson(nodeId)
   }
 }
-
-const attachEventHandlers = () => {
-  nodes.value.forEach(node => {
-    if (node.type === 'person') {
-      node.data = {
-        ...node.data,
-        onAddChild: handleAddChild,
-        onAddParent: handleAddParent,
-        onRemove: handleRemove,
-        onEdit: handleEdit
-      }
-    }
-  })
-}
-
-attachEventHandlers()
-
-watch(nodes, () => {
-  attachEventHandlers()
-}, { deep: true })
 </script>
 
 <style scoped>
