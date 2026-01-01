@@ -31,6 +31,12 @@ const getGroupName = (guestId) => {
   return 'Unknown'
 }
 
+// Helper function to get the table assignment for a guest
+const getTableAssignment = (guestId) => {
+  const table = tables.value.find(t => t.guestIds.includes(guestId))
+  return table ? table.name : null
+}
+
 const invitedGuests = computed(() => {
   return nodes.value.filter(node =>
     node.data.role === 'Person' && node.data.invited === true
@@ -193,6 +199,12 @@ const handleImport = () => {
             >
               <div class="guest-sidebar__item-name">{{ guest.data.name }}</div>
               <div class="guest-sidebar__item-group">{{ getGroupName(guest.id) }}</div>
+              <div
+                class="guest-sidebar__item-table"
+                :class="{ 'guest-sidebar__item-table--warning': !getTableAssignment(guest.id) }"
+              >
+                {{ getTableAssignment(guest.id) ? `Seated at ${getTableAssignment(guest.id)}` : 'Not seated yet' }}
+              </div>
             </div>
           </div>
         </div>
@@ -441,6 +453,19 @@ body {
   font-size: 12px;
   color: #9ca3af;
   font-weight: 400;
+  margin-bottom: 2px;
+}
+
+.guest-sidebar__item-table {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.guest-sidebar__item-table--warning {
+  color: #d97706;
+  font-weight: 500;
 }
 
 .guest-sidebar__item--draggable {
