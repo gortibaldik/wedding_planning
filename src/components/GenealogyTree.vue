@@ -18,7 +18,7 @@
         <form @submit.prevent="saveEdit">
           <div class="form-group">
             <label>Name:</label>
-            <input v-model="editForm.name" type="text" required />
+            <input ref="editNameInput" v-model="editForm.name" type="text" required />
           </div>
           <div class="form-group">
             <label>Role:</label>
@@ -38,7 +38,7 @@
         <form @submit.prevent="saveAdd">
           <div class="form-group">
             <label>Name:</label>
-            <input v-model="addForm.name" type="text" required />
+            <input ref="addNameInput" v-model="addForm.name" type="text" required />
           </div>
           <div class="form-group">
             <label>Role:</label>
@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, computed, markRaw, onMounted } from 'vue'
+import { ref, computed, markRaw, onMounted, nextTick } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -84,11 +84,13 @@ onMounted(() => {
 const showEditModal = ref(false)
 const editingNodeId = ref(null)
 const editForm = ref({ name: '', role: '' })
+const editNameInput = ref(null)
 
 const showAddModal = ref(false)
 const addModalType = ref('')
 const addModalTargetId = ref(null)
 const addForm = ref({ name: '', role: '' })
+const addNameInput = ref(null)
 
 const addModalTitle = ref('')
 
@@ -102,6 +104,9 @@ const handleEdit = (nodeId) => {
       role: node.data.role
     }
     showEditModal.value = true
+    nextTick(() => {
+      editNameInput.value?.focus()
+    })
   }
 }
 
@@ -137,6 +142,9 @@ const handleAddChild = (parentId) => {
   addModalTitle.value = 'Add Child'
   addForm.value = { name: '', role: 'guest' }
   showAddModal.value = true
+  nextTick(() => {
+    addNameInput.value?.focus()
+  })
 }
 
 const handleAddParent = (childId) => {
@@ -145,6 +153,9 @@ const handleAddParent = (childId) => {
   addModalTitle.value = 'Add Parent'
   addForm.value = { name: '', role: 'parent' }
   showAddModal.value = true
+  nextTick(() => {
+    addNameInput.value?.focus()
+  })
 }
 
 const saveAdd = () => {
