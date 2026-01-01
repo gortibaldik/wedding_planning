@@ -7,8 +7,21 @@
     <Handle type="target" :position="Position.Top" />
 
     <div class="person-node__content">
-      <div class="person-node__name">{{ data.name }}</div>
-      <div class="person-node__role">{{ data.role }}</div>
+      <div class="person-node__header">
+        <div class="person-node__info">
+          <div class="person-node__name">{{ data.name }}</div>
+          <div class="person-node__role">{{ data.role }}</div>
+        </div>
+        <div v-if="data.role === 'Person'" class="person-node__checkbox-wrapper" @click.stop>
+          <div class="person-node__checkbox-label">Invited?</div>
+          <input
+            type="checkbox"
+            :checked="data.invited"
+            @change="data.onToggleInvited?.(id)"
+            class="person-node__checkbox"
+          />
+        </div>
+      </div>
     </div>
 
     <div class="person-node__actions">
@@ -89,6 +102,16 @@ defineProps({
   z-index: 1;
 }
 
+.person-node__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.person-node__info {
+  flex: 1;
+}
+
 .person-node__name {
   font-weight: 600;
   font-size: 14px;
@@ -100,6 +123,27 @@ defineProps({
   font-size: 12px;
   color: #6b7280;
   text-transform: capitalize;
+}
+
+.person-node__checkbox-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.person-node__checkbox-label {
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.person-node__checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--node-color, #3b82f6);
 }
 
 .person-node__actions {

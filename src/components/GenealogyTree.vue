@@ -18,13 +18,48 @@
       <Controls />
     </VueFlow>
 
-    <button class="add-root-btn" @click="handleAddRoot" title="Add New Root">
+    <button
+      class="add-root-btn"
+      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
+      @click="handleAddRoot"
+      title="Add New Root"
+    >
       + Add Root
     </button>
 
-    <button class="clear-btn" @click="handleClearAll" title="Clear All Nodes">
+    <button
+      class="clear-btn"
+      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
+      @click="handleClearAll"
+      title="Clear All Nodes"
+    >
       Clear
     </button>
+
+    <div class="guest-sidebar" :class="{ 'guest-sidebar--collapsed': sidebarCollapsed }">
+      <button class="guest-sidebar__toggle" @click="toggleSidebar" :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+        {{ sidebarCollapsed ? '◀' : '▶' }}
+      </button>
+      <div class="guest-sidebar__content">
+        <div class="guest-sidebar__header">
+          <h3 class="guest-sidebar__title">Invited Guests</h3>
+          <div class="guest-sidebar__counter">{{ invitedGuests.length }}</div>
+        </div>
+        <div class="guest-sidebar__list">
+          <div v-if="invitedGuests.length === 0" class="guest-sidebar__empty">
+            No guests invited yet
+          </div>
+          <div
+            v-for="guest in invitedGuests"
+            :key="guest.id"
+            class="guest-sidebar__item"
+            :style="{ borderLeft: `4px solid ${guest.data.color}` }"
+          >
+            {{ guest.data.name }}
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
       <div class="modal" @click.stop>
@@ -72,13 +107,14 @@ import '@vue-flow/core/dist/style.css'
 
 import PersonNode from './PersonNode.vue'
 import { useGenealogyData } from '../composables/useGenealogyData'
+import { useSidebarState } from '../composables/useSidebarState'
 
 const nodeTypes = {
   person: markRaw(PersonNode)
 }
 
 const genealogyData = useGenealogyData()
-const { nodes: rawNodes, edges, addChild, addParent, addRoot, removePerson, updatePerson, clearAll } = genealogyData
+const { nodes: rawNodes, edges, addChild, addParent, addRoot, removePerson, updatePerson, toggleInvited, clearAll } = genealogyData
 
 const { fitView, updateNode } = useVueFlow()
 
@@ -124,10 +160,17 @@ const nodes = computed(() => {
       onAddChild: handleAddChild,
       onAddParent: handleAddParent,
       onRemove: handleRemove,
-      onEdit: handleEdit
+      onEdit: handleEdit,
+      onToggleInvited: toggleInvited
     }
   }))
 })
+
+const invitedGuests = computed(() => {
+  return rawNodes.value.filter(node => node.data.role === 'Person' && node.data.invited)
+})
+
+const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 
 const saveEdit = () => {
   if (editingNodeId.value) {
@@ -407,7 +450,7 @@ const onNodeDragStop = ({ node }) => {
 .add-root-btn {
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  right: 324px;
   padding: 12px 24px;
   background: #10b981;
   color: white;
@@ -417,7 +460,7 @@ const onNodeDragStop = ({ node }) => {
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-  transition: all 0.2s;
+  transition: right 0.3s ease;
   z-index: 100;
 }
 
@@ -434,7 +477,7 @@ const onNodeDragStop = ({ node }) => {
 .clear-btn {
   position: fixed;
   bottom: 72px;
-  right: 24px;
+  right: 324px;
   padding: 12px 24px;
   background: #ef4444;
   color: white;
@@ -444,7 +487,7 @@ const onNodeDragStop = ({ node }) => {
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-  transition: all 0.2s;
+  transition: right 0.3s ease;
   z-index: 100;
 }
 
@@ -456,5 +499,110 @@ const onNodeDragStop = ({ node }) => {
 
 .clear-btn:active {
   transform: translateY(0);
+}
+
+.guest-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100vh;
+  background: white;
+  border-left: 1px solid #e5e7eb;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  transition: transform 0.3s ease;
+}
+
+.guest-sidebar--collapsed {
+  transform: translateX(300px);
+}
+
+.guest-sidebar__toggle {
+  position: absolute;
+  left: -40px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 80px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #6b7280;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+  z-index: 11;
+}
+
+.guest-sidebar__toggle:hover {
+  background: #f9fafb;
+  color: #3b82f6;
+}
+
+.guest-sidebar__content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.guest-sidebar__header {
+  padding: 20px;
+  border-bottom: 2px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.guest-sidebar__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.guest-sidebar__counter {
+  background: #3b82f6;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 16px;
+  min-width: 32px;
+  text-align: center;
+}
+
+.guest-sidebar__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.guest-sidebar__empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.guest-sidebar__item {
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #1f2937;
+  transition: all 0.2s;
+}
+
+.guest-sidebar__item:hover {
+  background: #f3f4f6;
+  transform: translateX(-2px);
 }
 </style>

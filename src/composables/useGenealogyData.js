@@ -176,7 +176,8 @@ export function useGenealogyData() {
       data: {
         name: childData.name || 'New Person',
         role: 'Person',
-        color: color
+        color: color,
+        invited: false
       }
     }
 
@@ -212,7 +213,8 @@ export function useGenealogyData() {
       data: {
         name: parentData.name || 'New Person',
         role: 'Person',
-        color: color
+        color: color,
+        invited: false
       }
     }
 
@@ -241,7 +243,8 @@ export function useGenealogyData() {
       data: {
         name: rootData.name || 'New Group',
         role: 'Group',
-        color: getNextColor()
+        color: getNextColor(),
+        invited: false
       }
     }
 
@@ -266,6 +269,13 @@ export function useGenealogyData() {
     }
   }
 
+  const toggleInvited = (id) => {
+    const node = nodes.value.find(n => n.id === id)
+    if (node && node.data.role === 'Person') {
+      node.data.invited = !node.data.invited
+    }
+  }
+
   const clearAll = () => {
     nodes.value = []
     edges.value = []
@@ -285,6 +295,7 @@ export function useGenealogyData() {
     addRoot,
     removePerson,
     updatePerson,
+    toggleInvited,
     clearAll
   }
 }

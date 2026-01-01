@@ -1,8 +1,10 @@
 <script setup>
 import GenealogyTree from './components/GenealogyTree.vue'
 import { useGenealogyData } from './composables/useGenealogyData'
+import { useSidebarState } from './composables/useSidebarState'
 
 const { nodes, edges } = useGenealogyData()
+const { sidebarCollapsed } = useSidebarState()
 
 const handleExport = () => {
   const data = {
@@ -59,7 +61,7 @@ const handleImport = () => {
 
 <template>
   <div class="app">
-    <header class="app-header">
+    <header class="app-header" :style="{ width: sidebarCollapsed ? '100%' : 'calc(100% - 300px)' }">
       <div class="header-content">
         <div class="header-spacer"></div>
         <div class="header-center">
@@ -104,6 +106,7 @@ body {
   padding: 16px 24px;
   border-bottom: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: width 0.3s ease;
 }
 
 .header-content {
