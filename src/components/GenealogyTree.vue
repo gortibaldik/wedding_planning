@@ -16,6 +16,10 @@
       + Add Root
     </button>
 
+    <button class="clear-btn" @click="handleClearAll" title="Clear All Nodes">
+      Clear
+    </button>
+
     <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
       <div class="modal" @click.stop>
         <h3>Edit Person</h3>
@@ -75,7 +79,7 @@ const nodeTypes = {
 }
 
 const genealogyData = useGenealogyData()
-const { nodes: rawNodes, edges, addChild, addParent, addRoot, removePerson, updatePerson } = genealogyData
+const { nodes: rawNodes, edges, addChild, addParent, addRoot, removePerson, updatePerson, clearAll } = genealogyData
 
 const { fitView } = useVueFlow()
 
@@ -196,6 +200,12 @@ const handleRemove = (nodeId) => {
     removePerson(nodeId)
   }
 }
+
+const handleClearAll = () => {
+  if (confirm('Are you sure you want to clear all nodes from the tree? This action cannot be undone.')) {
+    clearAll()
+  }
+}
 </script>
 
 <style scoped>
@@ -314,6 +324,33 @@ const handleRemove = (nodeId) => {
 }
 
 .add-root-btn:active {
+  transform: translateY(0);
+}
+
+.clear-btn {
+  position: fixed;
+  bottom: 72px;
+  right: 24px;
+  padding: 12px 24px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  transition: all 0.2s;
+  z-index: 100;
+}
+
+.clear-btn:hover {
+  background: #dc2626;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+  transform: translateY(-2px);
+}
+
+.clear-btn:active {
   transform: translateY(0);
 }
 </style>

@@ -223,6 +223,11 @@ export function useGenealogyData() {
     }
   }
 
+  const clearAll = () => {
+    nodes.value = []
+    edges.value = []
+  }
+
   initializeData()
 
   watch([nodes, edges], () => {
@@ -236,6 +241,7 @@ export function useGenealogyData() {
     addParent,
     addRoot,
     removePerson,
-    updatePerson
+    updatePerson,
+    clearAll
   }
 }
