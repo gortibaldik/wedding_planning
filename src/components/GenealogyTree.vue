@@ -5,6 +5,9 @@
       :edges="edges"
       :node-types="nodeTypes"
       :nodes-connectable="false"
+      :nodes-draggable="true"
+      :selectable="true"
+      :multi-selection-key-code="'Meta'"
       fit-view-on-init
       :default-zoom="0.8"
     >
@@ -28,10 +31,6 @@
             <label>Name:</label>
             <input ref="editNameInput" v-model="editForm.name" type="text" required />
           </div>
-          <div class="form-group">
-            <label>Role:</label>
-            <input v-model="editForm.role" type="text" placeholder="e.g., parent, sibling, friend" />
-          </div>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Save</button>
             <button type="button" class="btn btn-secondary" @click="closeEditModal">Cancel</button>
@@ -48,10 +47,6 @@
             <label>Name:</label>
             <input ref="addNameInput" v-model="addForm.name" type="text" required />
           </div>
-          <div class="form-group">
-            <label>Role:</label>
-            <input v-model="addForm.role" type="text" placeholder="e.g., parent, sibling, friend" />
-          </div>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Add</button>
             <button type="button" class="btn btn-secondary" @click="closeAddModal">Cancel</button>
@@ -67,6 +62,7 @@ import { ref, computed, markRaw, onMounted, nextTick } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
+import { SelectionMode } from '@vue-flow/core'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -91,13 +87,13 @@ onMounted(() => {
 
 const showEditModal = ref(false)
 const editingNodeId = ref(null)
-const editForm = ref({ name: '', role: '' })
+const editForm = ref({ name: '' })
 const editNameInput = ref(null)
 
 const showAddModal = ref(false)
 const addModalType = ref('')
 const addModalTargetId = ref(null)
-const addForm = ref({ name: '', role: '' })
+const addForm = ref({ name: '' })
 const addNameInput = ref(null)
 
 const addModalTitle = ref('')
@@ -108,8 +104,7 @@ const handleEdit = (nodeId) => {
   if (node) {
     editingNodeId.value = nodeId
     editForm.value = {
-      name: node.data.name,
-      role: node.data.role
+      name: node.data.name
     }
     showEditModal.value = true
     nextTick(() => {
@@ -141,14 +136,14 @@ const saveEdit = () => {
 const closeEditModal = () => {
   showEditModal.value = false
   editingNodeId.value = null
-  editForm.value = { name: '', role: '' }
+  editForm.value = { name: '' }
 }
 
 const handleAddChild = (parentId) => {
   addModalType.value = 'child'
   addModalTargetId.value = parentId
   addModalTitle.value = 'Add Child'
-  addForm.value = { name: '', role: 'guest' }
+  addForm.value = { name: '' }
   showAddModal.value = true
   nextTick(() => {
     addNameInput.value?.focus()
@@ -159,7 +154,7 @@ const handleAddParent = (childId) => {
   addModalType.value = 'parent'
   addModalTargetId.value = childId
   addModalTitle.value = 'Add Parent'
-  addForm.value = { name: '', role: 'parent' }
+  addForm.value = { name: '' }
   showAddModal.value = true
   nextTick(() => {
     addNameInput.value?.focus()
@@ -170,7 +165,7 @@ const handleAddRoot = () => {
   addModalType.value = 'root'
   addModalTargetId.value = null
   addModalTitle.value = 'Add New Root'
-  addForm.value = { name: '', role: 'guest' }
+  addForm.value = { name: '' }
   showAddModal.value = true
   nextTick(() => {
     addNameInput.value?.focus()
@@ -192,7 +187,7 @@ const closeAddModal = () => {
   showAddModal.value = false
   addModalType.value = ''
   addModalTargetId.value = null
-  addForm.value = { name: '', role: '' }
+  addForm.value = { name: '' }
 }
 
 const handleRemove = (nodeId) => {
@@ -213,6 +208,11 @@ const handleClearAll = () => {
   width: 100%;
   height: 100vh;
   position: relative;
+}
+
+
+.genealogy-tree :deep(.vue-flow__node.selected .person-node) {
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.8);
 }
 
 .modal-overlay {

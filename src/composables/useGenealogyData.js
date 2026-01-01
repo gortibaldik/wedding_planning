@@ -10,6 +10,41 @@ const NODE_HEIGHT = 100
 const HORIZONTAL_SPACING = 80
 const VERTICAL_SPACING = 150
 
+const GROUP_COLORS = [
+  '#3b82f6', // blue
+  '#10b981', // green
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#8b5cf6', // purple
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#f97316', // orange
+]
+
+let nextColorIndex = 0
+
+function getNextColor() {
+  const color = GROUP_COLORS[nextColorIndex % GROUP_COLORS.length]
+  nextColorIndex++
+  return color
+}
+
+function findRootNode(nodeId) {
+  const visited = new Set()
+  let currentId = nodeId
+
+  while (!visited.has(currentId)) {
+    visited.add(currentId)
+    const parentEdge = edges.value.find(e => e.target === currentId)
+    if (!parentEdge) {
+      return currentId
+    }
+    currentId = parentEdge.source
+  }
+
+  return currentId
+}
+
 function calculateTreeLayout() {
   const nodeMap = new Map()
   nodes.value.forEach(node => nodeMap.set(node.id, node))
@@ -130,14 +165,18 @@ export function useGenealogyData() {
     const parent = nodes.value.find(n => n.id === parentId)
     if (!parent) return
 
+    const rootId = findRootNode(parentId)
+    const root = nodes.value.find(n => n.id === rootId)
+    const color = root ? root.data.color : '#3b82f6'
+
     const newNode = {
       id: newId,
       type: 'person',
       position: { x: 0, y: 0 },
       data: {
         name: childData.name || 'New Person',
-        side: parent.data.side,
-        role: childData.role || 'guest'
+        role: 'Person',
+        color: color
       }
     }
 
@@ -162,14 +201,18 @@ export function useGenealogyData() {
     const child = nodes.value.find(n => n.id === childId)
     if (!child) return
 
+    const rootId = findRootNode(childId)
+    const root = nodes.value.find(n => n.id === rootId)
+    const color = root ? root.data.color : '#3b82f6'
+
     const newNode = {
       id: newId,
       type: 'person',
       position: { x: 0, y: 0 },
       data: {
         name: parentData.name || 'New Person',
-        side: child.data.side,
-        role: parentData.role || 'guest'
+        role: 'Person',
+        color: color
       }
     }
 
@@ -196,9 +239,9 @@ export function useGenealogyData() {
       type: 'person',
       position: { x: 0, y: 0 },
       data: {
-        name: rootData.name || 'New Person',
-        side: rootData.side || 'neutral',
-        role: rootData.role || 'guest'
+        name: rootData.name || 'New Group',
+        role: 'Group',
+        color: getNextColor()
       }
     }
 

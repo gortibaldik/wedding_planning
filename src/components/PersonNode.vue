@@ -1,6 +1,7 @@
 <template>
   <div
-    :class="['person-node', `person-node--${data.side}`]"
+    class="person-node"
+    :style="{ '--node-color': data.color || '#3b82f6' }"
     @click="data.onEdit?.(id)"
   >
     <Handle type="target" :position="Position.Top" />
@@ -26,7 +27,6 @@
         ↓
       </button>
       <button
-        v-if="id !== 'bride' && id !== 'groom'"
         class="action-btn action-btn--remove"
         @click.stop="data.onRemove?.(id)"
         title="Remove person"
@@ -52,12 +52,26 @@ defineProps({
 .person-node {
   padding: 16px;
   border-radius: 8px;
-  border: 2px solid #ddd;
+  border: 2px solid var(--node-color, #3b82f6);
   background: white;
   min-width: 150px;
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.person-node::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--node-color, #3b82f6);
+  opacity: 0.08;
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 .person-node:hover {
@@ -65,18 +79,14 @@ defineProps({
   transform: translateY(-2px);
 }
 
-.person-node--bride {
-  border-color: #3b82f6;
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-}
-
-.person-node--groom {
-  border-color: #10b981;
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+.person-node:hover::before {
+  opacity: 0.12;
 }
 
 .person-node__content {
   margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .person-node__name {
@@ -96,6 +106,8 @@ defineProps({
   display: flex;
   gap: 4px;
   justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
 .action-btn {
