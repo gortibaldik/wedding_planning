@@ -11,6 +11,26 @@ const { nodes, edges } = useGenealogyData()
 const { tables, getAssignedGuestIds } = useTableSeating()
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 
+// Helper function to find the group (root) name for a guest
+const getGroupName = (guestId) => {
+  const visited = new Set()
+  let currentId = guestId
+
+  // Traverse up to find the root
+  while (!visited.has(currentId)) {
+    visited.add(currentId)
+    const parentEdge = edges.value.find(e => e.target === currentId)
+    if (!parentEdge) {
+      // Found the root
+      const rootNode = nodes.value.find(n => n.id === currentId)
+      return rootNode ? rootNode.data.name : 'Unknown'
+    }
+    currentId = parentEdge.source
+  }
+
+  return 'Unknown'
+}
+
 const invitedGuests = computed(() => {
   return nodes.value.filter(node =>
     node.data.role === 'Person' && node.data.invited === true
@@ -171,7 +191,8 @@ const handleImport = () => {
               @dragstart="handleDragStart(guest)"
               @dragend="handleDragEnd"
             >
-              {{ guest.data.name }}
+              <div class="guest-sidebar__item-name">{{ guest.data.name }}</div>
+              <div class="guest-sidebar__item-group">{{ getGroupName(guest.id) }}</div>
             </div>
           </div>
         </div>
@@ -401,15 +422,25 @@ body {
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 8px;
-  font-size: 14px;
-  color: #1f2937;
-  font-weight: 500;
   transition: all 0.2s;
 }
 
 .guest-sidebar__item:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transform: translateX(-4px);
+}
+
+.guest-sidebar__item-name {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.guest-sidebar__item-group {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 400;
 }
 
 .guest-sidebar__item--draggable {

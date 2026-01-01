@@ -10,7 +10,7 @@ const props = defineProps({
   }
 })
 
-const { nodes } = useGenealogyData()
+const { nodes, edges } = useGenealogyData()
 const {
   tables,
   addTable,
@@ -20,6 +20,26 @@ const {
   assignGuestToTable,
   removeGuestFromTable
 } = useTableSeating()
+
+// Helper function to find the group (root) name for a guest
+const getGroupName = (guestId) => {
+  const visited = new Set()
+  let currentId = guestId
+
+  // Traverse up to find the root
+  while (!visited.has(currentId)) {
+    visited.add(currentId)
+    const parentEdge = edges.value.find(e => e.target === currentId)
+    if (!parentEdge) {
+      // Found the root
+      const rootNode = nodes.value.find(n => n.id === currentId)
+      return rootNode ? rootNode.data.name : 'Unknown'
+    }
+    currentId = parentEdge.source
+  }
+
+  return 'Unknown'
+}
 
 const draggedGuest = ref(null)
 const draggedFromTable = ref(null)
@@ -137,7 +157,10 @@ const finishEditingTableName = (tableId) => {
               draggable="true"
               @dragstart="handleDragStart(guest, table.id)"
             >
-              <span class="guest-name">{{ guest.data.name }}</span>
+              <div class="guest-info">
+                <div class="guest-name">{{ guest.data.name }}</div>
+                <div class="guest-group">{{ getGroupName(guest.id) }}</div>
+              </div>
               <button
                 class="remove-guest-btn"
                 @click="handleRemoveFromTable(guest.id, table.id)"
@@ -331,8 +354,9 @@ const finishEditingTableName = (tableId) => {
   cursor: grab;
   transition: all 0.2s;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .guest-item:hover {
@@ -344,10 +368,22 @@ const finishEditingTableName = (tableId) => {
   cursor: grabbing;
 }
 
+.guest-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .guest-name {
   font-size: 14px;
   color: #1f2937;
   font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.guest-group {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 400;
 }
 
 .remove-guest-btn {
@@ -364,6 +400,8 @@ const finishEditingTableName = (tableId) => {
   justify-content: center;
   transition: all 0.2s;
   opacity: 0;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .guest-item:hover .remove-guest-btn {
