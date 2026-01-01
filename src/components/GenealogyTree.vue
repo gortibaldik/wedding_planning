@@ -4,6 +4,7 @@
       :nodes="nodes"
       :edges="edges"
       :node-types="nodeTypes"
+      :nodes-connectable="false"
       fit-view-on-init
       :default-zoom="0.8"
     >
