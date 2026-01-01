@@ -294,13 +294,14 @@ const onNodeDragStop = ({ node }) => {
   const offsetX = node.position.x - dragState.value.startPosition.x
   const offsetY = node.position.y - dragState.value.startPosition.y
 
-  // Update all positions in raw nodes for persistence
+  // Update all positions in raw nodes for persistence and mark as manually positioned
   const rawNode = rawNodes.value.find(n => n.id === node.id)
   if (rawNode) {
     rawNode.position = { ...node.position }
+    rawNode.data.manuallyPositioned = true
   }
 
-  // Update descendants positions in rawNodes
+  // Update descendants positions in rawNodes and mark as manually positioned
   dragState.value.descendantStartPositions.forEach((startPos, descendantId) => {
     const rawNode = rawNodes.value.find(n => n.id === descendantId)
     if (rawNode) {
@@ -308,6 +309,7 @@ const onNodeDragStop = ({ node }) => {
         x: startPos.x + offsetX,
         y: startPos.y + offsetY
       }
+      rawNode.data.manuallyPositioned = true
     }
   })
 

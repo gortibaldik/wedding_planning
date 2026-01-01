@@ -64,6 +64,73 @@ function calculateTreeLayout() {
     parentsMap.get(edge.target).push(edge.source)
   })
 
+  /**
+   * Check if two nodes would overlap at given positions
+   * Uses node dimensions plus a margin for spacing
+   */
+  function nodesCollide(pos1, pos2) {
+    const margin = 20 // Add some margin around nodes
+    const totalWidth = NODE_WIDTH + margin
+    const totalHeight = NODE_HEIGHT + margin
+
+    return Math.abs(pos1.x - pos2.x) < totalWidth &&
+           Math.abs(pos1.y - pos2.y) < totalHeight
+  }
+
+  /**
+   * Find a position near (desiredX, desiredY) that doesn't collide
+   * with any manually positioned nodes. Uses a spiral search pattern.
+   */
+  function findNonCollidingPosition(desiredX, desiredY, excludeNodeId) {
+    let testX = desiredX
+    let testY = desiredY
+
+    // Get all manually positioned nodes (these are the ones we must avoid)
+    // We only check against manually positioned nodes because:
+    // 1. Auto-positioned siblings are laid out left-to-right and won't overlap naturally
+    // 2. We want to maintain the tree structure as much as possible
+    // 3. Only manually positioned nodes can be in "unexpected" positions
+    const manualNodes = Array.from(nodeMap.values())
+      .filter(n => n.id !== excludeNodeId && n.data.manuallyPositioned)
+
+    // If no collision, return desired position
+    const hasCollision = manualNodes.some(node =>
+      nodesCollide({ x: testX, y: testY }, node.position)
+    )
+
+    if (!hasCollision) {
+      return { x: testX, y: testY }
+    }
+
+    // Try positions in a spiral pattern around the desired position
+    const step = HORIZONTAL_SPACING
+    let radius = step
+    const maxAttempts = 50
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // Try positions in a circle around the desired position
+      for (let angle = 0; angle < 360; angle += 45) {
+        const rad = (angle * Math.PI) / 180
+        testX = desiredX + radius * Math.cos(rad)
+        testY = desiredY + radius * Math.sin(rad)
+
+        const collision = manualNodes.some(node =>
+          nodesCollide({ x: testX, y: testY }, node.position)
+        )
+
+        if (!collision) {
+          return { x: testX, y: testY }
+        }
+      }
+
+      radius += step
+    }
+
+    // If we still haven't found a spot, return the desired position
+    // (better to have overlap than to place it very far away)
+    return { x: desiredX, y: desiredY }
+  }
+
   function calculateSubtreeWidth(nodeId, visited = new Set()) {
     if (visited.has(nodeId)) return NODE_WIDTH
     visited.add(nodeId)
@@ -88,22 +155,64 @@ function calculateTreeLayout() {
     const node = nodeMap.get(nodeId)
     if (!node) return
 
-    node.position = { x, y }
+    // Only update position if node is not manually positioned
+    if (!node.data.manuallyPositioned) {
+      // Check for collisions and find a safe position
+      const safePosition = findNonCollidingPosition(x, y, nodeId)
+      node.position = safePosition
+    }
 
     const children = childrenMap.get(nodeId) || []
     if (children.length === 0) return
 
-    const childWidths = children.map(childId => calculateSubtreeWidth(childId))
-    const totalWidth = childWidths.reduce((sum, w) => sum + w, 0) + (children.length - 1) * HORIZONTAL_SPACING
-
-    let currentX = x - totalWidth / 2
-
-    children.forEach((childId, index) => {
-      const childWidth = childWidths[index]
-      const childCenterX = currentX + childWidth / 2
-      layoutNode(childId, childCenterX, y + VERTICAL_SPACING, visited)
-      currentX += childWidth + HORIZONTAL_SPACING
+    // Get manually positioned and auto-positioned children
+    const manualChildren = children.filter(childId => {
+      const child = nodeMap.get(childId)
+      return child && child.data.manuallyPositioned
     })
+    const autoChildren = children.filter(childId => {
+      const child = nodeMap.get(childId)
+      return child && !child.data.manuallyPositioned
+    })
+
+    // If this node is manually positioned, position auto children relative to it
+    if (node.data.manuallyPositioned) {
+      // Position auto children below the manually positioned parent
+      const childWidths = autoChildren.map(childId => calculateSubtreeWidth(childId))
+      const totalWidth = childWidths.reduce((sum, w) => sum + w, 0) +
+                         (autoChildren.length - 1) * HORIZONTAL_SPACING
+
+      let currentX = node.position.x - totalWidth / 2
+
+      autoChildren.forEach((childId, index) => {
+        const childWidth = childWidths[index]
+        const childCenterX = currentX + childWidth / 2
+        layoutNode(childId, childCenterX, node.position.y + VERTICAL_SPACING, visited)
+        currentX += childWidth + HORIZONTAL_SPACING
+      })
+
+      // Still traverse manually positioned children to handle their descendants
+      manualChildren.forEach(childId => {
+        const child = nodeMap.get(childId)
+        if (child) {
+          layoutNode(childId, child.position.x, child.position.y, visited)
+        }
+      })
+    } else {
+      // Standard layout for auto-positioned nodes
+      const childWidths = children.map(childId => calculateSubtreeWidth(childId))
+      const totalWidth = childWidths.reduce((sum, w) => sum + w, 0) +
+                         (children.length - 1) * HORIZONTAL_SPACING
+
+      let currentX = x - totalWidth / 2
+
+      children.forEach((childId, index) => {
+        const childWidth = childWidths[index]
+        const childCenterX = currentX + childWidth / 2
+        layoutNode(childId, childCenterX, y + VERTICAL_SPACING, visited)
+        currentX += childWidth + HORIZONTAL_SPACING
+      })
+    }
   }
 
   const rootNodes = nodes.value.filter(node => {
@@ -113,9 +222,14 @@ function calculateTreeLayout() {
 
   let currentX = 0
   rootNodes.forEach(root => {
-    const subtreeWidth = calculateSubtreeWidth(root.id)
-    layoutNode(root.id, currentX + subtreeWidth / 2, 50)
-    currentX += subtreeWidth + HORIZONTAL_SPACING * 3
+    // If root is manually positioned, use its existing position
+    if (root.data.manuallyPositioned) {
+      layoutNode(root.id, root.position.x, root.position.y)
+    } else {
+      const subtreeWidth = calculateSubtreeWidth(root.id)
+      layoutNode(root.id, currentX + subtreeWidth / 2, 50)
+      currentX += subtreeWidth + HORIZONTAL_SPACING * 3
+    }
   })
 }
 
@@ -177,7 +291,8 @@ export function useGenealogyData() {
         name: childData.name || 'New Person',
         role: 'Person',
         color: color,
-        invited: false
+        invited: false,
+        manuallyPositioned: false
       }
     }
 
@@ -214,7 +329,8 @@ export function useGenealogyData() {
         name: parentData.name || 'New Person',
         role: 'Person',
         color: color,
-        invited: false
+        invited: false,
+        manuallyPositioned: false
       }
     }
 
@@ -244,7 +360,8 @@ export function useGenealogyData() {
         name: rootData.name || 'New Group',
         role: 'Group',
         color: getNextColor(),
-        invited: false
+        invited: false,
+        manuallyPositioned: false
       }
     }
 
