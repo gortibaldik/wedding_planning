@@ -10,6 +10,9 @@
       :multi-selection-key-code="'Meta'"
       fit-view-on-init
       :default-zoom="0.8"
+      @node-drag-start="onNodeDragStart"
+      @node-drag="onNodeDrag"
+      @node-drag-stop="onNodeDragStop"
     >
       <Background />
       <Controls />
@@ -77,7 +80,7 @@ const nodeTypes = {
 const genealogyData = useGenealogyData()
 const { nodes: rawNodes, edges, addChild, addParent, addRoot, removePerson, updatePerson, clearAll } = genealogyData
 
-const { fitView } = useVueFlow()
+const { fitView, updateNode } = useVueFlow()
 
 onMounted(() => {
   setTimeout(() => {
@@ -199,6 +202,107 @@ const handleRemove = (nodeId) => {
 const handleClearAll = () => {
   if (confirm('Are you sure you want to clear all nodes from the tree? This action cannot be undone.')) {
     clearAll()
+  }
+}
+
+// Track drag state
+const dragState = ref({
+  nodeId: null,
+  startPosition: null,
+  descendantStartPositions: new Map()
+})
+
+// Find all descendants of a node
+const findDescendants = (nodeId) => {
+  const descendants = new Set()
+  const toVisit = [nodeId]
+
+  while (toVisit.length > 0) {
+    const currentId = toVisit.pop()
+    const childEdges = edges.value.filter(e => e.source === currentId)
+
+    childEdges.forEach(edge => {
+      if (!descendants.has(edge.target)) {
+        descendants.add(edge.target)
+        toVisit.push(edge.target)
+      }
+    })
+  }
+
+  return Array.from(descendants)
+}
+
+// Handle drag start
+const onNodeDragStart = ({ node }) => {
+  const descendants = findDescendants(node.id)
+  const descendantPositions = new Map()
+
+  // Store initial positions of all descendants
+  descendants.forEach(descendantId => {
+    const rawNode = rawNodes.value.find(n => n.id === descendantId)
+    if (rawNode) {
+      descendantPositions.set(descendantId, { ...rawNode.position })
+    }
+  })
+
+  dragState.value = {
+    nodeId: node.id,
+    startPosition: { ...node.position },
+    descendantStartPositions: descendantPositions
+  }
+}
+
+// Handle node dragging to move children with parent
+const onNodeDrag = ({ node }) => {
+  if (!dragState.value.nodeId || dragState.value.nodeId !== node.id) {
+    return
+  }
+
+  // Calculate the offset from the start position
+  const offsetX = node.position.x - dragState.value.startPosition.x
+  const offsetY = node.position.y - dragState.value.startPosition.y
+
+  // Move all descendants by the same offset from their start positions
+  dragState.value.descendantStartPositions.forEach((startPos, descendantId) => {
+    updateNode(descendantId, {
+      position: {
+        x: startPos.x + offsetX,
+        y: startPos.y + offsetY
+      }
+    })
+  })
+}
+
+// Clean up drag state when drag stops
+const onNodeDragStop = ({ node }) => {
+  if (!dragState.value.nodeId) return
+
+  // Calculate final offset
+  const offsetX = node.position.x - dragState.value.startPosition.x
+  const offsetY = node.position.y - dragState.value.startPosition.y
+
+  // Update all positions in raw nodes for persistence
+  const rawNode = rawNodes.value.find(n => n.id === node.id)
+  if (rawNode) {
+    rawNode.position = { ...node.position }
+  }
+
+  // Update descendants positions in rawNodes
+  dragState.value.descendantStartPositions.forEach((startPos, descendantId) => {
+    const rawNode = rawNodes.value.find(n => n.id === descendantId)
+    if (rawNode) {
+      rawNode.position = {
+        x: startPos.x + offsetX,
+        y: startPos.y + offsetY
+      }
+    }
+  })
+
+  // Clear drag state
+  dragState.value = {
+    nodeId: null,
+    startPosition: null,
+    descendantStartPositions: new Map()
   }
 }
 </script>
