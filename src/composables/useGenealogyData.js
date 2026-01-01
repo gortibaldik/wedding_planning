@@ -1,4 +1,6 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+
+const STORAGE_KEY = 'wedding-genealogy-tree'
 
 const nodes = ref([])
 const edges = ref([])
@@ -82,8 +84,42 @@ function calculateTreeLayout() {
   })
 }
 
+function saveToLocalStorage() {
+  try {
+    const data = {
+      nodes: nodes.value,
+      edges: edges.value
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch (error) {
+    console.error('Failed to save genealogy data to localStorage:', error)
+  }
+}
+
+function loadFromLocalStorage() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const data = JSON.parse(stored)
+      return data
+    }
+  } catch (error) {
+    console.error('Failed to load genealogy data from localStorage:', error)
+  }
+  return null
+}
+
 export function useGenealogyData() {
   const initializeData = () => {
+    const savedData = loadFromLocalStorage()
+
+    if (savedData && savedData.nodes && savedData.edges) {
+      nodes.value = savedData.nodes
+      edges.value = savedData.edges
+      calculateTreeLayout()
+      return
+    }
+
     nodes.value = [
       {
         id: 'bride',
@@ -260,6 +296,10 @@ export function useGenealogyData() {
   }
 
   initializeData()
+
+  watch([nodes, edges], () => {
+    saveToLocalStorage()
+  }, { deep: true })
 
   return {
     nodes,

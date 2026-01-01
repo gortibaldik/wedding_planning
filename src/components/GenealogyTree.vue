@@ -55,8 +55,8 @@
 </template>
 
 <script setup>
-import { ref, computed, markRaw } from 'vue'
-import { VueFlow } from '@vue-flow/core'
+import { ref, computed, markRaw, onMounted } from 'vue'
+import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import '@vue-flow/core/dist/theme-default.css'
@@ -72,6 +72,14 @@ const nodeTypes = {
 
 const genealogyData = useGenealogyData()
 const { nodes: rawNodes, edges, addChild, addParent, removePerson, updatePerson } = genealogyData
+
+const { fitView } = useVueFlow()
+
+onMounted(() => {
+  setTimeout(() => {
+    fitView({ padding: 0.2, duration: 200 })
+  }, 100)
+})
 
 const showEditModal = ref(false)
 const editingNodeId = ref(null)
