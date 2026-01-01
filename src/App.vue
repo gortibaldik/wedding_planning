@@ -8,7 +8,7 @@ import { useSidebarState } from './composables/useSidebarState'
 
 const activeTab = ref('family-tree')
 const { nodes, edges } = useGenealogyData()
-const { getAssignedGuestIds } = useTableSeating()
+const { tables, getAssignedGuestIds } = useTableSeating()
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 
 const invitedGuests = computed(() => {
@@ -46,7 +46,8 @@ const handleDragEnd = () => {
 const handleExport = () => {
   const data = {
     nodes: nodes.value,
-    edges: edges.value
+    edges: edges.value,
+    tables: tables.value
   }
 
   const json = JSON.stringify(data, null, 2)
@@ -55,7 +56,7 @@ const handleExport = () => {
 
   const link = document.createElement('a')
   link.href = url
-  link.download = `genealogy-tree-${new Date().toISOString().split('T')[0]}.json`
+  link.download = `wedding-planning-${new Date().toISOString().split('T')[0]}.json`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -81,9 +82,18 @@ const handleImport = () => {
           return
         }
 
-        if (confirm('Import this file? This will replace your current genealogy tree.')) {
+        const confirmMessage = data.tables
+          ? 'Import this file? This will replace your current family tree and table seating arrangements.'
+          : 'Import this file? This will replace your current family tree.'
+
+        if (confirm(confirmMessage)) {
           nodes.value = data.nodes
           edges.value = data.edges
+
+          // Import tables if they exist (backwards compatible with old exports)
+          if (data.tables) {
+            tables.value = data.tables
+          }
         }
       } catch (error) {
         alert('Error reading file: ' + error.message)

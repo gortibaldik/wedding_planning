@@ -207,7 +207,30 @@ const closeAddModal = () => {
 }
 
 const handleRemove = (nodeId) => {
-  if (confirm('Are you sure you want to remove this person?')) {
+  const node = rawNodes.value.find(n => n.id === nodeId)
+  if (!node) return
+
+  // Count descendants
+  const findDescendantCount = (id) => {
+    const childEdges = edges.value.filter(e => e.source === id)
+    let count = childEdges.length
+
+    childEdges.forEach(edge => {
+      count += findDescendantCount(edge.target)
+    })
+
+    return count
+  }
+
+  const descendantCount = findDescendantCount(nodeId)
+  const itemType = node.data.role === 'Group' ? 'group' : 'person'
+
+  let confirmMessage = `Are you sure you want to remove this ${itemType}?`
+  if (descendantCount > 0) {
+    confirmMessage += ` This will also remove ${descendantCount} descendant${descendantCount > 1 ? 's' : ''}.`
+  }
+
+  if (confirm(confirmMessage)) {
     removePerson(nodeId)
   }
 }

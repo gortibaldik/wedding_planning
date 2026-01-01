@@ -373,8 +373,35 @@ export function useGenealogyData() {
   }
 
   const removePerson = (id) => {
-    nodes.value = nodes.value.filter(n => n.id !== id)
-    edges.value = edges.value.filter(e => e.source !== id && e.target !== id)
+    // Find all descendants recursively
+    const findAllDescendants = (nodeId) => {
+      const descendants = new Set()
+      const toProcess = [nodeId]
+
+      while (toProcess.length > 0) {
+        const currentId = toProcess.pop()
+        descendants.add(currentId)
+
+        // Find all children of the current node
+        const childEdges = edges.value.filter(e => e.source === currentId)
+        childEdges.forEach(edge => {
+          if (!descendants.has(edge.target)) {
+            toProcess.push(edge.target)
+          }
+        })
+      }
+
+      return descendants
+    }
+
+    // Get all nodes to remove (the node and all its descendants)
+    const nodesToRemove = findAllDescendants(id)
+
+    // Remove all nodes and their edges
+    nodes.value = nodes.value.filter(n => !nodesToRemove.has(n.id))
+    edges.value = edges.value.filter(e =>
+      !nodesToRemove.has(e.source) && !nodesToRemove.has(e.target)
+    )
 
     calculateTreeLayout()
   }
