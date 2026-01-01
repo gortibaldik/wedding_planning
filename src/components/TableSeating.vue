@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useGenealogyData } from '../composables/useGenealogyData'
 import { useTableSeating } from '../composables/useTableSeating'
+import { useSidebarState } from '../composables/useSidebarState'
 
 const props = defineProps({
   draggedGuestFromSidebar: {
@@ -11,6 +12,7 @@ const props = defineProps({
 })
 
 const { nodes, edges } = useGenealogyData()
+const { sidebarCollapsed } = useSidebarState()
 const {
   tables,
   addTable,
@@ -43,14 +45,20 @@ const getGroupName = (guestId) => {
 
 const draggedGuest = ref(null)
 const draggedFromTable = ref(null)
+const dragOverTableId = ref(null)
 
 const handleDragStart = (guest, fromTableId = null) => {
   draggedGuest.value = guest
   draggedFromTable.value = fromTableId
 }
 
-const handleDragOver = (event) => {
+const handleDragOver = (event, tableId) => {
   event.preventDefault()
+  dragOverTableId.value = tableId
+}
+
+const handleDragLeave = () => {
+  dragOverTableId.value = null
 }
 
 const handleDropOnTable = (tableId) => {
@@ -62,6 +70,7 @@ const handleDropOnTable = (tableId) => {
   assignGuestToTable(guestToDrop.id, tableId)
   draggedGuest.value = null
   draggedFromTable.value = null
+  dragOverTableId.value = null
 }
 
 const handleRemoveFromTable = (guestId, tableId) => {
@@ -96,7 +105,7 @@ const finishEditingTableName = (tableId) => {
 
 <template>
   <div class="table-seating">
-    <div class="tables-main">
+    <div class="tables-main" :style="{ paddingRight: sidebarCollapsed ? '24px' : '324px' }">
       <div class="tables-header">
         <h2>Tables</h2>
         <button class="add-table-btn" @click="addTable">+ Add Table</button>
@@ -107,7 +116,9 @@ const finishEditingTableName = (tableId) => {
           v-for="table in tables"
           :key="table.id"
           class="table-card"
-          @dragover="handleDragOver"
+          :class="{ 'table-card--drag-over': dragOverTableId === table.id }"
+          @dragover="handleDragOver($event, table.id)"
+          @dragleave="handleDragLeave"
           @drop="handleDropOnTable(table.id)"
         >
           <div class="table-header">
@@ -175,6 +186,12 @@ const finishEditingTableName = (tableId) => {
             >
               Drop guests here
             </div>
+            <div
+              v-else-if="dragOverTableId === table.id"
+              class="drop-zone-hint"
+            >
+              Drop guest here to add to table
+            </div>
           </div>
 
           <div class="table-footer">
@@ -210,6 +227,7 @@ const finishEditingTableName = (tableId) => {
   flex: 1;
   padding: 24px;
   overflow-y: auto;
+  transition: padding-right 0.3s ease;
 }
 
 .tables-header {
@@ -265,6 +283,13 @@ const finishEditingTableName = (tableId) => {
 .table-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-color: #3b82f6;
+}
+
+.table-card--drag-over {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  border-width: 3px;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
 .table-header {
@@ -419,6 +444,36 @@ const finishEditingTableName = (tableId) => {
   padding: 40px 20px;
   border: 2px dashed #d1d5db;
   border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.table-card--drag-over .empty-table {
+  border-color: #3b82f6;
+  background: #dbeafe;
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.drop-zone-hint {
+  text-align: center;
+  color: #3b82f6;
+  font-size: 13px;
+  padding: 16px;
+  margin-top: 8px;
+  background: #dbeafe;
+  border: 2px dashed #3b82f6;
+  border-radius: 8px;
+  font-weight: 500;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .table-footer {
