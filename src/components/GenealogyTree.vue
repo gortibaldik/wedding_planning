@@ -12,6 +12,10 @@
       <Controls />
     </VueFlow>
 
+    <button class="add-root-btn" @click="handleAddRoot" title="Add New Root">
+      + Add Root
+    </button>
+
     <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
       <div class="modal" @click.stop>
         <h3>Edit Person</h3>
@@ -71,7 +75,7 @@ const nodeTypes = {
 }
 
 const genealogyData = useGenealogyData()
-const { nodes: rawNodes, edges, addChild, addParent, removePerson, updatePerson } = genealogyData
+const { nodes: rawNodes, edges, addChild, addParent, addRoot, removePerson, updatePerson } = genealogyData
 
 const { fitView } = useVueFlow()
 
@@ -158,11 +162,24 @@ const handleAddParent = (childId) => {
   })
 }
 
+const handleAddRoot = () => {
+  addModalType.value = 'root'
+  addModalTargetId.value = null
+  addModalTitle.value = 'Add New Root'
+  addForm.value = { name: '', role: 'guest' }
+  showAddModal.value = true
+  nextTick(() => {
+    addNameInput.value?.focus()
+  })
+}
+
 const saveAdd = () => {
   if (addModalType.value === 'child') {
     addChild(addModalTargetId.value, addForm.value)
   } else if (addModalType.value === 'parent') {
     addParent(addModalTargetId.value, addForm.value)
+  } else if (addModalType.value === 'root') {
+    addRoot(addForm.value)
   }
   closeAddModal()
 }
@@ -271,5 +288,32 @@ const handleRemove = (nodeId) => {
 
 .btn-secondary:hover {
   background: #d1d5db;
+}
+
+.add-root-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 24px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  transition: all 0.2s;
+  z-index: 100;
+}
+
+.add-root-btn:hover {
+  background: #059669;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+  transform: translateY(-2px);
+}
+
+.add-root-btn:active {
+  transform: translateY(0);
 }
 </style>

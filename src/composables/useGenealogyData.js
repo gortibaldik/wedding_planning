@@ -120,97 +120,8 @@ export function useGenealogyData() {
       return
     }
 
-    nodes.value = [
-      {
-        id: 'bride',
-        type: 'person',
-        position: { x: 0, y: 0 },
-        data: {
-          name: 'Bride',
-          side: 'bride',
-          role: 'bride'
-        }
-      },
-      {
-        id: 'groom',
-        type: 'person',
-        position: { x: 0, y: 0 },
-        data: {
-          name: 'Groom',
-          side: 'groom',
-          role: 'groom'
-        }
-      },
-      {
-        id: 'bride-parent-1',
-        type: 'person',
-        position: { x: 0, y: 0 },
-        data: {
-          name: 'Bride\'s Mother',
-          side: 'bride',
-          role: 'parent'
-        }
-      },
-      {
-        id: 'bride-parent-2',
-        type: 'person',
-        position: { x: 0, y: 0 },
-        data: {
-          name: 'Bride\'s Father',
-          side: 'bride',
-          role: 'parent'
-        }
-      },
-      {
-        id: 'groom-parent-1',
-        type: 'person',
-        position: { x: 0, y: 0 },
-        data: {
-          name: 'Groom\'s Mother',
-          side: 'groom',
-          role: 'parent'
-        }
-      },
-      {
-        id: 'groom-parent-2',
-        type: 'person',
-        position: { x: 0, y: 0 },
-        data: {
-          name: 'Groom\'s Father',
-          side: 'groom',
-          role: 'parent'
-        }
-      }
-    ]
-
-    edges.value = [
-      {
-        id: 'e-bride-parent-1',
-        source: 'bride',
-        target: 'bride-parent-1',
-        type: 'smoothstep'
-      },
-      {
-        id: 'e-bride-parent-2',
-        source: 'bride',
-        target: 'bride-parent-2',
-        type: 'smoothstep'
-      },
-      {
-        id: 'e-groom-parent-1',
-        source: 'groom',
-        target: 'groom-parent-1',
-        type: 'smoothstep'
-      },
-      {
-        id: 'e-groom-parent-2',
-        source: 'groom',
-        target: 'groom-parent-2',
-        type: 'smoothstep'
-      }
-    ]
-
-    calculateTreeLayout()
+    nodes.value = []
+    edges.value = []
   }
 
   const addChild = (parentId, childData) => {
@@ -277,11 +188,28 @@ export function useGenealogyData() {
     return newId
   }
 
-  const removePerson = (id) => {
-    if (id === 'bride' || id === 'groom') {
-      return
+  const addRoot = (rootData) => {
+    const newId = `person-${Date.now()}`
+
+    const newNode = {
+      id: newId,
+      type: 'person',
+      position: { x: 0, y: 0 },
+      data: {
+        name: rootData.name || 'New Person',
+        side: rootData.side || 'neutral',
+        role: rootData.role || 'guest'
+      }
     }
 
+    nodes.value = [...nodes.value, newNode]
+
+    calculateTreeLayout()
+
+    return newId
+  }
+
+  const removePerson = (id) => {
     nodes.value = nodes.value.filter(n => n.id !== id)
     edges.value = edges.value.filter(e => e.source !== id && e.target !== id)
 
@@ -306,6 +234,7 @@ export function useGenealogyData() {
     edges,
     addChild,
     addParent,
+    addRoot,
     removePerson,
     updatePerson
   }
