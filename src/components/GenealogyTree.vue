@@ -36,31 +36,6 @@
       Clear
     </button>
 
-    <div class="guest-sidebar" :class="{ 'guest-sidebar--collapsed': sidebarCollapsed }">
-      <button class="guest-sidebar__toggle" @click="toggleSidebar" :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
-        {{ sidebarCollapsed ? '◀' : '▶' }}
-      </button>
-      <div class="guest-sidebar__content">
-        <div class="guest-sidebar__header">
-          <h3 class="guest-sidebar__title">Invited Guests</h3>
-          <div class="guest-sidebar__counter">{{ invitedGuests.length }}</div>
-        </div>
-        <div class="guest-sidebar__list">
-          <div v-if="invitedGuests.length === 0" class="guest-sidebar__empty">
-            No guests invited yet
-          </div>
-          <div
-            v-for="guest in invitedGuests"
-            :key="guest.id"
-            class="guest-sidebar__item"
-            :style="{ borderLeft: `4px solid ${guest.data.color}` }"
-          >
-            {{ guest.data.name }}
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
       <div class="modal" @click.stop>
         <h3>Edit Person</h3>
@@ -100,7 +75,6 @@ import { ref, computed, markRaw, onMounted, nextTick } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { SelectionMode } from '@vue-flow/core'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -166,11 +140,7 @@ const nodes = computed(() => {
   }))
 })
 
-const invitedGuests = computed(() => {
-  return rawNodes.value.filter(node => node.data.role === 'Person' && node.data.invited)
-})
-
-const { sidebarCollapsed, toggleSidebar } = useSidebarState()
+const { sidebarCollapsed } = useSidebarState()
 
 const saveEdit = () => {
   if (editingNodeId.value) {
@@ -499,110 +469,5 @@ const onNodeDragStop = ({ node }) => {
 
 .clear-btn:active {
   transform: translateY(0);
-}
-
-.guest-sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 300px;
-  height: 100vh;
-  background: white;
-  border-left: 1px solid #e5e7eb;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-  transition: transform 0.3s ease;
-}
-
-.guest-sidebar--collapsed {
-  transform: translateX(300px);
-}
-
-.guest-sidebar__toggle {
-  position: absolute;
-  left: -40px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px;
-  height: 80px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-right: none;
-  border-radius: 8px 0 0 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: #6b7280;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
-  z-index: 11;
-}
-
-.guest-sidebar__toggle:hover {
-  background: #f9fafb;
-  color: #3b82f6;
-}
-
-.guest-sidebar__content {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.guest-sidebar__header {
-  padding: 20px;
-  border-bottom: 2px solid #e5e7eb;
-  background: #f9fafb;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.guest-sidebar__title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.guest-sidebar__counter {
-  background: #3b82f6;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 16px;
-  min-width: 32px;
-  text-align: center;
-}
-
-.guest-sidebar__list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-
-.guest-sidebar__empty {
-  text-align: center;
-  color: #9ca3af;
-  padding: 40px 20px;
-  font-size: 14px;
-}
-
-.guest-sidebar__item {
-  padding: 12px 16px;
-  background: #f9fafb;
-  border-radius: 6px;
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: #1f2937;
-  transition: all 0.2s;
-}
-
-.guest-sidebar__item:hover {
-  background: #f3f4f6;
-  transform: translateX(-2px);
 }
 </style>
