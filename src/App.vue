@@ -78,7 +78,8 @@ const invitedGuests = computed(() => {
               color: node.data.color
             },
             nodeId: node.id, // Track which node they belong to
-            isMultiPerson: true
+            isMultiPerson: true,
+            groupName: node.data.name // The multi-person node's group name
           })
         }
       })
@@ -267,7 +268,9 @@ const handleImport = () => {
             >
               <div class="guest-sidebar__item-name">
                 {{ guest.data.name }}
-                <span v-if="guest.isMultiPerson" class="guest-sidebar__badge">Group</span>
+                <span v-if="guest.isMultiPerson" class="guest-sidebar__badge">{{
+                  guest.groupName
+                }}</span>
               </div>
               <div class="guest-sidebar__item-group">
                 {{ getGroupName(guest.id) }}

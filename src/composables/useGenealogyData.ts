@@ -130,8 +130,7 @@ export function useGenealogyData() {
   const addChildNode = (
     parentId: string,
     name: string,
-    role: 'person' | 'group' | 'multi-person' = 'person',
-    additionalPeople?: string[]
+    role: 'person' | 'group' | 'multi-person' = 'person'
   ) => {
     let node: ChartNode<PersonData | RootData | MultiPersonData>
 
@@ -186,12 +185,14 @@ export function useGenealogyData() {
   // Toggle all people in a multi-person node
   const toggleAllInvited = (nodeId: string) => {
     const node = nodes.value.find(n => n.id === nodeId)
-    if (node && node.data instanceof MultiPersonData) {
-      const allInvited = node.data.allInvited
-      node.data.people.forEach(p => {
-        p.invited = !allInvited
-      })
+    if (!node || !(node.data instanceof MultiPersonData)) {
+      return
     }
+
+    const allInvited = node.data.allInvited
+    node.data.people.forEach(p => {
+      p.invited = !allInvited
+    })
   }
 
   // Add person to existing multi-person node

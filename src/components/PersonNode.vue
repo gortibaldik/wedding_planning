@@ -269,15 +269,15 @@ defineProps({
 }
 
 .person-node__checkbox-small {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
   accent-color: var(--node-color, #3b82f6);
 }
 
 .person-node__checkbox-master {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   cursor: pointer;
   accent-color: var(--node-color, #3b82f6);
 }

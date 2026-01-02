@@ -120,7 +120,8 @@ const getGuestsByTableId = tableId => {
               color: multiPersonNode.data.color
             },
             nodeId: multiPersonNode.id,
-            isMultiPerson: true
+            isMultiPerson: true,
+            groupName: multiPersonNode.data.name
           }
         }
       }
@@ -207,7 +208,7 @@ const finishEditingTableName = tableId => {
               <div class="guest-info">
                 <div class="guest-name">
                   {{ guest.data.name }}
-                  <span v-if="guest.isMultiPerson" class="guest-badge">Group</span>
+                  <span v-if="guest.isMultiPerson" class="guest-badge">{{ guest.groupName }}</span>
                 </div>
                 <div class="guest-group">
                   {{ getGroupName(guest.id) }}
