@@ -1,7 +1,9 @@
 import { ref, watch } from 'vue'
+import { useLocalStorage } from './useLocalStorage.ts'
 
 const STORAGE_KEY = 'wedding-genealogy-tree'
 
+const roots = []
 const nodes = ref([])
 const edges = ref([])
 
@@ -97,32 +99,17 @@ function getNodesAtDepth(depth) {
   return nodes.value.filter(node => getNodeDepth(node.id) === depth)
 }
 
-function saveToLocalStorage() {
-  try {
-    const data = {
-      nodes: nodes.value,
-      edges: edges.value
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } catch (error) {
-    console.error('Failed to save genealogy data to localStorage:', error)
-  }
-}
-
-function loadFromLocalStorage() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const data = JSON.parse(stored)
-      return data
-    }
-  } catch (error) {
-    console.error('Failed to load genealogy data from localStorage:', error)
-  }
-  return null
-}
-
 export function useGenealogyData() {
+  
+  const serializeData = () => {
+    return {
+      'nodes': nodes.value,
+      'edges': edges.value
+    }
+  }
+  
+  const {saveToLocalStorage, loadFromLocalStorage} = useLocalStorage(STORAGE_KEY)
+
   const initializeData = () => {
     const savedData = loadFromLocalStorage()
 
@@ -359,7 +346,7 @@ export function useGenealogyData() {
   initializeData()
 
   watch([nodes, edges], () => {
-    saveToLocalStorage()
+    saveToLocalStorage(serializeData())
   }, { deep: true })
 
   return {

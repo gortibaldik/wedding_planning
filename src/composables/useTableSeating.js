@@ -1,34 +1,20 @@
 import { ref, watch, computed } from 'vue'
+import { useLocalStorage } from './useLocalStorage'
 
 const STORAGE_KEY = 'wedding-table-seating'
 
 const tables = ref([])
 
-function saveToLocalStorage() {
-  try {
-    const data = {
-      tables: tables.value
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } catch (error) {
-    console.error('Failed to save table seating data to localStorage:', error)
-  }
-}
-
-function loadFromLocalStorage() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const data = JSON.parse(stored)
-      return data
-    }
-  } catch (error) {
-    console.error('Failed to load table seating data from localStorage:', error)
-  }
-  return null
-}
-
 export function useTableSeating() {
+
+  const serializeData = () => {
+    return {
+      'tables': tables.value
+    }
+  }
+
+  const {loadFromLocalStorage, saveToLocalStorage} = useLocalStorage(STORAGE_KEY)
+
   const initializeData = () => {
     const savedData = loadFromLocalStorage()
 
@@ -118,7 +104,7 @@ export function useTableSeating() {
   initializeData()
 
   watch(tables, () => {
-    saveToLocalStorage()
+    saveToLocalStorage(serializeData())
   }, { deep: true })
 
   return {
