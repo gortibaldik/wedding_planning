@@ -10,6 +10,7 @@ import '@vue-flow/core/dist/style.css'
 import PersonNode from './PersonNode.vue'
 import { useGenealogyData } from '../composables/useGenealogyData'
 import { useSidebarState } from '../composables/useSidebarState'
+import { useBaseGraph } from '../composables/useBaseGraph.ts'
 
 const nodeTypes = {
   person: markRaw(PersonNode)
@@ -19,12 +20,11 @@ const genealogyData = useGenealogyData()
 const {
   nodes: rawNodes,
   edges,
-  addChild,
-  addParent,
-  addRoot,
-  removePerson,
-  updatePerson,
   toggleInvited,
+  addChildPersonNode,
+  addRootNode,
+  removePersonNode,
+  updatePersonNode,
   clearAll
 } = genealogyData
 
@@ -69,7 +69,6 @@ const nodes = computed(() => {
     data: {
       ...node.data,
       onAddChild: handleAddChild,
-      onAddParent: handleAddParent,
       onRemove: handleRemove,
       onEdit: handleEdit,
       onToggleInvited: toggleInvited
@@ -81,7 +80,7 @@ const { sidebarCollapsed } = useSidebarState()
 
 const saveEdit = () => {
   if (editingNodeId.value) {
-    updatePerson(editingNodeId.value, editForm.value)
+    updatePersonNode(editingNodeId.value, editForm.value)
     closeEditModal()
   }
 }
@@ -103,17 +102,6 @@ const handleAddChild = parentId => {
   })
 }
 
-const handleAddParent = childId => {
-  addModalType.value = 'parent'
-  addModalTargetId.value = childId
-  addModalTitle.value = 'Add Parent'
-  addForm.value = { name: '' }
-  showAddModal.value = true
-  nextTick(() => {
-    addNameInput.value?.focus()
-  })
-}
-
 const handleAddRoot = () => {
   addModalType.value = 'root'
   addModalTargetId.value = null
@@ -127,11 +115,9 @@ const handleAddRoot = () => {
 
 const saveAdd = () => {
   if (addModalType.value === 'child') {
-    addChild(addModalTargetId.value, addForm.value)
-  } else if (addModalType.value === 'parent') {
-    addParent(addModalTargetId.value, addForm.value)
+    addChildPersonNode(addModalTargetId.value, addForm.value.name)
   } else if (addModalType.value === 'root') {
-    addRoot(addForm.value)
+    addRootNode(addForm.value.name)
   }
   closeAddModal()
 }
@@ -168,7 +154,7 @@ const handleRemove = nodeId => {
   }
 
   if (confirm(confirmMessage)) {
-    removePerson(nodeId)
+    removePersonNode(nodeId)
   }
 }
 

@@ -2,12 +2,12 @@
 import { ref, computed } from 'vue'
 import GenealogyTree from './components/GenealogyTree.vue'
 import TableSeating from './components/TableSeating.vue'
-import { useGenealogyData } from './composables/useGenealogyData'
+import { useGenealogyData } from './composables/useGenealogyData.ts'
 import { useTableSeating } from './composables/useTableSeating'
 import { useSidebarState } from './composables/useSidebarState'
 
 const activeTab = ref('family-tree')
-const { nodes, edges } = useGenealogyData()
+const { nodes, edges, initializeNodesAndEdges } = useGenealogyData()
 const { tables, getAssignedGuestIds } = useTableSeating()
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 
@@ -38,7 +38,7 @@ const getTableAssignment = guestId => {
 }
 
 const invitedGuests = computed(() => {
-  return nodes.value.filter(node => node.data.role === 'Person' && node.data.invited === true)
+  return nodes.value.filter(node => node.data.role === 'person' && node.data.invited === true)
 })
 
 const unassignedGuests = computed(() => {
@@ -109,8 +109,7 @@ const handleImport = () => {
           : 'Import this file? This will replace your current family tree.'
 
         if (confirm(confirmMessage)) {
-          nodes.value = data.nodes
-          edges.value = data.edges
+          initializeNodesAndEdges(data.nodes, data.edges)
 
           // Import tables if they exist (backwards compatible with old exports)
           if (data.tables) {

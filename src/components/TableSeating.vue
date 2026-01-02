@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { useGenealogyData } from '../composables/useGenealogyData'
+import { useGenealogyData } from '../composables/useGenealogyData.ts'
 import { useTableSeating } from '../composables/useTableSeating'
 import { useSidebarState } from '../composables/useSidebarState'
 

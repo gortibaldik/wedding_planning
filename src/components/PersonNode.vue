@@ -25,7 +25,7 @@ defineProps({
             {{ data.role }}
           </div>
         </div>
-        <div v-if="data.role === 'Person'" class="person-node__checkbox-wrapper" @click.stop>
+        <div v-if="data.role === 'person'" class="person-node__checkbox-wrapper" @click.stop>
           <div class="person-node__checkbox-label">Invited?</div>
           <input
             type="checkbox"
@@ -38,13 +38,6 @@ defineProps({
     </div>
 
     <div class="person-node__actions">
-      <button
-        class="action-btn action-btn--parent"
-        title="Add parent"
-        @click.stop="data.onAddParent?.(id)"
-      >
-        ↑
-      </button>
       <button
         class="action-btn action-btn--child"
         title="Add child"
