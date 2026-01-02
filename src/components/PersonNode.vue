@@ -35,14 +35,13 @@ defineProps({
             <span class="person-node__checkbox-label">Invited?</span>
           </label>
 
-          <label v-if="data.hasChildren" class="person-node__checkbox-row" @click.stop>
-            <input
-              type="checkbox"
-              class="person-node__checkbox"
-              @change="data.onToggleSubtreeInvited?.(id)"
-            />
-            <span class="person-node__checkbox-label">Invite whole subtree?</span>
-          </label>
+          <button
+            v-if="data.hasChildren"
+            class="person-node__subtree-btn"
+            @click.stop="data.onToggleSubtreeInvited?.(id)"
+          >
+            Invite the whole subtree
+          </button>
         </div>
       </div>
 
@@ -66,14 +65,13 @@ defineProps({
             <span class="person-node__checkbox-label">Invite all?</span>
           </label>
 
-          <label v-if="data.hasChildren" class="person-node__checkbox-row" @click.stop>
-            <input
-              type="checkbox"
-              class="person-node__checkbox"
-              @change="data.onToggleSubtreeInvited?.(id)"
-            />
-            <span class="person-node__checkbox-label">Invite whole subtree?</span>
-          </label>
+          <button
+            v-if="data.hasChildren"
+            class="person-node__subtree-btn"
+            @click.stop="data.onToggleSubtreeInvited?.(id)"
+          >
+            Invite the whole subtree
+          </button>
         </div>
 
         <!-- Individual People List -->
@@ -103,16 +101,11 @@ defineProps({
           <div class="person-node__role">{{ data.role }}</div>
         </div>
 
-        <!-- Checkboxes below role for groups with children -->
+        <!-- Button for groups with children -->
         <div v-if="data.hasChildren" class="person-node__checkboxes">
-          <label class="person-node__checkbox-row" @click.stop>
-            <input
-              type="checkbox"
-              class="person-node__checkbox"
-              @change="data.onToggleSubtreeInvited?.(id)"
-            />
-            <span class="person-node__checkbox-label">Invite whole subtree?</span>
-          </label>
+          <button class="person-node__subtree-btn" @click.stop="data.onToggleSubtreeInvited?.(id)">
+            Invite the whole subtree
+          </button>
         </div>
       </div>
     </div>
@@ -230,6 +223,32 @@ defineProps({
   height: 18px;
   cursor: pointer;
   accent-color: var(--node-color, #3b82f6);
+}
+
+.person-node__subtree-btn {
+  width: 100%;
+  padding: 6px 12px;
+  background: #6898e4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.person-node__subtree-btn:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.person-node__subtree-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .person-node__actions {
