@@ -16,7 +16,8 @@ defineProps({
     <Handle type="target" :position="Position.Top" />
 
     <div class="person-node__content">
-      <div class="person-node__header">
+      <!-- Single Person Display -->
+      <div v-if="data.role === 'person'" class="person-node__header">
         <div class="person-node__info">
           <div class="person-node__name">
             {{ data.name }}
@@ -25,7 +26,7 @@ defineProps({
             {{ data.role }}
           </div>
         </div>
-        <div v-if="data.role === 'person'" class="person-node__checkbox-wrapper" @click.stop>
+        <div class="person-node__checkbox-wrapper" @click.stop>
           <div class="person-node__checkbox-label">Invited?</div>
           <input
             type="checkbox"
@@ -33,6 +34,58 @@ defineProps({
             class="person-node__checkbox"
             @change="data.onToggleInvited?.(id)"
           />
+        </div>
+      </div>
+
+      <!-- Multi-Person Display -->
+      <div v-else-if="data.role === 'multi-person'">
+        <div class="person-node__multi-header">
+          <div class="person-node__info">
+            <div class="person-node__name">Multiple People</div>
+            <div class="person-node__role">Multi-person</div>
+          </div>
+
+          <!-- Master Toggle All Checkbox -->
+          <div class="person-node__checkbox-wrapper" @click.stop>
+            <div class="person-node__checkbox-label">Invite All?</div>
+            <input
+              type="checkbox"
+              :checked="data.allInvited"
+              :indeterminate.prop="data.someInvited"
+              class="person-node__checkbox-master"
+              @change="data.onToggleAllInvited?.(id)"
+            />
+          </div>
+        </div>
+
+        <!-- Individual People List -->
+        <div class="person-node__people-list">
+          <div
+            v-for="person in data.people"
+            :key="person.id"
+            class="person-node__person-item"
+            @click.stop
+          >
+            <span class="person-node__person-name">{{ person.name }}</span>
+            <input
+              type="checkbox"
+              :checked="person.invited"
+              class="person-node__checkbox-small"
+              @change="data.onTogglePersonInvited?.(id, person.id)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Group Display -->
+      <div v-else class="person-node__header">
+        <div class="person-node__info">
+          <div class="person-node__name">
+            {{ data.name }}
+          </div>
+          <div class="person-node__role">
+            {{ data.role }}
+          </div>
         </div>
       </div>
     </div>
@@ -180,5 +233,51 @@ defineProps({
   background: #fee2e2;
   border-color: #ef4444;
   color: #ef4444;
+}
+
+/* Multi-person node styles */
+.person-node__multi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.person-node__people-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.person-node__person-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 4px;
+}
+
+.person-node__person-name {
+  font-size: 12px;
+  color: #374151;
+  flex: 1;
+}
+
+.person-node__checkbox-small {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--node-color, #3b82f6);
+}
+
+.person-node__checkbox-master {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--node-color, #3b82f6);
 }
 </style>

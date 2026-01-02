@@ -13,8 +13,23 @@ const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 
 // Helper function to find the group (root) name for a guest
 const getGroupName = guestId => {
+  // First check if this is a person within a multi-person node
+  const multiPersonNode = nodes.value.find(
+    node => node.data.role === 'multi-person' && node.data.people.some(p => p.id === guestId)
+  )
+
+  if (multiPersonNode) {
+    // Use the multi-person node ID to traverse up the tree
+    return getGroupNameForNode(multiPersonNode.id)
+  }
+
+  // Otherwise, it's a regular person node
+  return getGroupNameForNode(guestId)
+}
+
+const getGroupNameForNode = nodeId => {
   const visited = new Set()
-  let currentId = guestId
+  let currentId = nodeId
 
   // Traverse up to find the root
   while (!visited.has(currentId)) {
@@ -38,7 +53,39 @@ const getTableAssignment = guestId => {
 }
 
 const invitedGuests = computed(() => {
-  return nodes.value.filter(node => node.data.role === 'person' && node.data.invited === true)
+  const guests = []
+
+  nodes.value.forEach(node => {
+    if (node.data.role === 'person' && node.data.invited) {
+      // Regular person node
+      guests.push({
+        id: node.id,
+        data: {
+          name: node.data.name,
+          color: node.data.color
+        },
+        nodeId: node.id,
+        isMultiPerson: false
+      })
+    } else if (node.data.role === 'multi-person') {
+      // Multi-person node - add each invited person
+      node.data.people.forEach(person => {
+        if (person.invited) {
+          guests.push({
+            id: person.id, // Use person.id for seating
+            data: {
+              name: person.name,
+              color: node.data.color
+            },
+            nodeId: node.id, // Track which node they belong to
+            isMultiPerson: true
+          })
+        }
+      })
+    }
+  })
+
+  return guests
 })
 
 const unassignedGuests = computed(() => {
@@ -220,6 +267,7 @@ const handleImport = () => {
             >
               <div class="guest-sidebar__item-name">
                 {{ guest.data.name }}
+                <span v-if="guest.isMultiPerson" class="guest-sidebar__badge">Group</span>
               </div>
               <div class="guest-sidebar__item-group">
                 {{ getGroupName(guest.id) }}
@@ -511,5 +559,16 @@ body {
   color: #9ca3af;
   font-size: 14px;
   padding: 40px 20px;
+}
+
+.guest-sidebar__badge {
+  display: inline-block;
+  padding: 2px 6px;
+  margin-left: 6px;
+  font-size: 9px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #1e40af;
+  border-radius: 3px;
+  font-weight: 600;
 }
 </style>
