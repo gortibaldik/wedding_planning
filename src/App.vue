@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import GenealogyTree from './components/GenealogyTree.vue'
 import TableSeating from './components/TableSeating.vue'
 import { useGenealogyData } from './composables/useGenealogyData.ts'
@@ -8,7 +8,7 @@ import { useSidebarState } from './composables/useSidebarState'
 
 const activeTab = ref('family-tree')
 const { nodes, edges, initializeNodesAndEdges } = useGenealogyData()
-const { tables, getAssignedGuestIds } = useTableSeating()
+const { tables, getAssignedGuestIds, removeGuestFromTable } = useTableSeating()
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 
 // Helper function to find the group (root) name for a guest
@@ -112,6 +112,25 @@ const handleDragStart = guest => {
 const handleDragEnd = () => {
   draggedGuest.value = null
 }
+
+// Watch for changes to invited guests and remove uninvited guests from tables
+watch(
+  [nodes, tables],
+  () => {
+    // Get the set of currently invited guest IDs
+    const invitedGuestIds = new Set(invitedGuests.value.map(g => g.id))
+
+    // For each table, remove guests that are no longer invited
+    tables.value.forEach(table => {
+      const uninvitedGuests = table.guestIds.filter(guestId => !invitedGuestIds.has(guestId))
+
+      uninvitedGuests.forEach(guestId => {
+        removeGuestFromTable(guestId, table.id)
+      })
+    })
+  },
+  { deep: true }
+)
 
 const handleExport = () => {
   const data = {
