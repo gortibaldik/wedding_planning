@@ -1,3 +1,12 @@
+<script setup>
+import { Handle, Position } from '@vue-flow/core'
+
+defineProps({
+  id: String,
+  data: Object
+})
+</script>
+
 <template>
   <div
     class="person-node"
@@ -9,16 +18,20 @@
     <div class="person-node__content">
       <div class="person-node__header">
         <div class="person-node__info">
-          <div class="person-node__name">{{ data.name }}</div>
-          <div class="person-node__role">{{ data.role }}</div>
+          <div class="person-node__name">
+            {{ data.name }}
+          </div>
+          <div class="person-node__role">
+            {{ data.role }}
+          </div>
         </div>
         <div v-if="data.role === 'Person'" class="person-node__checkbox-wrapper" @click.stop>
           <div class="person-node__checkbox-label">Invited?</div>
           <input
             type="checkbox"
             :checked="data.invited"
-            @change="data.onToggleInvited?.(id)"
             class="person-node__checkbox"
+            @change="data.onToggleInvited?.(id)"
           />
         </div>
       </div>
@@ -27,22 +40,22 @@
     <div class="person-node__actions">
       <button
         class="action-btn action-btn--parent"
-        @click.stop="data.onAddParent?.(id)"
         title="Add parent"
+        @click.stop="data.onAddParent?.(id)"
       >
         ↑
       </button>
       <button
         class="action-btn action-btn--child"
-        @click.stop="data.onAddChild?.(id)"
         title="Add child"
+        @click.stop="data.onAddChild?.(id)"
       >
         ↓
       </button>
       <button
         class="action-btn action-btn--remove"
-        @click.stop="data.onRemove?.(id)"
         title="Remove person"
+        @click.stop="data.onRemove?.(id)"
       >
         ✕
       </button>
@@ -51,15 +64,6 @@
     <Handle type="source" :position="Position.Bottom" />
   </div>
 </template>
-
-<script setup>
-import { Handle, Position } from '@vue-flow/core'
-
-defineProps({
-  id: String,
-  data: Object
-})
-</script>
 
 <style scoped>
 .person-node {

@@ -20,7 +20,7 @@ const GROUP_COLORS = [
   '#8b5cf6', // purple
   '#ec4899', // pink
   '#06b6d4', // cyan
-  '#f97316', // orange
+  '#f97316' // orange
 ]
 
 let nextColorIndex = 0
@@ -56,7 +56,7 @@ function hasCollision(x, y, excludeNodeId = null) {
     if (node.id === excludeNodeId) return false
     const dx = Math.abs(node.position.x - x)
     const dy = Math.abs(node.position.y - y)
-    return dx < (NODE_WIDTH + margin) && dy < (NODE_HEIGHT + margin)
+    return dx < NODE_WIDTH + margin && dy < NODE_HEIGHT + margin
   })
 }
 
@@ -100,15 +100,14 @@ function getNodesAtDepth(depth) {
 }
 
 export function useGenealogyData() {
-  
   const serializeData = () => {
     return {
-      'nodes': nodes.value,
-      'edges': edges.value
+      nodes: nodes.value,
+      edges: edges.value
     }
   }
-  
-  const {saveToLocalStorage, loadFromLocalStorage} = useLocalStorage(STORAGE_KEY)
+
+  const { saveToLocalStorage, loadFromLocalStorage } = useLocalStorage(STORAGE_KEY)
 
   const initializeData = () => {
     const savedData = loadFromLocalStorage()
@@ -198,7 +197,7 @@ export function useGenealogyData() {
 
     // Calculate position for new parent
     // Position above the child
-    let newX = child.position.x
+    const newX = child.position.x
     let newY = child.position.y - VERTICAL_SPACING
 
     // Check if there are other nodes at the same depth (siblings of this new parent)
@@ -208,7 +207,8 @@ export function useGenealogyData() {
 
     if (nodesAtSameLevel.length > 0) {
       // Use the same Y level as other nodes at this depth
-      const avgY = nodesAtSameLevel.reduce((sum, n) => sum + n.position.y, 0) / nodesAtSameLevel.length
+      const avgY =
+        nodesAtSameLevel.reduce((sum, n) => sum + n.position.y, 0) / nodesAtSameLevel.length
       newY = avgY
     }
 
@@ -243,7 +243,7 @@ export function useGenealogyData() {
     return newId
   }
 
-  const addRoot = (rootData) => {
+  const addRoot = rootData => {
     const newId = `person-${Date.now()}`
 
     // Calculate position for new root
@@ -291,9 +291,9 @@ export function useGenealogyData() {
     return newId
   }
 
-  const removePerson = (id) => {
+  const removePerson = id => {
     // Find all descendants recursively
-    const findAllDescendants = (nodeId) => {
+    const findAllDescendants = nodeId => {
       const descendants = new Set()
       const toProcess = [nodeId]
 
@@ -318,8 +318,8 @@ export function useGenealogyData() {
 
     // Remove all nodes and their edges
     nodes.value = nodes.value.filter(n => !nodesToRemove.has(n.id))
-    edges.value = edges.value.filter(e =>
-      !nodesToRemove.has(e.source) && !nodesToRemove.has(e.target)
+    edges.value = edges.value.filter(
+      e => !nodesToRemove.has(e.source) && !nodesToRemove.has(e.target)
     )
     // No layout recalculation - preserve positions of remaining nodes
   }
@@ -331,7 +331,7 @@ export function useGenealogyData() {
     }
   }
 
-  const toggleInvited = (id) => {
+  const toggleInvited = id => {
     const node = nodes.value.find(n => n.id === id)
     if (node && node.data.role === 'Person') {
       node.data.invited = !node.data.invited
@@ -345,9 +345,13 @@ export function useGenealogyData() {
 
   initializeData()
 
-  watch([nodes, edges], () => {
-    saveToLocalStorage(serializeData())
-  }, { deep: true })
+  watch(
+    [nodes, edges],
+    () => {
+      saveToLocalStorage(serializeData())
+    },
+    { deep: true }
+  )
 
   return {
     nodes,

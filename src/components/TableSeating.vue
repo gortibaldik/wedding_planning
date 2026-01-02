@@ -24,7 +24,7 @@ const {
 } = useTableSeating()
 
 // Helper function to find the group (root) name for a guest
-const getGroupName = (guestId) => {
+const getGroupName = guestId => {
   const visited = new Set()
   let currentId = guestId
 
@@ -61,7 +61,7 @@ const handleDragLeave = () => {
   dragOverTableId.value = null
 }
 
-const handleDropOnTable = (tableId) => {
+const handleDropOnTable = tableId => {
   // Check if dragging from sidebar or from another table
   const guestToDrop = props.draggedGuestFromSidebar || draggedGuest.value
 
@@ -77,24 +77,22 @@ const handleRemoveFromTable = (guestId, tableId) => {
   removeGuestFromTable(guestId, tableId)
 }
 
-const getGuestsByTableId = (tableId) => {
+const getGuestsByTableId = tableId => {
   const table = tables.value.find(t => t.id === tableId)
   if (!table) return []
 
-  return table.guestIds
-    .map(id => nodes.value.find(n => n.id === id))
-    .filter(Boolean)
+  return table.guestIds.map(id => nodes.value.find(n => n.id === id)).filter(Boolean)
 }
 
 const editingTableId = ref(null)
 const editingTableName = ref('')
 
-const startEditingTableName = (table) => {
+const startEditingTableName = table => {
   editingTableId.value = table.id
   editingTableName.value = table.name
 }
 
-const finishEditingTableName = (tableId) => {
+const finishEditingTableName = tableId => {
   if (editingTableName.value.trim()) {
     updateTableName(tableId, editingTableName.value.trim())
   }
@@ -126,35 +124,27 @@ const finishEditingTableName = (tableId) => {
               <input
                 v-if="editingTableId === table.id"
                 v-model="editingTableName"
-                @blur="finishEditingTableName(table.id)"
-                @keyup.enter="finishEditingTableName(table.id)"
                 class="table-name-input"
                 autofocus
+                @blur="finishEditingTableName(table.id)"
+                @keyup.enter="finishEditingTableName(table.id)"
               />
-              <h3
-                v-else
-                class="table-name"
-                @dblclick="startEditingTableName(table)"
-              >
+              <h3 v-else class="table-name" @dblclick="startEditingTableName(table)">
                 {{ table.name }}
               </h3>
               <div class="table-capacity">
                 <input
                   type="number"
                   :value="table.capacity"
-                  @change="updateTableCapacity(table.id, $event.target.value)"
                   class="capacity-input"
                   min="1"
                   max="20"
+                  @change="updateTableCapacity(table.id, $event.target.value)"
                 />
                 <span class="capacity-label">seats</span>
               </div>
             </div>
-            <button
-              class="remove-table-btn"
-              @click="removeTable(table.id)"
-              title="Remove table"
-            >
+            <button class="remove-table-btn" @click="removeTable(table.id)" title="Remove table">
               ✕
             </button>
           </div>
@@ -169,27 +159,25 @@ const finishEditingTableName = (tableId) => {
               @dragstart="handleDragStart(guest, table.id)"
             >
               <div class="guest-info">
-                <div class="guest-name">{{ guest.data.name }}</div>
-                <div class="guest-group">{{ getGroupName(guest.id) }}</div>
+                <div class="guest-name">
+                  {{ guest.data.name }}
+                </div>
+                <div class="guest-group">
+                  {{ getGroupName(guest.id) }}
+                </div>
               </div>
               <button
                 class="remove-guest-btn"
-                @click="handleRemoveFromTable(guest.id, table.id)"
                 title="Remove from table"
+                @click="handleRemoveFromTable(guest.id, table.id)"
               >
                 ✕
               </button>
             </div>
-            <div
-              v-if="getGuestsByTableId(table.id).length === 0"
-              class="empty-table"
-            >
+            <div v-if="getGuestsByTableId(table.id).length === 0" class="empty-table">
               Drop guests here
             </div>
-            <div
-              v-else-if="dragOverTableId === table.id"
-              class="drop-zone-hint"
-            >
+            <div v-else-if="dragOverTableId === table.id" class="drop-zone-hint">
               Drop guest here to add to table
             </div>
           </div>
@@ -198,10 +186,7 @@ const finishEditingTableName = (tableId) => {
             <span class="seats-info">
               {{ getGuestsByTableId(table.id).length }} / {{ table.capacity }} seats
             </span>
-            <span
-              v-if="getGuestsByTableId(table.id).length > table.capacity"
-              class="over-capacity"
-            >
+            <span v-if="getGuestsByTableId(table.id).length > table.capacity" class="over-capacity">
               Over capacity!
             </span>
           </div>
@@ -468,7 +453,8 @@ const finishEditingTableName = (tableId) => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

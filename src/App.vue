@@ -12,7 +12,7 @@ const { tables, getAssignedGuestIds } = useTableSeating()
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 
 // Helper function to find the group (root) name for a guest
-const getGroupName = (guestId) => {
+const getGroupName = guestId => {
   const visited = new Set()
   let currentId = guestId
 
@@ -32,21 +32,17 @@ const getGroupName = (guestId) => {
 }
 
 // Helper function to get the table assignment for a guest
-const getTableAssignment = (guestId) => {
+const getTableAssignment = guestId => {
   const table = tables.value.find(t => t.guestIds.includes(guestId))
   return table ? table.name : null
 }
 
 const invitedGuests = computed(() => {
-  return nodes.value.filter(node =>
-    node.data.role === 'Person' && node.data.invited === true
-  )
+  return nodes.value.filter(node => node.data.role === 'Person' && node.data.invited === true)
 })
 
 const unassignedGuests = computed(() => {
-  return invitedGuests.value.filter(guest =>
-    !getAssignedGuestIds.value.has(guest.id)
-  )
+  return invitedGuests.value.filter(guest => !getAssignedGuestIds.value.has(guest.id))
 })
 
 const sidebarGuests = computed(() => {
@@ -59,7 +55,7 @@ const sidebarTitle = computed(() => {
 
 const draggedGuest = ref(null)
 
-const handleDragStart = (guest) => {
+const handleDragStart = guest => {
   if (activeTab.value === 'table-seating') {
     draggedGuest.value = guest
   }
@@ -94,12 +90,12 @@ const handleImport = () => {
   input.type = 'file'
   input.accept = 'application/json'
 
-  input.onchange = (e) => {
+  input.onchange = e => {
     const file = e.target.files[0]
     if (!file) return
 
     const reader = new FileReader()
-    reader.onload = (event) => {
+    reader.onload = event => {
       try {
         const data = JSON.parse(event.target.result)
 
@@ -154,38 +150,64 @@ const handleImport = () => {
         </div>
         <div class="header-center">
           <h1>Wedding Planning</h1>
-          <p class="instructions" v-if="activeTab === 'family-tree'">
-            Click on any person to edit their details.
-            Use the ↑ button to add parents, ↓ button to add children.
-            Use the zoom controls to navigate the tree.
+          <p v-if="activeTab === 'family-tree'" class="instructions">
+            Click on any person to edit their details. Use the ↑ button to add parents, ↓ button to
+            add children. Use the zoom controls to navigate the tree.
           </p>
-          <p class="instructions" v-else>
-            Organize your invited guests into round tables.
-            Drag guests from the unassigned list to tables or between tables.
+          <p v-else class="instructions">
+            Organize your invited guests into round tables. Drag guests from the unassigned list to
+            tables or between tables.
           </p>
         </div>
         <div class="header-buttons">
-          <button class="square-btn export-btn" @click="handleExport" title="Export tree to JSON file">⬇</button>
-          <button class="square-btn import-btn" @click="handleImport" title="Import tree from JSON file">⬆</button>
+          <button
+            class="square-btn export-btn"
+            title="Export tree to JSON file"
+            @click="handleExport"
+          >
+            ⬇
+          </button>
+          <button
+            class="square-btn import-btn"
+            title="Import tree from JSON file"
+            @click="handleImport"
+          >
+            ⬆
+          </button>
         </div>
       </div>
     </header>
     <div class="main-content">
       <GenealogyTree v-if="activeTab === 'family-tree'" />
-      <TableSeating v-if="activeTab === 'table-seating'" :draggedGuestFromSidebar="draggedGuest" />
+      <TableSeating
+        v-if="activeTab === 'table-seating'"
+        :dragged-guest-from-sidebar="draggedGuest"
+      />
 
       <div class="guest-sidebar" :class="{ 'guest-sidebar--collapsed': sidebarCollapsed }">
-        <button class="guest-sidebar__toggle" @click="toggleSidebar" :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+        <button
+          class="guest-sidebar__toggle"
+          :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+          @click="toggleSidebar"
+        >
           {{ sidebarCollapsed ? '◀' : '▶' }}
         </button>
         <div class="guest-sidebar__content">
           <div class="guest-sidebar__header">
-            <h3 class="guest-sidebar__title">{{ sidebarTitle }}</h3>
-            <div class="guest-sidebar__counter">{{ sidebarGuests.length }}</div>
+            <h3 class="guest-sidebar__title">
+              {{ sidebarTitle }}
+            </h3>
+            <div class="guest-sidebar__counter">
+              {{ sidebarGuests.length }}
+            </div>
           </div>
           <div class="guest-sidebar__list">
             <div v-if="sidebarGuests.length === 0" class="guest-sidebar__empty">
-              {{ activeTab === 'table-seating' ? 'All guests assigned to tables' : 'No guests invited yet' }}
+              {{
+                activeTab === 'table-seating'
+                  ? 'All guests assigned to tables'
+                  : 'No guests invited yet'
+              }}
             </div>
             <div
               v-for="guest in sidebarGuests"
@@ -197,13 +219,21 @@ const handleImport = () => {
               @dragstart="handleDragStart(guest)"
               @dragend="handleDragEnd"
             >
-              <div class="guest-sidebar__item-name">{{ guest.data.name }}</div>
-              <div class="guest-sidebar__item-group">{{ getGroupName(guest.id) }}</div>
+              <div class="guest-sidebar__item-name">
+                {{ guest.data.name }}
+              </div>
+              <div class="guest-sidebar__item-group">
+                {{ getGroupName(guest.id) }}
+              </div>
               <div
                 class="guest-sidebar__item-table"
                 :class="{ 'guest-sidebar__item-table--warning': !getTableAssignment(guest.id) }"
               >
-                {{ getTableAssignment(guest.id) ? `Seated at ${getTableAssignment(guest.id)}` : 'Not seated yet' }}
+                {{
+                  getTableAssignment(guest.id)
+                    ? `Seated at ${getTableAssignment(guest.id)}`
+                    : 'Not seated yet'
+                }}
               </div>
             </div>
           </div>
@@ -221,7 +251,8 @@ const handleImport = () => {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   background: #f9fafb;
 }
 

@@ -6,14 +6,13 @@ const STORAGE_KEY = 'wedding-table-seating'
 const tables = ref([])
 
 export function useTableSeating() {
-
   const serializeData = () => {
     return {
-      'tables': tables.value
+      tables: tables.value
     }
   }
 
-  const {loadFromLocalStorage, saveToLocalStorage} = useLocalStorage(STORAGE_KEY)
+  const { loadFromLocalStorage, saveToLocalStorage } = useLocalStorage(STORAGE_KEY)
 
   const initializeData = () => {
     const savedData = loadFromLocalStorage()
@@ -51,7 +50,7 @@ export function useTableSeating() {
     tables.value = [...tables.value, newTable]
   }
 
-  const removeTable = (tableId) => {
+  const removeTable = tableId => {
     tables.value = tables.value.filter(t => t.id !== tableId)
   }
 
@@ -103,9 +102,13 @@ export function useTableSeating() {
 
   initializeData()
 
-  watch(tables, () => {
-    saveToLocalStorage(serializeData())
-  }, { deep: true })
+  watch(
+    tables,
+    () => {
+      saveToLocalStorage(serializeData())
+    },
+    { deep: true }
+  )
 
   return {
     tables,

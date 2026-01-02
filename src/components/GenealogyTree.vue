@@ -1,75 +1,3 @@
-<template>
-  <div class="genealogy-tree">
-    <VueFlow
-      :nodes="nodes"
-      :edges="edges"
-      :node-types="nodeTypes"
-      :nodes-connectable="false"
-      :nodes-draggable="true"
-      :selectable="true"
-      :multi-selection-key-code="'Meta'"
-      fit-view-on-init
-      :default-zoom="0.8"
-      @node-drag-start="onNodeDragStart"
-      @node-drag="onNodeDrag"
-      @node-drag-stop="onNodeDragStop"
-    >
-      <Background />
-      <Controls />
-    </VueFlow>
-
-    <button
-      class="add-root-btn"
-      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
-      @click="handleAddRoot"
-      title="Add New Root"
-    >
-      + Add Root
-    </button>
-
-    <button
-      class="clear-btn"
-      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
-      @click="handleClearAll"
-      title="Clear All Nodes"
-    >
-      Clear
-    </button>
-
-    <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
-      <div class="modal" @click.stop>
-        <h3>Edit Person</h3>
-        <form @submit.prevent="saveEdit">
-          <div class="form-group">
-            <label>Name:</label>
-            <input ref="editNameInput" v-model="editForm.name" type="text" required />
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <button type="button" class="btn btn-secondary" @click="closeEditModal">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div v-if="showAddModal" class="modal-overlay" @click="closeAddModal">
-      <div class="modal" @click.stop>
-        <h3>{{ addModalTitle }}</h3>
-        <form @submit.prevent="saveAdd">
-          <div class="form-group">
-            <label>Name:</label>
-            <input ref="addNameInput" v-model="addForm.name" type="text" required />
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Add</button>
-            <button type="button" class="btn btn-secondary" @click="closeAddModal">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, computed, markRaw, onMounted, nextTick } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
@@ -88,7 +16,17 @@ const nodeTypes = {
 }
 
 const genealogyData = useGenealogyData()
-const { nodes: rawNodes, edges, addChild, addParent, addRoot, removePerson, updatePerson, toggleInvited, clearAll } = genealogyData
+const {
+  nodes: rawNodes,
+  edges,
+  addChild,
+  addParent,
+  addRoot,
+  removePerson,
+  updatePerson,
+  toggleInvited,
+  clearAll
+} = genealogyData
 
 const { fitView, updateNode } = useVueFlow()
 
@@ -111,8 +49,7 @@ const addNameInput = ref(null)
 
 const addModalTitle = ref('')
 
-
-const handleEdit = (nodeId) => {
+const handleEdit = nodeId => {
   const node = rawNodes.value.find(n => n.id === nodeId)
   if (node) {
     editingNodeId.value = nodeId
@@ -155,7 +92,7 @@ const closeEditModal = () => {
   editForm.value = { name: '' }
 }
 
-const handleAddChild = (parentId) => {
+const handleAddChild = parentId => {
   addModalType.value = 'child'
   addModalTargetId.value = parentId
   addModalTitle.value = 'Add Child'
@@ -166,7 +103,7 @@ const handleAddChild = (parentId) => {
   })
 }
 
-const handleAddParent = (childId) => {
+const handleAddParent = childId => {
   addModalType.value = 'parent'
   addModalTargetId.value = childId
   addModalTitle.value = 'Add Parent'
@@ -206,12 +143,12 @@ const closeAddModal = () => {
   addForm.value = { name: '' }
 }
 
-const handleRemove = (nodeId) => {
+const handleRemove = nodeId => {
   const node = rawNodes.value.find(n => n.id === nodeId)
   if (!node) return
 
   // Count descendants
-  const findDescendantCount = (id) => {
+  const findDescendantCount = id => {
     const childEdges = edges.value.filter(e => e.source === id)
     let count = childEdges.length
 
@@ -236,7 +173,9 @@ const handleRemove = (nodeId) => {
 }
 
 const handleClearAll = () => {
-  if (confirm('Are you sure you want to clear all nodes from the tree? This action cannot be undone.')) {
+  if (
+    confirm('Are you sure you want to clear all nodes from the tree? This action cannot be undone.')
+  ) {
     clearAll()
   }
 }
@@ -249,7 +188,7 @@ const dragState = ref({
 })
 
 // Find all descendants of a node
-const findDescendants = (nodeId) => {
+const findDescendants = nodeId => {
   const descendants = new Set()
   const toVisit = [nodeId]
 
@@ -345,13 +284,84 @@ const onNodeDragStop = ({ node }) => {
 }
 </script>
 
+<template>
+  <div class="genealogy-tree">
+    <VueFlow
+      :nodes="nodes"
+      :edges="edges"
+      :node-types="nodeTypes"
+      :nodes-connectable="false"
+      :nodes-draggable="true"
+      :selectable="true"
+      :multi-selection-key-code="'Meta'"
+      fit-view-on-init
+      :default-zoom="0.8"
+      @node-drag-start="onNodeDragStart"
+      @node-drag="onNodeDrag"
+      @node-drag-stop="onNodeDragStop"
+    >
+      <Background />
+      <Controls />
+    </VueFlow>
+
+    <button
+      class="add-root-btn"
+      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
+      title="Add New Root"
+      @click="handleAddRoot"
+    >
+      + Add Root
+    </button>
+
+    <button
+      class="clear-btn"
+      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
+      title="Clear All Nodes"
+      @click="handleClearAll"
+    >
+      Clear
+    </button>
+
+    <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
+      <div class="modal" @click.stop>
+        <h3>Edit Person</h3>
+        <form @submit.prevent="saveEdit">
+          <div class="form-group">
+            <label>Name:</label>
+            <input ref="editNameInput" v-model="editForm.name" type="text" required />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-secondary" @click="closeEditModal">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div v-if="showAddModal" class="modal-overlay" @click="closeAddModal">
+      <div class="modal" @click.stop>
+        <h3>{{ addModalTitle }}</h3>
+        <form @submit.prevent="saveAdd">
+          <div class="form-group">
+            <label>Name:</label>
+            <input ref="addNameInput" v-model="addForm.name" type="text" required />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Add</button>
+            <button type="button" class="btn btn-secondary" @click="closeAddModal">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .genealogy-tree {
   width: 100%;
   height: 100vh;
   position: relative;
 }
-
 
 .genealogy-tree :deep(.vue-flow__node.selected .person-node) {
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.8);
