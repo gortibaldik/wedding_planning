@@ -23,6 +23,7 @@ const {
   toggleInvited,
   togglePersonInvited,
   toggleAllInvited,
+  toggleSubtreeInvited,
   addPersonToNode,
   removePersonFromNode,
   addChildNode,
@@ -78,18 +79,25 @@ const handleEdit = nodeId => {
 }
 
 const nodes = computed(() => {
-  return rawNodes.value.map(node => ({
-    ...node,
-    data: {
-      ...node.data,
-      onAddChild: handleAddChild,
-      onRemove: handleRemove,
-      onEdit: handleEdit,
-      onToggleInvited: toggleInvited,
-      onTogglePersonInvited: togglePersonInvited,
-      onToggleAllInvited: toggleAllInvited
+  return rawNodes.value.map(node => {
+    // Check if this node has children
+    const hasChildren = edges.value.some(e => e.source === node.id)
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        onAddChild: handleAddChild,
+        onRemove: handleRemove,
+        onEdit: handleEdit,
+        onToggleInvited: toggleInvited,
+        onTogglePersonInvited: togglePersonInvited,
+        onToggleAllInvited: toggleAllInvited,
+        onToggleSubtreeInvited: toggleSubtreeInvited,
+        hasChildren
+      }
     }
-  }))
+  })
 })
 
 const { sidebarCollapsed } = useSidebarState()

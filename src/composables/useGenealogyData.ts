@@ -67,10 +67,14 @@ let nodes: Ref<ChartNode<GenealogyData>[]> = ref([])
 let edges = ref([])
 
 export function useGenealogyData() {
-  const { addRootBase, addChildBase, removePersonNode, updatePersonNode, clearAll } = useBaseGraph(
-    nodes,
-    edges
-  )
+  const {
+    addRootBase,
+    addChildBase,
+    removePersonNode,
+    updatePersonNode,
+    clearAll,
+    findAllDescendants
+  } = useBaseGraph(nodes, edges)
 
   const serializeData = () => {
     return {
@@ -216,6 +220,41 @@ export function useGenealogyData() {
     }
   }
 
+  // Toggle invited status for entire subtree (node + all descendants)
+  const toggleSubtreeInvited = (nodeId: string) => {
+    const node = nodes.value.find(n => n.id === nodeId)
+    if (!node) return
+
+    // Determine the new invited state based on the current node
+    let newInvitedState: boolean
+    if (node.data instanceof PersonData && node.data.role === 'person') {
+      newInvitedState = !node.data.invited
+    } else if (node.data instanceof MultiPersonData) {
+      // For multi-person, toggle based on whether all are currently invited
+      newInvitedState = !node.data.allInvited
+    } else {
+      // For groups, we'll invite all descendants
+      newInvitedState = true
+    }
+
+    // Get all descendants (including the node itself)
+    const descendants = findAllDescendants(nodeId)
+
+    // Apply to all nodes in the subtree
+    descendants.forEach(descendantId => {
+      const descendantNode = nodes.value.find(n => n.id === descendantId)
+      if (descendantNode) {
+        if (descendantNode.data instanceof PersonData && descendantNode.data.role === 'person') {
+          descendantNode.data.invited = newInvitedState
+        } else if (descendantNode.data instanceof MultiPersonData) {
+          descendantNode.data.people.forEach(p => {
+            p.invited = newInvitedState
+          })
+        }
+      }
+    })
+  }
+
   initializeData()
 
   watch(
@@ -230,6 +269,7 @@ export function useGenealogyData() {
     toggleInvited,
     togglePersonInvited,
     toggleAllInvited,
+    toggleSubtreeInvited,
     addPersonToNode,
     removePersonFromNode,
     addRootNode,

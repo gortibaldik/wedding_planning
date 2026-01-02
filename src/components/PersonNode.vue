@@ -17,37 +17,45 @@ defineProps({
 
     <div class="person-node__content">
       <!-- Single Person Display -->
-      <div v-if="data.role === 'person'" class="person-node__header">
-        <div class="person-node__info">
-          <div class="person-node__name">
-            {{ data.name }}
-          </div>
-          <div class="person-node__role">
-            {{ data.role }}
-          </div>
+      <div v-if="data.role === 'person'">
+        <div class="person-node__header">
+          <div class="person-node__name">{{ data.name }}</div>
+          <div class="person-node__role">{{ data.role }}</div>
         </div>
-        <div class="person-node__checkbox-wrapper" @click.stop>
-          <div class="person-node__checkbox-label">Invited?</div>
-          <input
-            type="checkbox"
-            :checked="data.invited"
-            class="person-node__checkbox"
-            @change="data.onToggleInvited?.(id)"
-          />
+
+        <!-- Checkboxes below role -->
+        <div class="person-node__checkboxes">
+          <label class="person-node__checkbox-row" @click.stop>
+            <input
+              type="checkbox"
+              :checked="data.invited"
+              class="person-node__checkbox"
+              @change="data.onToggleInvited?.(id)"
+            />
+            <span class="person-node__checkbox-label">Invited?</span>
+          </label>
+
+          <label v-if="data.hasChildren" class="person-node__checkbox-row" @click.stop>
+            <input
+              type="checkbox"
+              class="person-node__checkbox"
+              @change="data.onToggleSubtreeInvited?.(id)"
+            />
+            <span class="person-node__checkbox-label">Invite whole subtree?</span>
+          </label>
         </div>
       </div>
 
       <!-- Multi-Person Display -->
       <div v-else-if="data.role === 'multi-person'">
-        <div class="person-node__multi-header">
-          <div class="person-node__info">
-            <div class="person-node__name">{{ data.name }}</div>
-            <div class="person-node__role">Multi-person ({{ data.people.length }})</div>
-          </div>
+        <div class="person-node__header">
+          <div class="person-node__name">{{ data.name }}</div>
+          <div class="person-node__role">Multi-person ({{ data.people.length }})</div>
+        </div>
 
-          <!-- Master Toggle All Checkbox -->
-          <div v-if="data.people.length > 0" class="person-node__checkbox-wrapper" @click.stop>
-            <div class="person-node__checkbox-label">Invite All?</div>
+        <!-- Checkboxes below role -->
+        <div v-if="data.people.length > 0" class="person-node__checkboxes">
+          <label class="person-node__checkbox-row" @click.stop>
             <input
               type="checkbox"
               :checked="data.allInvited"
@@ -55,7 +63,17 @@ defineProps({
               class="person-node__checkbox-master"
               @change="data.onToggleAllInvited?.(id)"
             />
-          </div>
+            <span class="person-node__checkbox-label">Invite all?</span>
+          </label>
+
+          <label v-if="data.hasChildren" class="person-node__checkbox-row" @click.stop>
+            <input
+              type="checkbox"
+              class="person-node__checkbox"
+              @change="data.onToggleSubtreeInvited?.(id)"
+            />
+            <span class="person-node__checkbox-label">Invite whole subtree?</span>
+          </label>
         </div>
 
         <!-- Individual People List -->
@@ -79,14 +97,22 @@ defineProps({
       </div>
 
       <!-- Group Display -->
-      <div v-else class="person-node__header">
-        <div class="person-node__info">
-          <div class="person-node__name">
-            {{ data.name }}
-          </div>
-          <div class="person-node__role">
-            {{ data.role }}
-          </div>
+      <div v-else>
+        <div class="person-node__header">
+          <div class="person-node__name">{{ data.name }}</div>
+          <div class="person-node__role">{{ data.role }}</div>
+        </div>
+
+        <!-- Checkboxes below role for groups with children -->
+        <div v-if="data.hasChildren" class="person-node__checkboxes">
+          <label class="person-node__checkbox-row" @click.stop>
+            <input
+              type="checkbox"
+              class="person-node__checkbox"
+              @change="data.onToggleSubtreeInvited?.(id)"
+            />
+            <span class="person-node__checkbox-label">Invite whole subtree?</span>
+          </label>
         </div>
       </div>
     </div>
@@ -154,13 +180,7 @@ defineProps({
 }
 
 .person-node__header {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.person-node__info {
-  flex: 1;
+  margin-bottom: 8px;
 }
 
 .person-node__name {
@@ -174,20 +194,35 @@ defineProps({
   font-size: 12px;
   color: #6b7280;
   text-transform: capitalize;
+  margin-bottom: 8px;
 }
 
-.person-node__checkbox-wrapper {
+.person-node__checkboxes {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.person-node__checkbox-row {
+  display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.person-node__checkbox-row:hover {
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .person-node__checkbox-label {
-  font-size: 10px;
+  font-size: 11px;
   color: #6b7280;
   font-weight: 500;
-  white-space: nowrap;
+  user-select: none;
 }
 
 .person-node__checkbox {
@@ -237,15 +272,6 @@ defineProps({
 }
 
 /* Multi-person node styles */
-.person-node__multi-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
 .person-node__people-list {
   display: flex;
   flex-direction: column;

@@ -178,6 +178,7 @@ export function useBaseGraph(nodes: Ref<ChartNode<BaseData>[]>, edges: Ref<any[]
     addChildBase,
     findNode,
     addRootBase,
-    clearAll
+    clearAll,
+    findAllDescendants
   }
 }
