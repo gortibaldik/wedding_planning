@@ -25,8 +25,23 @@ const {
 
 // Helper function to find the group (root) name for a guest
 const getGroupName = guestId => {
+  // First check if this is a person within a multi-person node
+  const multiPersonNode = nodes.value.find(
+    node => node.data.role === 'multi-person' && node.data.people.some(p => p.id === guestId)
+  )
+
+  if (multiPersonNode) {
+    // Use the multi-person node ID to traverse up the tree
+    return getGroupNameForNode(multiPersonNode.id)
+  }
+
+  // Otherwise, it's a regular person node
+  return getGroupNameForNode(guestId)
+}
+
+const getGroupNameForNode = nodeId => {
   const visited = new Set()
-  let currentId = guestId
+  let currentId = nodeId
 
   // Traverse up to find the root
   while (!visited.has(currentId)) {
@@ -81,7 +96,38 @@ const getGuestsByTableId = tableId => {
   const table = tables.value.find(t => t.id === tableId)
   if (!table) return []
 
-  return table.guestIds.map(id => nodes.value.find(n => n.id === id)).filter(Boolean)
+  return table.guestIds
+    .map(id => {
+      // First try to find a regular node
+      const node = nodes.value.find(n => n.id === id)
+      if (node) {
+        return node
+      }
+
+      // If not found, check if it's a person within a multi-person node
+      const multiPersonNode = nodes.value.find(
+        n => n.data.role === 'multi-person' && n.data.people.some(p => p.id === id)
+      )
+
+      if (multiPersonNode) {
+        const person = multiPersonNode.data.people.find(p => p.id === id)
+        if (person) {
+          // Return a guest-like object for the person
+          return {
+            id: person.id,
+            data: {
+              name: person.name,
+              color: multiPersonNode.data.color
+            },
+            nodeId: multiPersonNode.id,
+            isMultiPerson: true
+          }
+        }
+      }
+
+      return null
+    })
+    .filter(Boolean)
 }
 
 const editingTableId = ref(null)
@@ -161,6 +207,7 @@ const finishEditingTableName = tableId => {
               <div class="guest-info">
                 <div class="guest-name">
                   {{ guest.data.name }}
+                  <span v-if="guest.isMultiPerson" class="guest-badge">Group</span>
                 </div>
                 <div class="guest-group">
                   {{ getGroupName(guest.id) }}
@@ -487,5 +534,16 @@ const finishEditingTableName = tableId => {
   padding: 60px 20px;
   color: #9ca3af;
   font-size: 16px;
+}
+
+.guest-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  margin-left: 6px;
+  font-size: 9px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #1e40af;
+  border-radius: 3px;
+  font-weight: 600;
 }
 </style>

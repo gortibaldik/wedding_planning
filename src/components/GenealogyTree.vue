@@ -56,7 +56,7 @@ const addModalTitle = ref('')
 // Multi-person modal state
 const showMultiPersonModal = ref(false)
 const editingMultiPersonNodeId = ref(null)
-const multiPersonForm = ref({ people: [] })
+const multiPersonForm = ref({ groupName: '', people: [] })
 const newPersonName = ref('')
 
 const handleEdit = nodeId => {
@@ -205,6 +205,7 @@ const handleEditMultiPerson = nodeId => {
   const node = rawNodes.value.find(n => n.id === nodeId)
   if (node && node.data.role === 'multi-person') {
     editingMultiPersonNodeId.value = nodeId
+    multiPersonForm.value.groupName = node.data.name
     multiPersonForm.value.people = [...node.data.people]
     showMultiPersonModal.value = true
   }
@@ -225,9 +226,12 @@ const handleRemovePersonFromForm = personId => {
 }
 
 const saveMultiPersonEdit = () => {
-  if (editingMultiPersonNodeId.value && multiPersonForm.value.people.length >= 1) {
+  if (editingMultiPersonNodeId.value && multiPersonForm.value.groupName.trim()) {
     const node = rawNodes.value.find(n => n.id === editingMultiPersonNodeId.value)
     if (node && node.data.role === 'multi-person') {
+      // Update group name
+      node.data.name = multiPersonForm.value.groupName.trim()
+
       // Update people, preserving invited status where possible
       const updatedPeople = multiPersonForm.value.people.map((formPerson, index) => {
         const existingPerson = node.data.people.find(p => p.name === formPerson.name)
@@ -246,6 +250,7 @@ const saveMultiPersonEdit = () => {
 const closeMultiPersonModal = () => {
   showMultiPersonModal.value = false
   editingMultiPersonNodeId.value = null
+  multiPersonForm.value.groupName = ''
   multiPersonForm.value.people = []
   newPersonName.value = ''
 }
@@ -414,7 +419,17 @@ const onNodeDragStop = ({ node }) => {
         <form @submit.prevent="saveAdd">
           <div class="form-group">
             <label>Name:</label>
-            <input ref="addNameInput" v-model="addForm.name" type="text" required />
+            <input
+              ref="addNameInput"
+              v-model="addForm.name"
+              type="text"
+              :placeholder="
+                addForm.nodeType === 'multi-person'
+                  ? 'Group name (e.g., Frederik and Veronika)'
+                  : 'Enter name'
+              "
+              required
+            />
           </div>
           <div v-if="addForm.nodeTypeOptions.length > 1" class="form-group">
             <label>Node Type:</label>
@@ -436,6 +451,20 @@ const onNodeDragStop = ({ node }) => {
     <div v-if="showMultiPersonModal" class="modal-overlay" @click="closeMultiPersonModal">
       <div class="modal modal-wide" @click.stop>
         <h3>Edit Multi-Person Node</h3>
+
+        <div class="form-group">
+          <label>Group Name:</label>
+          <input
+            v-model="multiPersonForm.groupName"
+            type="text"
+            placeholder="e.g., 'Frederik and Veronika' or 'John's kids'"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label>People in this group:</label>
+        </div>
 
         <div class="multi-person-list">
           <div v-for="person in multiPersonForm.people" :key="person.id" class="multi-person-item">
@@ -468,7 +497,7 @@ const onNodeDragStop = ({ node }) => {
             type="button"
             class="btn btn-primary"
             @click="saveMultiPersonEdit"
-            :disabled="multiPersonForm.people.length === 0"
+            :disabled="!multiPersonForm.groupName.trim()"
           >
             Save
           </button>

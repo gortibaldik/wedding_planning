@@ -37,7 +37,10 @@ export class RootData extends GenealogyData {
 }
 
 export class MultiPersonData extends GenealogyData {
-  constructor(public people: PersonInNode[]) {
+  constructor(
+    public name: string, // Group name like "Frederik and Veronika" or "John's kids"
+    public people: PersonInNode[]
+  ) {
     super('multi-person', 'invalid-color', false, false)
   }
 
@@ -88,7 +91,7 @@ export function useGenealogyData() {
       } else if (newNode.data.role === 'person') {
         data = new PersonData(newNode.data['name'], newNode.data['invited'], newNode.data.role)
       } else if (newNode.data.role === 'multi-person') {
-        data = new MultiPersonData(newNode.data['people'] || [])
+        data = new MultiPersonData(newNode.data['name'], newNode.data['people'] || [])
       } else {
         throw TypeError(`unexpected role: ${newNode.data.role}`)
       }
@@ -133,23 +136,15 @@ export function useGenealogyData() {
     let node: ChartNode<PersonData | RootData | MultiPersonData>
 
     if (role === 'multi-person') {
-      // Create array of people (primary + additional)
-      const people: PersonInNode[] = [{ id: `${Date.now()}-0`, name, invited: false }]
-      if (additionalPeople && additionalPeople.length > 0) {
-        additionalPeople.forEach((personName, index) => {
-          people.push({
-            id: `${Date.now()}-${index + 1}`,
-            name: personName,
-            invited: false
-          })
-        })
-      }
+      // For multi-person, 'name' is the group name
+      // People will be added via the edit modal
+      const people: PersonInNode[] = []
 
       node = {
         id: `multi-person-${Date.now()}`,
         type: 'person', // Still uses 'person' type for vue-flow rendering
         position: { x: 0, y: 0 },
-        data: new MultiPersonData(people)
+        data: new MultiPersonData(name, people)
       }
     } else if (role === 'group') {
       node = {

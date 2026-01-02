@@ -41,12 +41,12 @@ defineProps({
       <div v-else-if="data.role === 'multi-person'">
         <div class="person-node__multi-header">
           <div class="person-node__info">
-            <div class="person-node__name">Multiple People</div>
-            <div class="person-node__role">Multi-person</div>
+            <div class="person-node__name">{{ data.name }}</div>
+            <div class="person-node__role">Multi-person ({{ data.people.length }})</div>
           </div>
 
           <!-- Master Toggle All Checkbox -->
-          <div class="person-node__checkbox-wrapper" @click.stop>
+          <div v-if="data.people.length > 0" class="person-node__checkbox-wrapper" @click.stop>
             <div class="person-node__checkbox-label">Invite All?</div>
             <input
               type="checkbox"
@@ -59,7 +59,7 @@ defineProps({
         </div>
 
         <!-- Individual People List -->
-        <div class="person-node__people-list">
+        <div v-if="data.people.length > 0" class="person-node__people-list">
           <div
             v-for="person in data.people"
             :key="person.id"
@@ -75,6 +75,7 @@ defineProps({
             />
           </div>
         </div>
+        <div v-else class="person-node__empty-hint">Click to add people</div>
       </div>
 
       <!-- Group Display -->
@@ -279,5 +280,14 @@ defineProps({
   height: 16px;
   cursor: pointer;
   accent-color: var(--node-color, #3b82f6);
+}
+
+.person-node__empty-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
+  padding: 8px;
+  margin-bottom: 8px;
 }
 </style>
