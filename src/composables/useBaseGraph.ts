@@ -149,8 +149,6 @@ export function useBaseGraph(nodes: Ref<ChartNode<BaseData>[]>, edges: Ref<any[]
   }
 
   const addChildBase = (parentId: string, childNode: ChartNode<BaseData>) => {
-    const newId = `${childNode.type}-${Date.now()}`
-
     const parent = findNode(parentId)
     if (!parent) return
 
@@ -160,16 +158,16 @@ export function useBaseGraph(nodes: Ref<ChartNode<BaseData>[]>, edges: Ref<any[]
     childNode.data.color = color
 
     const newEdge = {
-      id: `e-${parentId}-${newId}`,
+      id: `e-${parentId}-${childNode.id}`,
       source: parentId,
-      target: newId,
+      target: childNode.id,
       type: 'smoothstep'
     }
 
     nodes.value = [...nodes.value, childNode]
     edges.value = [...edges.value, newEdge]
 
-    return newId
+    return childNode.id
   }
 
   return {

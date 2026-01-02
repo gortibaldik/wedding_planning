@@ -93,12 +93,23 @@ export function useGenealogyData() {
     return addRootBase(node)
   }
 
-  const addChildNode = (parentId: string, name: string) => {
-    const node: ChartNode<PersonData> = {
-      id: `person-${Date.now()}`,
-      type: 'person',
-      position: { x: 0, y: 0 },
-      data: new PersonData(name, false, 'person')
+  const addChildNode = (parentId: string, name: string, role: 'person' | 'group' = 'person') => {
+    let node: ChartNode<PersonData | RootData>
+
+    if (role === 'group') {
+      node = {
+        id: `group-${Date.now()}`,
+        type: 'person',
+        position: { x: 0, y: 0 },
+        data: new RootData(name)
+      }
+    } else {
+      node = {
+        id: `person-${Date.now()}`,
+        type: 'person',
+        position: { x: 0, y: 0 },
+        data: new PersonData(name, false, 'person')
+      }
     }
 
     return addChildBase(parentId, node)
@@ -124,7 +135,7 @@ export function useGenealogyData() {
   return {
     toggleInvited,
     addRootNode,
-    addChildPersonNode: addChildNode,
+    addChildNode,
     nodes,
     edges,
     removePersonNode,

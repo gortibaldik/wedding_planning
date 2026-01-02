@@ -21,7 +21,7 @@ const {
   nodes: rawNodes,
   edges,
   toggleInvited,
-  addChildPersonNode,
+  addChildNode,
   addRootNode,
   removePersonNode,
   updatePersonNode,
@@ -44,7 +44,7 @@ const editNameInput = ref(null)
 const showAddModal = ref(false)
 const addModalType = ref('')
 const addModalTargetId = ref(null)
-const addForm = ref({ name: '' })
+const addForm = ref({ name: '', nodeType: 'person', nodeTypeOptions: [] })
 const addNameInput = ref(null)
 
 const addModalTitle = ref('')
@@ -95,7 +95,7 @@ const handleAddChild = parentId => {
   addModalType.value = 'child'
   addModalTargetId.value = parentId
   addModalTitle.value = 'Add Child'
-  addForm.value = { name: '' }
+  addForm.value = { name: '', nodeType: 'person', nodeTypeOptions: ['person', 'group'] }
   showAddModal.value = true
   nextTick(() => {
     addNameInput.value?.focus()
@@ -106,7 +106,7 @@ const handleAddRoot = () => {
   addModalType.value = 'root'
   addModalTargetId.value = null
   addModalTitle.value = 'Add New Root'
-  addForm.value = { name: '' }
+  addForm.value = { name: '', nodeType: 'group', nodeTypeOptions: ['group'] }
   showAddModal.value = true
   nextTick(() => {
     addNameInput.value?.focus()
@@ -115,7 +115,7 @@ const handleAddRoot = () => {
 
 const saveAdd = () => {
   if (addModalType.value === 'child') {
-    addChildPersonNode(addModalTargetId.value, addForm.value.name)
+    addChildNode(addModalTargetId.value, addForm.value.name, addForm.value.nodeType)
   } else if (addModalType.value === 'root') {
     addRootNode(addForm.value.name)
   }
@@ -126,7 +126,7 @@ const closeAddModal = () => {
   showAddModal.value = false
   addModalType.value = ''
   addModalTargetId.value = null
-  addForm.value = { name: '' }
+  addForm.value = { name: '', nodeType: 'person', nodeTypeOptions: [] }
 }
 
 const handleRemove = nodeId => {
@@ -332,6 +332,14 @@ const onNodeDragStop = ({ node }) => {
             <label>Name:</label>
             <input ref="addNameInput" v-model="addForm.name" type="text" required />
           </div>
+          <div v-if="addForm.nodeTypeOptions.length > 1" class="form-group">
+            <label>Node Type:</label>
+            <select v-model="addForm.nodeType" required>
+              <option v-for="option in addForm.nodeTypeOptions" :key="option" :value="option">
+                {{ option.charAt(0).toUpperCase() + option.slice(1) }}
+              </option>
+            </select>
+          </div>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Add</button>
             <button type="button" class="btn btn-secondary" @click="closeAddModal">Cancel</button>
@@ -390,7 +398,8 @@ const onNodeDragStop = ({ node }) => {
   color: #374151;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #d1d5db;
@@ -398,7 +407,8 @@ const onNodeDragStop = ({ node }) => {
   font-size: 14px;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
