@@ -11,8 +11,16 @@ import { useInvitationLists } from './composables/useInvitationLists.ts'
 const activeTab = ref('family-tree')
 const { nodes, edges, initializeNodesAndEdges, populateNodesWithNewList, removeListFromNodes } =
   useGenealogyData()
-const { tables, tablesPerList, getAssignedGuestIds, removeGuestFromTable, populateListWithTables } =
-  useTableSeating()
+const {
+  tables,
+  tablesPerList,
+  getAssignedGuestIds,
+  removeGuestFromTable,
+  assignGuestToTable,
+  populateListWithTables
+} = useTableSeating()
+
+const notFullTables = computed(tables.value.filter(t => t.guestIds.length != t.capacity))
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 const {
   activeInvitationList,
@@ -122,6 +130,33 @@ const handleDragStart = guest => {
 
 const handleDragEnd = () => {
   draggedGuest.value = null
+}
+
+// Table assignment dropdown state
+const showTableDropdown = ref(null) // guestId for which dropdown is shown
+const dropdownPosition = ref({ top: 0, left: 0, width: 0 })
+
+const toggleTableDropdown = (guestId, event) => {
+  if (showTableDropdown.value === guestId) {
+    showTableDropdown.value = null
+    return
+  }
+
+  // Calculate position based on button position
+  const button = event.target
+  const rect = button.getBoundingClientRect()
+  dropdownPosition.value = {
+    top: rect.bottom + 4,
+    left: rect.left,
+    width: rect.width
+  }
+
+  showTableDropdown.value = guestId
+}
+
+const handleAssignToTable = (guestId, tableId) => {
+  assignGuestToTable(guestId, tableId)
+  showTableDropdown.value = null
 }
 
 // Watch for changes to invited guests and remove uninvited guests from tables
@@ -370,10 +405,54 @@ const handleRemoveInvitationList = listName => {
                     : 'Not seated yet'
                 }}
               </div>
+
+              <!-- Assign to Table button (only for unassigned guests in table-seating tab) -->
+              <div
+                v-if="activeTab === 'table-seating' && !getTableAssignment(guest.id)"
+                class="guest-sidebar__assign"
+              >
+                <button
+                  class="assign-btn"
+                  :ref="`assignBtn-${guest.id}`"
+                  @click.stop="toggleTableDropdown(guest.id, $event)"
+                  title="Assign to table"
+                >
+                  Assign
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Teleported table dropdown -->
+      <Teleport to="body">
+        <div
+          v-if="showTableDropdown"
+          class="table-dropdown"
+          :style="{
+            position: 'fixed',
+            top: dropdownPosition.top + 'px',
+            left: dropdownPosition.left + 'px',
+            width: dropdownPosition.width + 'px'
+          }"
+        >
+          <div
+            v-for="table in notFullTables"
+            :key="table.id"
+            class="table-dropdown__item"
+            @click.stop="handleAssignToTable(showTableDropdown, table.id)"
+          >
+            {{ table.name }}
+            <span class="table-dropdown__capacity">
+              ({{ table.guestIds.length }}/{{ table.capacity }})
+            </span>
+          </div>
+          <div v-if="notFullTables.length === 0" class="table-dropdown__empty">
+            No tables available
+          </div>
+        </div>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -664,5 +743,67 @@ body {
   color: #1e40af;
   border-radius: 3px;
   font-weight: 600;
+}
+
+.guest-sidebar__assign {
+  margin-top: 8px;
+}
+
+.assign-btn {
+  width: 100%;
+  padding: 6px 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.assign-btn:hover {
+  background: #2563eb;
+}
+
+.table-dropdown {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 10000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.table-dropdown__item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.table-dropdown__item:last-child {
+  border-bottom: none;
+}
+
+.table-dropdown__item:hover {
+  background: #f9fafb;
+}
+
+.table-dropdown__capacity {
+  font-size: 11px;
+  color: #6b7280;
+  margin-left: 8px;
+}
+
+.table-dropdown__empty {
+  padding: 12px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
 }
 </style>
