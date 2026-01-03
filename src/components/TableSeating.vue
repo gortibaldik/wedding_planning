@@ -155,6 +155,7 @@ const finishEditingTableName = tableId => {
         <h2>Tables</h2>
         <button class="add-table-btn" @click="addTable">+ Add Table</button>
       </div>
+      <p class="tables-hint">Double-click on a table name to rename it</p>
 
       <div class="tables-grid">
         <div
@@ -293,6 +294,13 @@ const finishEditingTableName = tableId => {
   background: #2563eb;
   box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
   transform: translateY(-2px);
+}
+
+.tables-hint {
+  font-size: 14px;
+  color: #6b7280;
+  margin: -12px 0 20px 0;
+  font-style: italic;
 }
 
 .tables-grid {
