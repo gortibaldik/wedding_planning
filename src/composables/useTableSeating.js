@@ -21,12 +21,6 @@ export function useTableSeating() {
             name: 'Table 1',
             capacity: 8,
             guestIds: []
-          },
-          {
-            id: `table-${Date.now()}-2`,
-            name: 'Table 2',
-            capacity: 8,
-            guestIds: []
           }
         ]
       }
@@ -63,7 +57,7 @@ export function useTableSeating() {
     const newTable = {
       id: `table-${Date.now()}`,
       name: `Table ${tableNumber}`,
-      capacity: 8,
+      capacity: 10,
       guestIds: []
     }
     tables.value = [...currentTables, newTable]
