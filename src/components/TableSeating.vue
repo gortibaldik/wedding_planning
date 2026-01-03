@@ -27,7 +27,7 @@ const {
 const getGroupName = guestId => {
   // First check if this is a person within a multi-person node
   const multiPersonNode = nodes.value.find(
-    node => node.data.role === 'multi-person' && node.data.people.some(p => p.id === guestId)
+    node => node.type === 'multi-person' && node.data.people.some(p => p.id === guestId)
   )
 
   if (multiPersonNode) {
@@ -106,7 +106,7 @@ const getGuestsByTableId = tableId => {
 
       // If not found, check if it's a person within a multi-person node
       const multiPersonNode = nodes.value.find(
-        n => n.data.role === 'multi-person' && n.data.people.some(p => p.id === id)
+        n => n.type === 'multi-person' && n.data.people.some(p => p.id === id)
       )
 
       if (multiPersonNode) {

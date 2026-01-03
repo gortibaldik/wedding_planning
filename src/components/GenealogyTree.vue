@@ -7,13 +7,17 @@ import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/core/dist/style.css'
 
-import PersonNode from './PersonNode.vue'
+import PersonNode from './nodes/PersonNode.vue'
+import MultiPersonNode from './nodes/MultiPersonNode.vue'
+import GroupNode from './nodes/GroupNode.vue'
 import { useGenealogyData } from '../composables/useGenealogyData'
 import { useSidebarState } from '../composables/useSidebarState'
 import { useBaseGraph } from '../composables/useBaseGraph.ts'
 
 const nodeTypes = {
-  person: markRaw(PersonNode)
+  person: markRaw(PersonNode),
+  'multi-person': markRaw(MultiPersonNode),
+  group: markRaw(GroupNode)
 }
 
 const genealogyData = useGenealogyData()
@@ -63,7 +67,7 @@ const newPersonName = ref('')
 const handleEdit = nodeId => {
   const node = rawNodes.value.find(n => n.id === nodeId)
   if (node) {
-    if (node.data.role === 'multi-person') {
+    if (node.type === 'multi-person') {
       handleEditMultiPerson(nodeId)
     } else {
       editingNodeId.value = nodeId
@@ -94,7 +98,8 @@ const nodes = computed(() => {
         onTogglePersonInvited: togglePersonInvited,
         onToggleAllInvited: toggleAllInvited,
         onToggleSubtreeInvited: toggleSubtreeInvited,
-        hasChildren
+        hasChildren,
+        type: node.type
       }
     }
   })
@@ -188,9 +193,8 @@ const handleRemove = nodeId => {
   }
 
   const descendantCount = findDescendantCount(nodeId)
-  const itemType = node.data.role === 'Group' ? 'group' : 'person'
 
-  let confirmMessage = `Are you sure you want to remove this ${itemType}?`
+  let confirmMessage = `Are you sure you want to remove this ${node.type}?`
   if (descendantCount > 0) {
     confirmMessage += ` This will also remove ${descendantCount} descendant${descendantCount > 1 ? 's' : ''}.`
   }
@@ -211,7 +215,7 @@ const handleClearAll = () => {
 // Multi-person modal handlers
 const handleEditMultiPerson = nodeId => {
   const node = rawNodes.value.find(n => n.id === nodeId)
-  if (node && node.data.role === 'multi-person') {
+  if (node && node.type === 'multi-person') {
     editingMultiPersonNodeId.value = nodeId
     multiPersonForm.value.groupName = node.data.name
     multiPersonForm.value.people = [...node.data.people]
@@ -236,7 +240,7 @@ const handleRemovePersonFromForm = personId => {
 const saveMultiPersonEdit = () => {
   if (editingMultiPersonNodeId.value && multiPersonForm.value.groupName.trim()) {
     const node = rawNodes.value.find(n => n.id === editingMultiPersonNodeId.value)
-    if (node && node.data.role === 'multi-person') {
+    if (node && node.type === 'multi-person') {
       // Update group name
       node.data.name = multiPersonForm.value.groupName.trim()
 

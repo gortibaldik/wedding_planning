@@ -15,7 +15,7 @@ const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 const getGroupName = guestId => {
   // First check if this is a person within a multi-person node
   const multiPersonNode = nodes.value.find(
-    node => node.data.role === 'multi-person' && node.data.people.some(p => p.id === guestId)
+    node => node.type === 'multi-person' && node.data.people.some(p => p.id === guestId)
   )
 
   if (multiPersonNode) {
@@ -56,7 +56,7 @@ const invitedGuests = computed(() => {
   const guests = []
 
   nodes.value.forEach(node => {
-    if (node.data.role === 'person' && node.data.invited) {
+    if (node.type === 'person' && node.data.invited) {
       // Regular person node
       guests.push({
         id: node.id,
@@ -67,7 +67,7 @@ const invitedGuests = computed(() => {
         nodeId: node.id,
         isMultiPerson: false
       })
-    } else if (node.data.role === 'multi-person') {
+    } else if (node.type === 'multi-person') {
       // Multi-person node - add each invited person
       node.data.people.forEach(person => {
         if (person.invited) {

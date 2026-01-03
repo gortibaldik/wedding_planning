@@ -10,12 +10,7 @@ export interface PersonInNode {
 }
 
 export class GenealogyData extends BaseData {
-  constructor(
-    public role: 'person' | 'group' | 'multi-person',
-    color: string,
-    isRoot: boolean,
-    manuallyPositioned: boolean
-  ) {
+  constructor(color: string, isRoot: boolean, manuallyPositioned: boolean) {
     super(color, isRoot, manuallyPositioned)
   }
 }
@@ -23,16 +18,15 @@ export class GenealogyData extends BaseData {
 export class PersonData extends GenealogyData {
   constructor(
     public name: string,
-    public invited: boolean,
-    role: 'person' | 'group'
+    public invited: boolean
   ) {
-    super(role, 'invalid-color', false, false)
+    super('invalid-color', false, false)
   }
 }
 
 export class RootData extends GenealogyData {
   constructor(public name: string) {
-    super('group', 'invalid-color', true, false)
+    super('invalid-color', true, false)
   }
 }
 
@@ -41,7 +35,7 @@ export class MultiPersonData extends GenealogyData {
     public name: string, // Group name like "Frederik and Veronika" or "John's kids"
     public people: PersonInNode[]
   ) {
-    super('multi-person', 'invalid-color', false, false)
+    super('invalid-color', false, false)
   }
 
   // Helper: Get all invited people
@@ -90,14 +84,14 @@ export function useGenealogyData() {
 
     newNodes.forEach(newNode => {
       let data: RootData | PersonData | MultiPersonData
-      if (newNode.data.role === 'group') {
+      if (newNode.type === 'group') {
         data = new RootData(newNode.data['name'])
-      } else if (newNode.data.role === 'person') {
-        data = new PersonData(newNode.data['name'], newNode.data['invited'], newNode.data.role)
-      } else if (newNode.data.role === 'multi-person') {
+      } else if (newNode.type === 'person') {
+        data = new PersonData(newNode.data['name'], newNode.data['invited'])
+      } else if (newNode.type === 'multi-person') {
         data = new MultiPersonData(newNode.data['name'], newNode.data['people'] || [])
       } else {
-        throw TypeError(`unexpected role: ${newNode.data.role}`)
+        throw TypeError(`unexpected node type: ${newNode.type}`)
       }
 
       data.color = newNode.data.color
@@ -124,7 +118,7 @@ export function useGenealogyData() {
   const addRootNode = (name: string) => {
     const node: ChartNode<RootData> = {
       id: `root-${Date.now()}`,
-      type: 'person',
+      type: 'group',
       position: { x: 0, y: 0 },
       data: new RootData(name)
     }
@@ -134,25 +128,25 @@ export function useGenealogyData() {
   const addChildNode = (
     parentId: string,
     name: string,
-    role: 'person' | 'group' | 'multi-person' = 'person'
+    type: 'person' | 'group' | 'multi-person' = 'person'
   ) => {
     let node: ChartNode<PersonData | RootData | MultiPersonData>
 
-    if (role === 'multi-person') {
+    if (type === 'multi-person') {
       // For multi-person, 'name' is the group name
       // People will be added via the edit modal
       const people: PersonInNode[] = []
 
       node = {
         id: `multi-person-${Date.now()}`,
-        type: 'person', // Still uses 'person' type for vue-flow rendering
+        type: 'multi-person',
         position: { x: 0, y: 0 },
         data: new MultiPersonData(name, people)
       }
-    } else if (role === 'group') {
+    } else if (type === 'group') {
       node = {
         id: `group-${Date.now()}`,
-        type: 'person',
+        type: 'group',
         position: { x: 0, y: 0 },
         data: new RootData(name)
       }
@@ -161,7 +155,7 @@ export function useGenealogyData() {
         id: `person-${Date.now()}`,
         type: 'person',
         position: { x: 0, y: 0 },
-        data: new PersonData(name, false, 'person')
+        data: new PersonData(name, false)
       }
     }
 
@@ -170,7 +164,7 @@ export function useGenealogyData() {
 
   const toggleInvited = (nodeId: string) => {
     const node = nodes.value.find(n => n.id === nodeId)
-    if (node && node.data instanceof PersonData && node.data.role === 'person') {
+    if (node && node.data instanceof PersonData) {
       node.data.invited = !node.data.invited
     }
   }
@@ -227,7 +221,7 @@ export function useGenealogyData() {
 
     // Determine the new invited state based on the current node
     let newInvitedState: boolean
-    if (node.data instanceof PersonData && node.data.role === 'person') {
+    if (node.data instanceof PersonData) {
       newInvitedState = !node.data.invited
     } else if (node.data instanceof MultiPersonData) {
       // For multi-person, toggle based on whether all are currently invited
@@ -244,7 +238,7 @@ export function useGenealogyData() {
     descendants.forEach(descendantId => {
       const descendantNode = nodes.value.find(n => n.id === descendantId)
       if (descendantNode) {
-        if (descendantNode.data instanceof PersonData && descendantNode.data.role === 'person') {
+        if (descendantNode.data instanceof PersonData) {
           descendantNode.data.invited = newInvitedState
         } else if (descendantNode.data instanceof MultiPersonData) {
           descendantNode.data.people.forEach(p => {
