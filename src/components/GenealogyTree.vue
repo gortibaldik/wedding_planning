@@ -58,27 +58,17 @@ const addNameInput = ref(null)
 
 const addModalTitle = ref('')
 
-// Multi-person modal state
-const showMultiPersonModal = ref(false)
-const editingMultiPersonNodeId = ref(null)
-const multiPersonForm = ref({ groupName: '', people: [] })
-const newPersonName = ref('')
-
 const handleEdit = nodeId => {
   const node = rawNodes.value.find(n => n.id === nodeId)
-  if (node) {
-    if (node.type === 'multi-person') {
-      handleEditMultiPerson(nodeId)
-    } else {
-      editingNodeId.value = nodeId
-      editForm.value = {
-        name: node.data.name
-      }
-      showEditModal.value = true
-      nextTick(() => {
-        editNameInput.value?.focus()
-      })
+  if (node && node.type !== 'multi-person') {
+    editingNodeId.value = nodeId
+    editForm.value = {
+      name: node.data.name
     }
+    showEditModal.value = true
+    nextTick(() => {
+      editNameInput.value?.focus()
+    })
   }
 }
 
@@ -148,21 +138,8 @@ const handleAddRoot = () => {
 
 const saveAdd = () => {
   if (addModalType.value === 'child') {
-    if (addForm.value.nodeType === 'multi-person') {
-      // For multi-person, create with primary name and prompt to add more
-      const nodeId = addChildNode(addModalTargetId.value, addForm.value.name, 'multi-person')
-      closeAddModal()
-
-      // Immediately open edit modal to add more people
-      nextTick(() => {
-        if (nodeId) {
-          handleEditMultiPerson(nodeId)
-        }
-      })
-    } else {
-      addChildNode(addModalTargetId.value, addForm.value.name, addForm.value.nodeType)
-      closeAddModal()
-    }
+    addChildNode(addModalTargetId.value, addForm.value.name, addForm.value.nodeType)
+    closeAddModal()
   } else if (addModalType.value === 'root') {
     addRootNode(addForm.value.name)
     closeAddModal()
@@ -210,71 +187,6 @@ const handleClearAll = () => {
   ) {
     clearAll()
   }
-}
-
-// Multi-person modal handlers
-const handleEditMultiPerson = nodeId => {
-  const node = rawNodes.value.find(n => n.id === nodeId)
-  if (node && node.type === 'multi-person') {
-    editingMultiPersonNodeId.value = nodeId
-    multiPersonForm.value.groupName = node.data.name
-    multiPersonForm.value.people = [...node.data.people]
-    showMultiPersonModal.value = true
-  }
-}
-
-const handleAddPersonToForm = () => {
-  if (newPersonName.value.trim()) {
-    multiPersonForm.value.people.push({
-      id: `temp-${Date.now()}`,
-      name: newPersonName.value.trim()
-    })
-    newPersonName.value = ''
-  }
-}
-
-const handleRemovePersonFromForm = personId => {
-  multiPersonForm.value.people = multiPersonForm.value.people.filter(p => p.id !== personId)
-}
-
-const handleEditPersonInForm = personId => {
-  const person = multiPersonForm.value.people.find(p => p.id === personId)
-  if (person) {
-    const newName = prompt('Edit person name:', person.name)
-    if (newName && newName.trim()) {
-      person.name = newName.trim()
-    }
-  }
-}
-
-const saveMultiPersonEdit = () => {
-  if (editingMultiPersonNodeId.value && multiPersonForm.value.groupName.trim()) {
-    const node = rawNodes.value.find(n => n.id === editingMultiPersonNodeId.value)
-    if (node && node.type === 'multi-person') {
-      // Update group name
-      node.data.name = multiPersonForm.value.groupName.trim()
-
-      // Update people, preserving invited status where possible
-      const updatedPeople = multiPersonForm.value.people.map((formPerson, index) => {
-        const existingPerson = node.data.people.find(p => p.name === formPerson.name)
-        return {
-          id: existingPerson?.id || `${node.id}-${Date.now()}-${index}`,
-          name: formPerson.name,
-          invited: existingPerson?.invited || false
-        }
-      })
-      node.data.people = updatedPeople
-    }
-    closeMultiPersonModal()
-  }
-}
-
-const closeMultiPersonModal = () => {
-  showMultiPersonModal.value = false
-  editingMultiPersonNodeId.value = null
-  multiPersonForm.value.groupName = ''
-  multiPersonForm.value.people = []
-  newPersonName.value = ''
 }
 
 // Track drag state
@@ -468,78 +380,6 @@ const onNodeDragStop = ({ node }) => {
         </form>
       </div>
     </div>
-
-    <!-- Multi-Person Edit Modal -->
-    <div v-if="showMultiPersonModal" class="modal-overlay" @click="closeMultiPersonModal">
-      <div class="modal modal-wide" @click.stop>
-        <h3>Edit Multi-Person Node</h3>
-
-        <div class="form-group">
-          <label>Group Name:</label>
-          <input
-            v-model="multiPersonForm.groupName"
-            type="text"
-            placeholder="e.g., 'Frederik and Veronika' or 'John's kids'"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label>People in this group:</label>
-        </div>
-
-        <div class="multi-person-list">
-          <div v-for="person in multiPersonForm.people" :key="person.id" class="multi-person-item">
-            <span>{{ person.name }}</span>
-            <div class="person-actions">
-              <button
-                type="button"
-                class="btn btn-edit-small"
-                @click="handleEditPersonInForm(person.id)"
-                title="Edit name"
-              >
-                ✎
-              </button>
-              <button
-                type="button"
-                class="btn btn-remove-small"
-                @click="handleRemovePersonFromForm(person.id)"
-                :disabled="multiPersonForm.people.length <= 1"
-                title="Remove person"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="add-person-section">
-          <input
-            v-model="newPersonName"
-            type="text"
-            placeholder="Enter name (or '+1', 'Guest of John', etc.)"
-            @keyup.enter="handleAddPersonToForm"
-          />
-          <button type="button" class="btn btn-secondary" @click="handleAddPersonToForm">
-            + Add Person
-          </button>
-        </div>
-
-        <div class="form-actions">
-          <button
-            type="button"
-            class="btn btn-primary"
-            @click="saveMultiPersonEdit"
-            :disabled="!multiPersonForm.groupName.trim()"
-          >
-            Save
-          </button>
-          <button type="button" class="btn btn-secondary" @click="closeMultiPersonModal">
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -693,92 +533,5 @@ const onNodeDragStop = ({ node }) => {
 
 .clear-btn:active {
   transform: translateY(0);
-}
-
-/* Multi-person modal styles */
-.modal-wide {
-  min-width: 500px;
-}
-
-.multi-person-list {
-  max-height: 300px;
-  overflow-y: auto;
-  margin-bottom: 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  padding: 8px;
-}
-
-.multi-person-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: #f9fafb;
-  border-radius: 4px;
-  margin-bottom: 4px;
-}
-
-.multi-person-item:last-child {
-  margin-bottom: 0;
-}
-
-.person-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.btn-edit-small {
-  padding: 4px 8px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.btn-edit-small:hover {
-  background: #2563eb;
-}
-
-.btn-remove-small {
-  padding: 4px 8px;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.btn-remove-small:hover {
-  background: #dc2626;
-}
-
-.btn-remove-small:disabled {
-  background: #d1d5db;
-  cursor: not-allowed;
-}
-
-.add-person-section {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.add-person-section input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.add-person-section input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 </style>
