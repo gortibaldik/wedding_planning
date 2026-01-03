@@ -1,12 +1,13 @@
 import { watch, ref, Ref } from 'vue'
 import { useLocalStorage } from './useLocalStorage.js'
 import { useBaseGraph, BaseData, ChartNode } from './useBaseGraph.js'
+import { useInvitationLists } from './useInvitationLists.js'
 
 // Interface for individuals within a multi-person node
 export interface PersonInNode {
   id: string // Unique ID for seating assignments
   name: string // Can be "+1", "Guest of John", etc.
-  invited: boolean
+  invited: { [listName: string]: boolean }
 }
 
 export class GenealogyData extends BaseData {
@@ -18,7 +19,7 @@ export class GenealogyData extends BaseData {
 export class PersonData extends GenealogyData {
   constructor(
     public name: string,
-    public invited: boolean
+    public invited: { [listName: string]: boolean }
   ) {
     super('invalid-color', false, false)
   }
@@ -38,19 +39,27 @@ export class MultiPersonData extends GenealogyData {
     super('invalid-color', false, false)
   }
 
-  // Helper: Get all invited people
+  // Helper: Get all invited people for the active list
   get invitedPeople(): PersonInNode[] {
-    return this.people.filter(p => p.invited)
+    const { activeInvitationList } = useInvitationLists()
+    return this.people.filter(p => p.invited[activeInvitationList.value] === true)
   }
 
-  // Helper: Are all people invited?
+  // Helper: Are all people invited for the active list?
   get allInvited(): boolean {
-    return this.people.length > 0 && this.people.every(p => p.invited)
+    const { activeInvitationList } = useInvitationLists()
+    return (
+      this.people.length > 0 &&
+      this.people.every(p => p.invited[activeInvitationList.value] === true)
+    )
   }
 
-  // Helper: Are some (but not all) people invited?
+  // Helper: Are some (but not all) people invited for the active list?
   get someInvited(): boolean {
-    const invitedCount = this.people.filter(p => p.invited).length
+    const { activeInvitationList } = useInvitationLists()
+    const invitedCount = this.people.filter(
+      p => p.invited[activeInvitationList.value] === true
+    ).length
     return invitedCount > 0 && invitedCount < this.people.length
   }
 }
@@ -61,6 +70,7 @@ let nodes: Ref<ChartNode<GenealogyData>[]> = ref([])
 let edges = ref([])
 
 export function useGenealogyData() {
+  const { activeInvitationList, availableInvitationLists } = useInvitationLists()
   const {
     addRootBase,
     addChildBase,
@@ -151,11 +161,17 @@ export function useGenealogyData() {
         data: new RootData(name)
       }
     } else {
+      // Initialize invited dictionary with all available lists set to false
+      const invitedDict: { [listName: string]: boolean } = {}
+      availableInvitationLists.value.forEach(listName => {
+        invitedDict[listName] = false
+      })
+
       node = {
         id: `person-${Date.now()}`,
         type: 'person',
         position: { x: 0, y: 0 },
-        data: new PersonData(name, false)
+        data: new PersonData(name, invitedDict)
       }
     }
 
@@ -165,7 +181,8 @@ export function useGenealogyData() {
   const toggleInvited = (nodeId: string) => {
     const node = nodes.value.find(n => n.id === nodeId)
     if (node && node.data instanceof PersonData) {
-      node.data.invited = !node.data.invited
+      const currentValue = node.data.invited[activeInvitationList.value] || false
+      node.data.invited[activeInvitationList.value] = !currentValue
     }
   }
 
@@ -175,7 +192,8 @@ export function useGenealogyData() {
     if (node && node.data instanceof MultiPersonData) {
       const person = node.data.people.find(p => p.id === personId)
       if (person) {
-        person.invited = !person.invited
+        const currentValue = person.invited[activeInvitationList.value] || false
+        person.invited[activeInvitationList.value] = !currentValue
       }
     }
   }
@@ -189,7 +207,7 @@ export function useGenealogyData() {
 
     const allInvited = node.data.allInvited
     node.data.people.forEach(p => {
-      p.invited = !allInvited
+      p.invited[activeInvitationList.value] = !allInvited
     })
   }
 
@@ -197,10 +215,16 @@ export function useGenealogyData() {
   const addPersonToNode = (nodeId: string, personName: string) => {
     const node = nodes.value.find(n => n.id === nodeId)
     if (node && node.data instanceof MultiPersonData) {
+      // Initialize invited dictionary with all available lists set to false
+      const invitedDict: { [listName: string]: boolean } = {}
+      availableInvitationLists.value.forEach(listName => {
+        invitedDict[listName] = false
+      })
+
       const newPerson: PersonInNode = {
         id: `${nodeId}-${Date.now()}`,
         name: personName,
-        invited: false
+        invited: invitedDict
       }
       node.data.people.push(newPerson)
     }
@@ -214,6 +238,36 @@ export function useGenealogyData() {
     }
   }
 
+  // Populate all nodes with a new invitation list (set to false by default)
+  const populateNodesWithNewList = (listName: string) => {
+    nodes.value.forEach(node => {
+      if (node.data instanceof PersonData) {
+        if (!node.data.invited[listName]) {
+          node.data.invited[listName] = false
+        }
+      } else if (node.data instanceof MultiPersonData) {
+        node.data.people.forEach(person => {
+          if (!person.invited[listName]) {
+            person.invited[listName] = false
+          }
+        })
+      }
+    })
+  }
+
+  // Remove an invitation list from all nodes
+  const removeListFromNodes = (listName: string) => {
+    nodes.value.forEach(node => {
+      if (node.data instanceof PersonData) {
+        delete node.data.invited[listName]
+      } else if (node.data instanceof MultiPersonData) {
+        node.data.people.forEach(person => {
+          delete person.invited[listName]
+        })
+      }
+    })
+  }
+
   // Toggle invited status for entire subtree (node + all descendants)
   const toggleSubtreeInvited = (nodeId: string) => {
     const node = nodes.value.find(n => n.id === nodeId)
@@ -222,7 +276,7 @@ export function useGenealogyData() {
     // Determine the new invited state based on the current node
     let newInvitedState: boolean
     if (node.data instanceof PersonData) {
-      newInvitedState = !node.data.invited
+      newInvitedState = !(node.data.invited[activeInvitationList.value] || false)
     } else if (node.data instanceof MultiPersonData) {
       // For multi-person, toggle based on whether all are currently invited
       newInvitedState = !node.data.allInvited
@@ -239,10 +293,10 @@ export function useGenealogyData() {
       const descendantNode = nodes.value.find(n => n.id === descendantId)
       if (descendantNode) {
         if (descendantNode.data instanceof PersonData) {
-          descendantNode.data.invited = newInvitedState
+          descendantNode.data.invited[activeInvitationList.value] = newInvitedState
         } else if (descendantNode.data instanceof MultiPersonData) {
           descendantNode.data.people.forEach(p => {
-            p.invited = newInvitedState
+            p.invited[activeInvitationList.value] = newInvitedState
           })
         }
       }
@@ -273,6 +327,8 @@ export function useGenealogyData() {
     removePersonNode,
     updatePersonNode,
     clearAll,
-    initializeNodesAndEdges
+    initializeNodesAndEdges,
+    populateNodesWithNewList,
+    removeListFromNodes
   }
 }

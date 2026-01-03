@@ -1,10 +1,13 @@
 <script setup>
 import NodeBase from './NodeBase.vue'
+import { useInvitationLists } from '../../composables/useInvitationLists.ts'
 
 defineProps({
   id: String,
   data: Object
 })
+
+const { activeInvitationList } = useInvitationLists()
 </script>
 
 <template>
@@ -47,7 +50,7 @@ defineProps({
         <span class="person-node__person-name">{{ person.name }}</span>
         <input
           type="checkbox"
-          :checked="person.invited"
+          :checked="person.invited[activeInvitationList]"
           class="person-node__checkbox-small"
           @change="data.onTogglePersonInvited?.(id, person.id)"
         />

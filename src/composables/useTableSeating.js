@@ -1,14 +1,45 @@
 import { ref, watch, computed } from 'vue'
 import { useLocalStorage } from './useLocalStorage'
+import { useInvitationLists } from './useInvitationLists'
 
 const STORAGE_KEY = 'wedding-table-seating'
 
-const tables = ref([])
+// Store tables per invitation list: { [listName: string]: Table[] }
+const tablesPerList = ref({})
 
 export function useTableSeating() {
+  const { activeInvitationList, availableInvitationLists } = useInvitationLists()
+
+  // Computed property to get tables for the active invitation list
+  const tables = computed({
+    get: () => {
+      if (!tablesPerList.value[activeInvitationList.value]) {
+        // Initialize with default tables if this list doesn't have any yet
+        tablesPerList.value[activeInvitationList.value] = [
+          {
+            id: `table-${Date.now()}-1`,
+            name: 'Table 1',
+            capacity: 8,
+            guestIds: []
+          },
+          {
+            id: `table-${Date.now()}-2`,
+            name: 'Table 2',
+            capacity: 8,
+            guestIds: []
+          }
+        ]
+      }
+      return tablesPerList.value[activeInvitationList.value]
+    },
+    set: value => {
+      tablesPerList.value[activeInvitationList.value] = value
+    }
+  })
+
   const serializeData = () => {
     return {
-      tables: tables.value
+      tablesPerList: tablesPerList.value
     }
   }
 
@@ -17,37 +48,25 @@ export function useTableSeating() {
   const initializeData = () => {
     const savedData = loadFromLocalStorage()
 
-    if (savedData && savedData.tables) {
-      tables.value = savedData.tables
+    if (savedData && savedData.tablesPerList) {
+      tablesPerList.value = savedData.tablesPerList
       return
     }
 
-    // Initialize with a few default tables
-    tables.value = [
-      {
-        id: `table-${Date.now()}-1`,
-        name: 'Table 1',
-        capacity: 8,
-        guestIds: []
-      },
-      {
-        id: `table-${Date.now()}-2`,
-        name: 'Table 2',
-        capacity: 8,
-        guestIds: []
-      }
-    ]
+    // Initialize empty - tables will be created on first access via the computed property
+    tablesPerList.value = {}
   }
 
   const addTable = () => {
-    const tableNumber = tables.value.length + 1
+    const currentTables = tables.value
+    const tableNumber = currentTables.length + 1
     const newTable = {
       id: `table-${Date.now()}`,
       name: `Table ${tableNumber}`,
       capacity: 8,
       guestIds: []
     }
-    tables.value = [...tables.value, newTable]
+    tables.value = [...currentTables, newTable]
   }
 
   const removeTable = tableId => {
@@ -100,10 +119,17 @@ export function useTableSeating() {
     tables.value = []
   }
 
+  // Populate existing invitation lists with empty table arrays if they don't have any
+  const populateListWithTables = listName => {
+    if (!tablesPerList.value[listName]) {
+      tablesPerList.value[listName] = []
+    }
+  }
+
   initializeData()
 
   watch(
-    tables,
+    tablesPerList,
     () => {
       saveToLocalStorage(serializeData())
     },
@@ -112,6 +138,7 @@ export function useTableSeating() {
 
   return {
     tables,
+    tablesPerList, // Expose for export/import
     addTable,
     removeTable,
     updateTableName,
@@ -119,6 +146,7 @@ export function useTableSeating() {
     assignGuestToTable,
     removeGuestFromTable,
     getAssignedGuestIds,
-    clearAll
+    clearAll,
+    populateListWithTables
   }
 }

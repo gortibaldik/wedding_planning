@@ -2,14 +2,25 @@
 import { ref, computed, watch } from 'vue'
 import GenealogyTree from './components/GenealogyTree.vue'
 import TableSeating from './components/TableSeating.vue'
+import InvitationListDropdown from './components/InvitationListDropdown.vue'
 import { useGenealogyData } from './composables/useGenealogyData.ts'
 import { useTableSeating } from './composables/useTableSeating'
 import { useSidebarState } from './composables/useSidebarState'
+import { useInvitationLists } from './composables/useInvitationLists.ts'
 
 const activeTab = ref('family-tree')
-const { nodes, edges, initializeNodesAndEdges } = useGenealogyData()
-const { tables, getAssignedGuestIds, removeGuestFromTable } = useTableSeating()
+const { nodes, edges, initializeNodesAndEdges, populateNodesWithNewList, removeListFromNodes } =
+  useGenealogyData()
+const { tables, tablesPerList, getAssignedGuestIds, removeGuestFromTable, populateListWithTables } =
+  useTableSeating()
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
+const {
+  activeInvitationList,
+  availableInvitationLists,
+  addInvitationList,
+  removeInvitationList,
+  setActiveInvitationList
+} = useInvitationLists()
 
 // Helper function to find the group (root) name for a guest
 const getGroupName = guestId => {
@@ -56,7 +67,7 @@ const invitedGuests = computed(() => {
   const guests = []
 
   nodes.value.forEach(node => {
-    if (node.type === 'person' && node.data.invited) {
+    if (node.type === 'person' && node.data.invited[activeInvitationList.value]) {
       // Regular person node
       guests.push({
         id: node.id,
@@ -70,7 +81,7 @@ const invitedGuests = computed(() => {
     } else if (node.type === 'multi-person') {
       // Multi-person node - add each invited person
       node.data.people.forEach(person => {
-        if (person.invited) {
+        if (person.invited[activeInvitationList.value]) {
           guests.push({
             id: person.id, // Use person.id for seating
             data: {
@@ -114,13 +125,14 @@ const handleDragEnd = () => {
 }
 
 // Watch for changes to invited guests and remove uninvited guests from tables
+// This includes when switching between invitation lists
 watch(
-  [nodes, tables],
+  [nodes, tables, activeInvitationList],
   () => {
-    // Get the set of currently invited guest IDs
+    // Get the set of currently invited guest IDs for the active list
     const invitedGuestIds = new Set(invitedGuests.value.map(g => g.id))
 
-    // For each table, remove guests that are no longer invited
+    // For each table, remove guests that are no longer invited in the active list
     tables.value.forEach(table => {
       const uninvitedGuests = table.guestIds.filter(guestId => !invitedGuestIds.has(guestId))
 
@@ -136,7 +148,11 @@ const handleExport = () => {
   const data = {
     nodes: nodes.value,
     edges: edges.value,
-    tables: tables.value
+    tablesPerList: tablesPerList.value, // Export all tables for all invitation lists
+    invitationLists: {
+      available: availableInvitationLists.value,
+      active: activeInvitationList.value
+    }
   }
 
   const json = JSON.stringify(data, null, 2)
@@ -171,16 +187,26 @@ const handleImport = () => {
           return
         }
 
-        const confirmMessage = data.tables
-          ? 'Import this file? This will replace your current family tree and table seating arrangements.'
-          : 'Import this file? This will replace your current family tree.'
+        const confirmMessage =
+          'Import this file? This will replace your current family tree, invitation lists, and table seating arrangements.'
 
         if (confirm(confirmMessage)) {
           initializeNodesAndEdges(data.nodes, data.edges)
 
-          // Import tables if they exist (backwards compatible with old exports)
-          if (data.tables) {
-            tables.value = data.tables
+          // Import tables per list
+          if (data.tablesPerList) {
+            tablesPerList.value = data.tablesPerList
+          }
+
+          // Import invitation lists
+          if (data.invitationLists) {
+            availableInvitationLists.value = data.invitationLists.available
+            if (data.invitationLists.active) {
+              activeInvitationList.value = data.invitationLists.active
+            }
+          } else {
+            availableInvitationLists.value = ['final_decision']
+            activeInvitationList.value = 'final_decision'
           }
         }
       } catch (error) {
@@ -191,6 +217,37 @@ const handleImport = () => {
   }
 
   input.click()
+}
+
+const handleSelectInvitationList = listName => {
+  setActiveInvitationList(listName)
+}
+
+const handleAddInvitationList = listName => {
+  try {
+    addInvitationList(listName)
+    // Populate all existing nodes with the new list (set to false)
+    populateNodesWithNewList(listName)
+    // Initialize empty tables for the new list
+    populateListWithTables(listName)
+    // Select the newly created list
+    setActiveInvitationList(listName)
+  } catch (error) {
+    alert(error.message)
+  }
+}
+
+const handleRemoveInvitationList = listName => {
+  try {
+    // Remove the list from the state
+    removeInvitationList(listName)
+    // Remove the list from all nodes
+    removeListFromNodes(listName)
+    // Remove the list from table seating
+    delete tablesPerList.value[listName]
+  } catch (error) {
+    alert(error.message)
+  }
 }
 </script>
 
@@ -226,20 +283,29 @@ const handleImport = () => {
           </p>
         </div>
         <div class="header-buttons">
-          <button
-            class="square-btn export-btn"
-            title="Export tree to JSON file"
-            @click="handleExport"
-          >
-            ⬇
-          </button>
-          <button
-            class="square-btn import-btn"
-            title="Import tree from JSON file"
-            @click="handleImport"
-          >
-            ⬆
-          </button>
+          <div class="buttons-row">
+            <button
+              class="square-btn export-btn"
+              title="Export tree to JSON file"
+              @click="handleExport"
+            >
+              ⬇
+            </button>
+            <button
+              class="square-btn import-btn"
+              title="Import tree from JSON file"
+              @click="handleImport"
+            >
+              ⬆
+            </button>
+          </div>
+          <InvitationListDropdown
+            :active-invitation-list="activeInvitationList"
+            :available-invitation-lists="availableInvitationLists"
+            @select="handleSelectInvitationList"
+            @add="handleAddInvitationList"
+            @remove="handleRemoveInvitationList"
+          />
         </div>
       </div>
     </header>
@@ -396,8 +462,14 @@ body {
 
 .header-buttons {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.buttons-row {
+  display: flex;
   gap: 8px;
-  justify-content: flex-end;
 }
 
 .square-btn {
