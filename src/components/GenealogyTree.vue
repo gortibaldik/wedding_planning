@@ -237,6 +237,16 @@ const handleRemovePersonFromForm = personId => {
   multiPersonForm.value.people = multiPersonForm.value.people.filter(p => p.id !== personId)
 }
 
+const handleEditPersonInForm = personId => {
+  const person = multiPersonForm.value.people.find(p => p.id === personId)
+  if (person) {
+    const newName = prompt('Edit person name:', person.name)
+    if (newName && newName.trim()) {
+      person.name = newName.trim()
+    }
+  }
+}
+
 const saveMultiPersonEdit = () => {
   if (editingMultiPersonNodeId.value && multiPersonForm.value.groupName.trim()) {
     const node = rawNodes.value.find(n => n.id === editingMultiPersonNodeId.value)
@@ -481,14 +491,25 @@ const onNodeDragStop = ({ node }) => {
         <div class="multi-person-list">
           <div v-for="person in multiPersonForm.people" :key="person.id" class="multi-person-item">
             <span>{{ person.name }}</span>
-            <button
-              type="button"
-              class="btn btn-remove-small"
-              @click="handleRemovePersonFromForm(person.id)"
-              :disabled="multiPersonForm.people.length <= 1"
-            >
-              ✕
-            </button>
+            <div class="person-actions">
+              <button
+                type="button"
+                class="btn btn-edit-small"
+                @click="handleEditPersonInForm(person.id)"
+                title="Edit name"
+              >
+                ✎
+              </button>
+              <button
+                type="button"
+                class="btn btn-remove-small"
+                @click="handleRemovePersonFromForm(person.id)"
+                :disabled="multiPersonForm.people.length <= 1"
+                title="Remove person"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         </div>
 
@@ -700,6 +721,26 @@ const onNodeDragStop = ({ node }) => {
 
 .multi-person-item:last-child {
   margin-bottom: 0;
+}
+
+.person-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-edit-small {
+  padding: 4px 8px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.btn-edit-small:hover {
+  background: #2563eb;
 }
 
 .btn-remove-small {
