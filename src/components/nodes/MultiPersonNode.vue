@@ -12,6 +12,20 @@ const props = defineProps({
 const { activeInvitationList } = useInvitationLists()
 const { nodes } = useGenealogyData()
 
+// Compute allInvited/someInvited locally instead of relying on class getters,
+// which get lost when GenealogyTree.vue spreads node.data into a plain object.
+const allInvited = computed(() => {
+  const people = props.data.people || []
+  console.info(`ALL INVITED: people (${people})`)
+  return people.length > 0 && people.every(p => p.invited[activeInvitationList.value] === true)
+})
+
+const someInvited = computed(() => {
+  const people = props.data.people || []
+  const count = people.filter(p => p.invited[activeInvitationList.value] === true).length
+  return count > 0 && count < people.length
+})
+
 // Modal state
 const showModal = ref(false)
 const modalForm = ref({ groupName: '', people: [] })
@@ -98,8 +112,8 @@ const saveModal = () => {
         <label class="person-node__checkbox-row" @click.stop>
           <input
             type="checkbox"
-            :checked="localData.allInvited"
-            :indeterminate.prop="localData.someInvited"
+            :checked="allInvited"
+            :indeterminate.prop="someInvited"
             class="person-node__checkbox-master"
             @change="localData.onToggleAllInvited?.(id)"
           />

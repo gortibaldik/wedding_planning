@@ -47,6 +47,7 @@ export class MultiPersonData extends GenealogyData {
 
   // Helper: Are all people invited for the active list?
   get allInvited(): boolean {
+    console.info('All invited on the useGenealogyDataCalled')
     const { activeInvitationList } = useInvitationLists()
     return (
       this.people.length > 0 &&
@@ -68,6 +69,7 @@ const STORAGE_KEY = 'wedding-genealogy-tree'
 
 let nodes: Ref<ChartNode<GenealogyData>[]> = ref([])
 let edges = ref([])
+let initialized = false
 
 export function useGenealogyData() {
   const { activeInvitationList, availableInvitationLists } = useInvitationLists()
@@ -303,15 +305,18 @@ export function useGenealogyData() {
     })
   }
 
-  initializeData()
+  if (!initialized) {
+    initializeData()
+    initialized = true
 
-  watch(
-    [nodes, edges],
-    () => {
-      saveToLocalStorage(serializeData())
-    },
-    { deep: true }
-  )
+    watch(
+      [nodes, edges],
+      () => {
+        saveToLocalStorage(serializeData())
+      },
+      { deep: true }
+    )
+  }
 
   return {
     toggleInvited,
