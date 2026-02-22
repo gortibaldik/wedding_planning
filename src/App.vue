@@ -20,7 +20,7 @@ const {
   populateListWithTables
 } = useTableSeating()
 
-const notFullTables = computed(tables.value.filter(t => t.guestIds.length != t.capacity))
+const notFullTables = computed(() => tables.value.filter(t => t.guestIds.length != t.capacity))
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
 const {
   activeInvitationList,
