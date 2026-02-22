@@ -7,7 +7,7 @@ const STORAGE_KEY = 'wedding-invitation-lists'
 const availableInvitationLists = ref<string[]>(['final_decision'])
 
 // Currently active invitation list
-const activeInvitationList = ref<string>('final_decision')
+const activeInvitationListId = ref<string>('final_decision')
 
 export function useInvitationLists() {
   const { saveToLocalStorage, loadFromLocalStorage } = useLocalStorage(STORAGE_KEY)
@@ -20,7 +20,7 @@ export function useInvitationLists() {
         availableInvitationLists.value = savedData.availableInvitationLists
       }
       if (savedData.activeInvitationList && typeof savedData.activeInvitationList === 'string') {
-        activeInvitationList.value = savedData.activeInvitationList
+        activeInvitationListId.value = savedData.activeInvitationList
       }
     }
   }
@@ -45,8 +45,8 @@ export function useInvitationLists() {
     if (index > -1) {
       availableInvitationLists.value.splice(index, 1)
       // If we're removing the active list, switch to final_decision
-      if (activeInvitationList.value === listName) {
-        activeInvitationList.value = 'final_decision'
+      if (activeInvitationListId.value === listName) {
+        activeInvitationListId.value = 'final_decision'
       }
     }
   }
@@ -56,16 +56,16 @@ export function useInvitationLists() {
     if (!availableInvitationLists.value.includes(listName)) {
       throw new Error('List does not exist')
     }
-    activeInvitationList.value = listName
+    activeInvitationListId.value = listName
   }
 
   // Watch for changes and save to local storage
   watch(
-    [availableInvitationLists, activeInvitationList],
+    [availableInvitationLists, activeInvitationListId],
     () => {
       saveToLocalStorage({
         availableInvitationLists: availableInvitationLists.value,
-        activeInvitationList: activeInvitationList.value
+        activeInvitationList: activeInvitationListId.value
       })
     },
     { deep: true }
@@ -75,7 +75,7 @@ export function useInvitationLists() {
 
   return {
     availableInvitationLists,
-    activeInvitationList,
+    activeInvitationList: activeInvitationListId,
     addInvitationList,
     removeInvitationList,
     setActiveInvitationList
