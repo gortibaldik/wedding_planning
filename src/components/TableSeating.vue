@@ -398,6 +398,9 @@ const finishEditingTableName = tableId => {
   font-size: 16px;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .remove-table-btn:hover {
