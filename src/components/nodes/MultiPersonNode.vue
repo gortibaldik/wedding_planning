@@ -16,7 +16,6 @@ const { nodes } = useGenealogyData()
 // which get lost when GenealogyTree.vue spreads node.data into a plain object.
 const allInvited = computed(() => {
   const people = props.data.people || []
-  console.info(`ALL INVITED: people (${people})`)
   return people.length > 0 && people.every(p => p.invited[activeInvitationList.value] === true)
 })
 

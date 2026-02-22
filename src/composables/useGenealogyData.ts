@@ -47,7 +47,6 @@ export class MultiPersonData extends GenealogyData {
 
   // Helper: Are all people invited for the active list?
   get allInvited(): boolean {
-    console.info('All invited on the useGenealogyDataCalled')
     const { activeInvitationList } = useInvitationLists()
     return (
       this.people.length > 0 &&
