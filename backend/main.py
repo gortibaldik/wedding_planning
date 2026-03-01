@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request, HTTPException
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from jose import jwt
@@ -6,23 +7,26 @@ import httpx
 import os
 from urllib.parse import urlencode
 
-app = FastAPI()
+from .config import Config
+from .dependencies import init_config, get_config
 
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
-REDIRECT_URL_AFTER_AUTH_BASE = os.environ.get("REDIRECT_URL_AFTER_AUTH_BASE", "")
-REDIRECT_URL_DURING_AUTH_BASE = os.environ.get("REDIRECT_URL_DURING_AUTH_BASE", "")
-ALGORITHM = "HS256"
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_config()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/auth/google")
-async def google_auth(request: Request):
-    if not GOOGLE_CLIENT_ID:
+async def google_auth(request: Request, config: Config = Depends(get_config)):
+    if not config.google_client_id:
         raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_ID not configured")
-    redirect_uri = REDIRECT_URL_DURING_AUTH_BASE.rstrip("/") + "/auth/google/callback"
+    redirect_uri = config.redirect_url_during_auth_base.rstrip("/") + "/auth/google/callback"
     params = {
-        "client_id": GOOGLE_CLIENT_ID,
+        "client_id": config.google_client_id,
         "redirect_uri": redirect_uri,
         "response_type": "code",
         "scope": "openid email profile",
@@ -34,15 +38,15 @@ async def google_auth(request: Request):
 
 
 @app.get("/auth/google/callback")
-async def google_auth_callback(request: Request, code: str):
-    redirect_uri = REDIRECT_URL_DURING_AUTH_BASE.rstrip("/") + "/auth/google/callback"
+async def google_auth_callback(request: Request, code: str, config: Config = Depends(get_config)):
+    redirect_uri = config.redirect_url_during_auth_base.rstrip("/") + "/auth/google/callback"
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
             "https://oauth2.googleapis.com/token",
             data={
                 "code": code,
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
+                "client_id": config.google_client_id,
+                "client_secret": config.google_client_secret,
                 "redirect_uri": redirect_uri,
                 "grant_type": "authorization_code",
             },
@@ -59,10 +63,10 @@ async def google_auth_callback(request: Request, code: str):
 
     jwt_token = jwt.encode(
         {"sub": user_info.get("email", ""), "name": user_info.get("name", "")},
-        SECRET_KEY,
-        algorithm=ALGORITHM,
+        config.secret_key,
+        algorithm=config.algorithm,
     )
-    return RedirectResponse(url=f"{REDIRECT_URL_AFTER_AUTH_BASE}/?token={jwt_token}")
+    return RedirectResponse(url=f"{config.redirect_url_after_auth_base}/?token={jwt_token}")
 
 
 # API routes (define BEFORE static file mount)
