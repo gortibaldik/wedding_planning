@@ -4,6 +4,7 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
+RUN rm .env.local
 RUN npm run build
 
 # Stage 2: Python runtime

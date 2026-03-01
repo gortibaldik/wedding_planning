@@ -37,6 +37,17 @@ Release a new version of the application:
 heroku container:release web
 ```
 
+### How to Set Config Variables
+
+```shell
+# set environment variable
+heroku config:set GOOGLE_CLIENT_ID=""
+
+# unset environment variable
+heroku config:unset GOOGLE_CLIENT_ID
+```
+
+
 
 ### Setup Heroku
 Install Heroku CLI:
