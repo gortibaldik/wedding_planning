@@ -11,3 +11,4 @@ class Config(BaseSettings):
     redirect_url_after_auth_base: str = ""
     redirect_url_during_auth_base: str = ""
     algorithm: str = "HS256"
+    rediscloud_url: str = ""

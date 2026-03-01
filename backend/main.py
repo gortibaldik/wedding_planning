@@ -4,19 +4,22 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .dependencies import init_config
-from .routers import authorization
+from .dependencies import close_redis, get_config, init_config, init_redis
+from .routers import authorization, invitation_lists
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_config()
+    init_redis(get_config().rediscloud_url)
     yield
+    await close_redis()
 
 
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(authorization.router)
+app.include_router(invitation_lists.router)
 
 
 # Serve Vue SPA - html=True enables SPA fallback (serves index.html for unknown routes)

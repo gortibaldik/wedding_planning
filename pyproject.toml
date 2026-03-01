@@ -12,6 +12,7 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "httpx>=0.27.0",
     "python-jose[cryptography]>=3.3.0",
+    "redis>=5.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -46,8 +47,10 @@ ignore=[
     "D213",
     "D104",
     "D100",
+    "D203",
     "D101",
-    "D103"
+    "D103",
+    "E501"
 ]
 
 [tool.ruff.format]
