@@ -1,21 +1,24 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
+from typing import Annotated
+from urllib.parse import urlencode
+
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from jose import jwt
-import httpx
-from urllib.parse import urlencode
 
 from backend.config import Config
 from backend.dependencies import get_config
-
 
 router = APIRouter(prefix="/auth")
 
 
 @router.get("/google", tags=["authorization"])
-async def google_auth(request: Request, config: Config = Depends(get_config)):
+async def google_auth(request: Request, config: Annotated[Config, Depends(get_config)]):
     if not config.google_client_id:
         raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_ID not configured")
-    redirect_uri = config.redirect_url_during_auth_base.rstrip("/") + "/auth/google/callback"
+    redirect_uri = (
+        config.redirect_url_during_auth_base.rstrip("/") + "/auth/google/callback"
+    )
     params = {
         "client_id": config.google_client_id,
         "redirect_uri": redirect_uri,
@@ -28,11 +31,13 @@ async def google_auth(request: Request, config: Config = Depends(get_config)):
     )
 
 
-@router.get(
-    "/google/callback",
-    tags=["authorization"])
-async def google_auth_callback(request: Request, code: str, config: Config = Depends(get_config)):
-    redirect_uri = config.redirect_url_during_auth_base.rstrip("/") + "/auth/google/callback"
+@router.get("/google/callback", tags=["authorization"])
+async def google_auth_callback(
+    request: Request, code: str, config: Annotated[Config, Depends(get_config)]
+):
+    redirect_uri = (
+        config.redirect_url_during_auth_base.rstrip("/") + "/auth/google/callback"
+    )
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
             "https://oauth2.googleapis.com/token",
@@ -59,4 +64,6 @@ async def google_auth_callback(request: Request, code: str, config: Config = Dep
         config.secret_key,
         algorithm=config.algorithm,
     )
-    return RedirectResponse(url=f"{config.redirect_url_after_auth_base}/?token={jwt_token}")
+    return RedirectResponse(
+        url=f"{config.redirect_url_after_auth_base}/?token={jwt_token}"
+    )

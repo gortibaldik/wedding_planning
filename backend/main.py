@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-import os
 
 from .dependencies import init_config
 from .routers import authorization
@@ -19,5 +20,5 @@ app.include_router(authorization.router)
 
 
 # Serve Vue SPA - html=True enables SPA fallback (serves index.html for unknown routes)
-frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+frontend_dist = str(Path(__file__).parent.parent / "frontend" / "dist")
 app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")

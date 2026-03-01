@@ -1,5 +1,5 @@
-from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
+from pydantic_settings import BaseSettings
 
 
 class Config(BaseSettings):
@@ -7,7 +7,7 @@ class Config(BaseSettings):
 
     google_client_id: str = ""
     google_client_secret: str = ""
-    secret_key: str = "dev-secret-key-change-in-production"
+    secret_key: str = "dev-secret-key-change-in-production"  # noqa: S105
     redirect_url_after_auth_base: str = ""
     redirect_url_during_auth_base: str = ""
     algorithm: str = "HS256"

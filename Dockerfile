@@ -10,8 +10,8 @@ RUN npm run build
 # Stage 2: Python runtime
 FROM python:3.12-slim
 WORKDIR /app
-COPY backend/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir .
 COPY backend/ ./backend/
 COPY --chmod=755 ./start.sh ./start.sh
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
