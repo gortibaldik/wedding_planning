@@ -4,23 +4,16 @@ This application is intended to help us with:
 - managing the wedding (invitations, table arrangements)
 - getting used to vibe-coding and exploring the capabilities of latest models
 
-## How to Run Locally
-
-Run the frontend with:
-
-```shell
-npm run dev
-```
 
 ## How to Run Locally with Docker
 
-```shell
-# build the app
-docker build -t wedding-app .
+Run the dev frontend server and the backend server. Hot-reload for frontend is supported.
 
-# run the app
-docker run -p 8000:8000 wedding-app
+```shell
+docker compose up --build
 ```
+
+If you want to run without authentication, just set the `VITE_SKIP_AUTH` to empty variable in the file `frontend/.env.local`.
 
 ## How to Deploy to Heroku
 

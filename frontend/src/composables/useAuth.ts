@@ -4,6 +4,10 @@ export function useAuth() {
   const getToken = (): string | null => localStorage.getItem(TOKEN_KEY)
 
   const checkAuth = (): boolean => {
+    if (import.meta.env.VITE_SKIP_AUTH === 'true') {
+      return true
+    }
+
     const params = new URLSearchParams(window.location.search)
     const urlToken = params.get('token')
 

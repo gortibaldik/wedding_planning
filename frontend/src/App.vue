@@ -13,6 +13,7 @@ import { useAuth } from './composables/useAuth.ts'
 import LoginScreen from './components/LoginScreen.vue'
 
 const { checkAuth, logout } = useAuth()
+const skipAuth = import.meta.env.VITE_SKIP_AUTH === 'true'
 
 const handleLogout = () => {
   logout()
@@ -316,7 +317,14 @@ const handleRemoveInvitationList = listName => {
             >
               ⬆
             </button>
-            <button class="square-btn logout-btn" title="Log out" @click="handleLogout">⏻</button>
+            <button
+              v-if="!skipAuth"
+              class="square-btn logout-btn"
+              title="Log out"
+              @click="handleLogout"
+            >
+              ⏻
+            </button>
           </div>
           <InvitationListDropdown
             :active-invitation-list="activeInvitationList"
