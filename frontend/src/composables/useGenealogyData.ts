@@ -1,5 +1,4 @@
-import { watch, ref, Ref } from 'vue'
-import { useLocalStorage } from './useLocalStorage.js'
+import { Ref } from 'vue'
 import { useBaseGraph, BaseData, ChartNode } from './useBaseGraph.js'
 import { useInvitationLists } from './useInvitationLists.js'
 
@@ -64,14 +63,11 @@ export class MultiPersonData extends GenealogyData {
   }
 }
 
-const STORAGE_KEY = 'wedding-genealogy-tree'
-
-let nodes: Ref<ChartNode<GenealogyData>[]> = ref([])
-let edges = ref([])
-let initialized = false
-
 export function useGenealogyData() {
-  const { activeInvitationList, availableInvitationLists } = useInvitationLists()
+  const { activeInvitationList, availableInvitationLists, nodes, edges } = useInvitationLists()
+  const typedNodes = nodes as Ref<ChartNode<GenealogyData>[]>
+  const typedEdges = edges as Ref<any[]>
+
   const {
     addRootBase,
     addChildBase,
@@ -79,19 +75,10 @@ export function useGenealogyData() {
     updatePersonNode,
     clearAll,
     findAllDescendants
-  } = useBaseGraph(nodes, edges)
-
-  const serializeData = () => {
-    return {
-      nodes: nodes.value,
-      edges: edges.value
-    }
-  }
-
-  const { saveToLocalStorage, loadFromLocalStorage } = useLocalStorage(STORAGE_KEY)
+  } = useBaseGraph(typedNodes, typedEdges)
 
   const initializeNodesAndEdges = (newNodes: ChartNode<GenealogyData>[], newEdges: []) => {
-    edges.value = newEdges
+    typedEdges.value = newEdges
 
     newNodes.forEach(newNode => {
       let data: RootData | PersonData | MultiPersonData
@@ -110,19 +97,7 @@ export function useGenealogyData() {
       newNode.data = data
     })
 
-    nodes.value = newNodes
-  }
-
-  const initializeData = () => {
-    const savedData = loadFromLocalStorage()
-
-    if (savedData && savedData.nodes && savedData.edges) {
-      initializeNodesAndEdges(savedData.nodes, savedData.edges)
-      return
-    }
-
-    nodes.value = []
-    edges.value = []
+    typedNodes.value = newNodes
   }
 
   /** Add root node to the chart */
@@ -180,7 +155,7 @@ export function useGenealogyData() {
   }
 
   const toggleInvited = (nodeId: string) => {
-    const node = nodes.value.find(n => n.id === nodeId)
+    const node = typedNodes.value.find(n => n.id === nodeId)
     if (node && node.data instanceof PersonData) {
       const currentValue = node.data.invited[activeInvitationList.value] || false
       node.data.invited[activeInvitationList.value] = !currentValue
@@ -189,7 +164,7 @@ export function useGenealogyData() {
 
   // Toggle individual person within a multi-person node
   const togglePersonInvited = (nodeId: string, personId: string) => {
-    const node = nodes.value.find(n => n.id === nodeId)
+    const node = typedNodes.value.find(n => n.id === nodeId)
     if (node && node.data instanceof MultiPersonData) {
       const person = node.data.people.find(p => p.id === personId)
       if (person) {
@@ -201,7 +176,7 @@ export function useGenealogyData() {
 
   // Toggle all people in a multi-person node
   const toggleAllInvited = (nodeId: string) => {
-    const node = nodes.value.find(n => n.id === nodeId)
+    const node = typedNodes.value.find(n => n.id === nodeId)
     if (!node || !(node.data instanceof MultiPersonData)) {
       return
     }
@@ -214,7 +189,7 @@ export function useGenealogyData() {
 
   // Add person to existing multi-person node
   const addPersonToNode = (nodeId: string, personName: string) => {
-    const node = nodes.value.find(n => n.id === nodeId)
+    const node = typedNodes.value.find(n => n.id === nodeId)
     if (node && node.data instanceof MultiPersonData) {
       // Initialize invited dictionary with all available lists set to false
       const invitedDict: { [listName: string]: boolean } = {}
@@ -233,7 +208,7 @@ export function useGenealogyData() {
 
   // Remove person from multi-person node
   const removePersonFromNode = (nodeId: string, personId: string) => {
-    const node = nodes.value.find(n => n.id === nodeId)
+    const node = typedNodes.value.find(n => n.id === nodeId)
     if (node && node.data instanceof MultiPersonData) {
       node.data.people = node.data.people.filter(p => p.id !== personId)
     }
@@ -241,7 +216,7 @@ export function useGenealogyData() {
 
   // Populate all nodes with a new invitation list (set to false by default)
   const populateNodesWithNewList = (listName: string) => {
-    nodes.value.forEach(node => {
+    typedNodes.value.forEach(node => {
       if (node.data instanceof PersonData) {
         if (!node.data.invited[listName]) {
           node.data.invited[listName] = false
@@ -258,7 +233,7 @@ export function useGenealogyData() {
 
   // Remove an invitation list from all nodes
   const removeListFromNodes = (listName: string) => {
-    nodes.value.forEach(node => {
+    typedNodes.value.forEach(node => {
       if (node.data instanceof PersonData) {
         delete node.data.invited[listName]
       } else if (node.data instanceof MultiPersonData) {
@@ -271,7 +246,7 @@ export function useGenealogyData() {
 
   // Toggle invited status for entire subtree (node + all descendants)
   const toggleSubtreeInvited = (nodeId: string) => {
-    const node = nodes.value.find(n => n.id === nodeId)
+    const node = typedNodes.value.find(n => n.id === nodeId)
     if (!node) return
 
     // Determine the new invited state based on the current node
@@ -291,7 +266,7 @@ export function useGenealogyData() {
 
     // Apply to all nodes in the subtree
     descendants.forEach(descendantId => {
-      const descendantNode = nodes.value.find(n => n.id === descendantId)
+      const descendantNode = typedNodes.value.find(n => n.id === descendantId)
       if (descendantNode) {
         if (descendantNode.data instanceof PersonData) {
           descendantNode.data.invited[activeInvitationList.value] = newInvitedState
@@ -304,19 +279,6 @@ export function useGenealogyData() {
     })
   }
 
-  if (!initialized) {
-    initializeData()
-    initialized = true
-
-    watch(
-      [nodes, edges],
-      () => {
-        saveToLocalStorage(serializeData())
-      },
-      { deep: true }
-    )
-  }
-
   return {
     toggleInvited,
     togglePersonInvited,
@@ -326,8 +288,8 @@ export function useGenealogyData() {
     removePersonFromNode,
     addRootNode,
     addChildNode,
-    nodes,
-    edges,
+    nodes: typedNodes,
+    edges: typedEdges,
     removePersonNode,
     updatePersonNode,
     clearAll,

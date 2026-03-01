@@ -1,14 +1,9 @@
-import { ref, watch, computed } from 'vue'
-import { useLocalStorage } from './useLocalStorage'
+import { computed } from 'vue'
 import { useInvitationLists } from './useInvitationLists'
 
-const STORAGE_KEY = 'wedding-table-seating'
-
-// Store tables per invitation list: { [listName: string]: Table[] }
-const tablesPerList = ref({})
-
 export function useTableSeating() {
-  const { activeInvitationList, availableInvitationLists } = useInvitationLists()
+  const { activeInvitationList, availableInvitationLists, tablesPerList, initializedData } =
+    useInvitationLists()
 
   // Computed property to get tables for the active invitation list
   const tables = computed({
@@ -30,26 +25,6 @@ export function useTableSeating() {
       tablesPerList.value[activeInvitationList.value] = value
     }
   })
-
-  const serializeData = () => {
-    return {
-      tablesPerList: tablesPerList.value
-    }
-  }
-
-  const { loadFromLocalStorage, saveToLocalStorage } = useLocalStorage(STORAGE_KEY)
-
-  const initializeData = () => {
-    const savedData = loadFromLocalStorage()
-
-    if (savedData && savedData.tablesPerList) {
-      tablesPerList.value = savedData.tablesPerList
-      return
-    }
-
-    // Initialize empty - tables will be created on first access via the computed property
-    tablesPerList.value = {}
-  }
 
   const addTable = () => {
     const currentTables = tables.value
@@ -119,16 +94,6 @@ export function useTableSeating() {
       tablesPerList.value[listName] = []
     }
   }
-
-  initializeData()
-
-  watch(
-    tablesPerList,
-    () => {
-      saveToLocalStorage(serializeData())
-    },
-    { deep: true }
-  )
 
   return {
     tables,
