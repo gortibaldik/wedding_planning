@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import GenealogyTree from './components/GenealogyTree.vue'
 import TableSeating from './components/TableSeating.vue'
 import InvitationListDropdown from './components/InvitationListDropdown.vue'
@@ -9,6 +9,20 @@ import { useGenealogyData } from './composables/useGenealogyData.ts'
 import { useTableSeating } from './composables/useTableSeating'
 import { useSidebarState } from './composables/useSidebarState'
 import { useInvitationLists } from './composables/useInvitationLists.ts'
+import { useAuth } from './composables/useAuth.ts'
+import LoginScreen from './components/LoginScreen.vue'
+
+const { checkAuth, logout } = useAuth()
+
+const handleLogout = () => {
+  logout()
+  isAuthenticated.value = false
+}
+const isAuthenticated = ref(false)
+
+onMounted(() => {
+  isAuthenticated.value = checkAuth()
+})
 
 const activeTab = ref('family-tree')
 const { nodes, edges, initializeNodesAndEdges, populateNodesWithNewList, removeListFromNodes } =
@@ -255,7 +269,8 @@ const handleRemoveInvitationList = listName => {
 </script>
 
 <template>
-  <div class="app">
+  <LoginScreen v-if="!isAuthenticated" />
+  <div v-else class="app">
     <header class="app-header" :style="{ width: sidebarCollapsed ? '100%' : 'calc(100% - 300px)' }">
       <div class="header-content">
         <div class="header-tabs">
@@ -301,6 +316,7 @@ const handleRemoveInvitationList = listName => {
             >
               ⬆
             </button>
+            <button class="square-btn logout-btn" title="Log out" @click="handleLogout">⏻</button>
           </div>
           <InvitationListDropdown
             :active-invitation-list="activeInvitationList"
@@ -465,6 +481,17 @@ body {
 .import-btn:hover {
   background: #059669;
   box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  transform: translateY(-2px);
+}
+
+.logout-btn {
+  background: #6b7280;
+  color: white;
+}
+
+.logout-btn:hover {
+  background: #4b5563;
+  box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
   transform: translateY(-2px);
 }
 

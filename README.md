@@ -6,13 +6,13 @@ This application is intended to help us with:
 
 ## How to Run Locally
 
-Run with:
+Run the frontend with:
 
 ```shell
 npm run dev
 ```
 
-## How to Run with Docker
+## How to Run Locally with Docker
 
 ```shell
 # build the app
