@@ -43,7 +43,8 @@ const {
   availableInvitationLists,
   addInvitationList,
   removeInvitationList,
-  setActiveInvitationList
+  setActiveInvitationList,
+  saveInvitationList
 } = useInvitationLists()
 
 // Helper function to find the group (root) name for a guest
@@ -162,6 +163,14 @@ watch(
   { deep: true }
 )
 
+const handleSave = async () => {
+  await saveInvitationList({
+    nodes: nodes.value,
+    edges: edges.value,
+    tables: tablesPerList.value[activeInvitationList.value]
+  })
+}
+
 const handleExport = () => {
   const data = {
     nodes: nodes.value,
@@ -222,9 +231,6 @@ const handleImport = () => {
             if (data.invitationLists.active) {
               activeInvitationList.value = data.invitationLists.active
             }
-          } else {
-            availableInvitationLists.value = ['final_decision']
-            activeInvitationList.value = 'final_decision'
           }
         }
       } catch (error) {
@@ -241,14 +247,16 @@ const handleSelectInvitationList = listName => {
   setActiveInvitationList(listName)
 }
 
-const handleAddInvitationList = listName => {
+const handleAddInvitationList = async listName => {
   try {
-    addInvitationList(listName)
-    // Populate all existing nodes with the new list (set to false)
+    // Populate nodes and tables first so data is ready to send
+    await addInvitationList(listName, {
+      nodes: [],
+      edges: [],
+      tables: tablesPerList.value[listName]
+    })
     populateNodesWithNewList(listName)
-    // Initialize empty tables for the new list
     populateListWithTables(listName)
-    // Select the newly created list
     setActiveInvitationList(listName)
   } catch (error) {
     alert(error.message)
@@ -303,6 +311,9 @@ const handleRemoveInvitationList = listName => {
         </div>
         <div class="header-buttons">
           <div class="buttons-row">
+            <button class="square-btn save-btn" title="Save to server" @click="handleSave">
+              💾
+            </button>
             <button
               class="square-btn export-btn"
               title="Export tree to JSON file"
@@ -468,6 +479,17 @@ body {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.save-btn {
+  background: #8b5cf6;
+  color: white;
+}
+
+.save-btn:hover {
+  background: #7c3aed;
+  box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
 }
 
 .export-btn {

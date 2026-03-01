@@ -1,3 +1,5 @@
+import logging
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -6,6 +8,12 @@ from fastapi.staticfiles import StaticFiles
 
 from .dependencies import close_redis, get_config, init_config, init_redis
 from .routers import authorization, invitation_lists
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    stream=sys.stdout,
+)
 
 
 @asynccontextmanager

@@ -1,4 +1,9 @@
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   wedding-planning:
     build:
       context: .
@@ -11,8 +16,12 @@ services:
       - PORT=8000
       - REDIRECT_URL_AFTER_AUTH_BASE=http://localhost:5173
       - REDIRECT_URL_DURING_AUTH_BASE=http://localhost:8000
+      - REDISCLOUD_URL=redis://redis:6379
+      - HOT_RELOAD=true
     env_file:
       - .env
+    depends_on:
+      - redis
 
   frontend:
     build:

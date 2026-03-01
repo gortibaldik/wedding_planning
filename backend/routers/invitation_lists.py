@@ -1,3 +1,4 @@
+import logging
 import zlib
 from typing import Annotated, Any
 
@@ -7,6 +8,7 @@ from pydantic import BaseModel
 
 from backend.dependencies import get_current_user, get_redis
 
+logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/invitation_lists",
     dependencies=[Depends(get_current_user)],
@@ -70,5 +72,8 @@ async def get_invitation_list(
 async def remove_invitation_list(
     name: str,
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
-) -> InvitationIds:
+):
+    logger.info(f"Removing invitation list: '{name}'")
+    await redis.srem(REDIS_KEY, name)
     await redis.delete(name)
+    return {"result", "success"}
