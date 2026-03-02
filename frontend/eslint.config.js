@@ -59,6 +59,7 @@ export default [
     languageOptions: {
       parser: vueParser,
       parserOptions: {
+        parser: tsparser,
         ecmaVersion: 2022,
         sourceType: 'module'
       }

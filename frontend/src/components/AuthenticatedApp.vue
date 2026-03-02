@@ -1,275 +1,279 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import GenealogyTree from './GenealogyTree.vue'
-import TableSeating from './TableSeating.vue'
-import InvitationListDropdown from './InvitationListDropdown.vue'
-import TableSeatingSidebar from './TableSeatingSidebar.vue'
-import GenealogyTreeSidebar from './GenealogyTreeSidebar.vue'
+import GenealogyTree from './GenealogyTree/GenealogyTree.vue'
+// import TableSeating from './TableSeating.vue'
+// import InvitationListDropdown from './InvitationListDropdown.vue'
+// import TableSeatingSidebar from './TableSeatingSidebar.vue'
+// import GenealogyTreeSidebar from './GenealogyTreeSidebar.vue'
 import { useGenealogyData } from '../composables/useGenealogyData.ts'
-import { useTableSeating } from '../composables/useTableSeating'
+// import { useTableSeating } from '../composables/useTableSeating'
 import { useSidebarState } from '../composables/useSidebarState'
-import { useInvitationLists } from '../composables/useInvitationLists.ts'
+// import { useInvitationLists } from '../composables/useInvitationLists.ts'
 import { useAuth } from '../composables/useAuth.ts'
 
-const emit = defineEmits(['logout'])
+// const emit = defineEmits(['logout'])
 
 const { logout } = useAuth()
 const skipAuth = import.meta.env.VITE_SKIP_AUTH === 'true'
 
-const handleLogout = () => {
-  logout()
-  emit('logout')
-}
+// const handleLogout = () => {
+//   logout()
+//   emit('logout')
+// }
 
 const activeTab = ref('family-tree')
-const { nodes, edges, initializeNodesAndEdges, populateNodesWithNewList, removeListFromNodes } =
-  useGenealogyData()
-const {
-  tables,
-  tablesPerList,
-  getAssignedGuestIds,
-  removeGuestFromTable,
-  assignGuestToTable,
-  populateListWithTables
-} = useTableSeating()
+try {
+  const { nodes, edges, initializeNodesAndEdges, populateNodesWithNewList, removeListFromNodes } =
+    useGenealogyData()
+} catch (e) {
+  console.error(`There was an error ${e.stack}`)
+}
+// // const {
+// //   tables,
+// //   tablesPerList,
+// //   getAssignedGuestIds,
+// //   removeGuestFromTable,
+// //   assignGuestToTable,
+// //   populateListWithTables
+// // } = useTableSeating()
 
 const { sidebarCollapsed } = useSidebarState()
-const {
-  activeInvitationList,
-  availableInvitationLists,
-  addInvitationList,
-  removeInvitationList,
-  setActiveInvitationList,
-  saveInvitationList
-} = useInvitationLists()
+// // const {
+// //   activeInvitationList,
+// //   availableInvitationLists,
+// //   addInvitationList,
+// //   removeInvitationList,
+// //   setActiveInvitationList,
+// //   saveInvitationList
+// // } = useInvitationLists()
 
-// Helper function to find the group (root) name for a guest
-const getGroupName = guestId => {
-  // First check if this is a person within a multi-person node
-  const multiPersonNode = nodes.value.find(
-    node => node.type === 'multi-person' && node.data.people.some(p => p.id === guestId)
-  )
+// // Helper function to find the group (root) name for a guest
+// const getGroupName = guestId => {
+//   // First check if this is a person within a multi-person node
+//   const multiPersonNode = nodes.value.find(
+//     node => node.type === 'multi-person' && node.data.people.some(p => p.id === guestId)
+//   )
 
-  if (multiPersonNode) {
-    // Use the multi-person node ID to traverse up the tree
-    return getGroupNameForNode(multiPersonNode.id)
-  }
+//   if (multiPersonNode) {
+//     // Use the multi-person node ID to traverse up the tree
+//     return getGroupNameForNode(multiPersonNode.id)
+//   }
 
-  // Otherwise, it's a regular person node
-  return getGroupNameForNode(guestId)
-}
+//   // Otherwise, it's a regular person node
+//   return getGroupNameForNode(guestId)
+// }
 
-const getGroupNameForNode = nodeId => {
-  const visited = new Set()
-  let currentId = nodeId
+// const getGroupNameForNode = nodeId => {
+//   const visited = new Set()
+//   let currentId = nodeId
 
-  // Traverse up to find the root
-  while (!visited.has(currentId)) {
-    visited.add(currentId)
-    const parentEdge = edges.value.find(e => e.target === currentId)
-    if (!parentEdge) {
-      // Found the root
-      const rootNode = nodes.value.find(n => n.id === currentId)
-      return rootNode ? rootNode.data.name : 'Unknown'
-    }
-    currentId = parentEdge.source
-  }
+//   // Traverse up to find the root
+//   while (!visited.has(currentId)) {
+//     visited.add(currentId)
+//     const parentEdge = edges.value.find(e => e.target === currentId)
+//     if (!parentEdge) {
+//       // Found the root
+//       const rootNode = nodes.value.find(n => n.id === currentId)
+//       return rootNode ? rootNode.data.name : 'Unknown'
+//     }
+//     currentId = parentEdge.source
+//   }
 
-  return 'Unknown'
-}
+//   return 'Unknown'
+// }
 
-// Helper function to get the table assignment for a guest
-const getTableAssignment = guestId => {
-  const table = tables.value.find(t => t.guestIds.includes(guestId))
-  return table ? table.name : null
-}
+// // Helper function to get the table assignment for a guest
+// const getTableAssignment = guestId => {
+//   const table = tables.value.find(t => t.guestIds.includes(guestId))
+//   return table ? table.name : null
+// }
 
-const invitedGuests = computed(() => {
-  const guests = []
+// const invitedGuests = computed(() => {
+//   const guests = []
 
-  nodes.value.forEach(node => {
-    if (node.type === 'person' && node.data.invited[activeInvitationList.value]) {
-      // Regular person node
-      guests.push({
-        id: node.id,
-        data: {
-          name: node.data.name,
-          color: node.data.color
-        },
-        nodeId: node.id,
-        isMultiPerson: false
-      })
-    } else if (node.type === 'multi-person') {
-      // Multi-person node - add each invited person
-      node.data.people.forEach(person => {
-        if (person.invited[activeInvitationList.value]) {
-          guests.push({
-            id: person.id, // Use person.id for seating
-            data: {
-              name: person.name,
-              color: node.data.color
-            },
-            nodeId: node.id, // Track which node they belong to
-            isMultiPerson: true,
-            groupName: node.data.name // The multi-person node's group name
-          })
-        }
-      })
-    }
-  })
+//   nodes.value.forEach(node => {
+//     if (node.type === 'person' && node.data.invited[activeInvitationList.value]) {
+//       // Regular person node
+//       guests.push({
+//         id: node.id,
+//         data: {
+//           name: node.data.name,
+//           color: node.data.color
+//         },
+//         nodeId: node.id,
+//         isMultiPerson: false
+//       })
+//     } else if (node.type === 'multi-person') {
+//       // Multi-person node - add each invited person
+//       node.data.people.forEach(person => {
+//         if (person.invited[activeInvitationList.value]) {
+//           guests.push({
+//             id: person.id, // Use person.id for seating
+//             data: {
+//               name: person.name,
+//               color: node.data.color
+//             },
+//             nodeId: node.id, // Track which node they belong to
+//             isMultiPerson: true,
+//             groupName: node.data.name // The multi-person node's group name
+//           })
+//         }
+//       })
+//     }
+//   })
 
-  return guests
-})
+//   return guests
+// })
 
-const unassignedGuests = computed(() => {
-  return invitedGuests.value.filter(guest => !getAssignedGuestIds.value.has(guest.id))
-})
+// const unassignedGuests = computed(() => {
+//   return invitedGuests.value.filter(guest => !getAssignedGuestIds.value.has(guest.id))
+// })
 
-const draggedGuest = ref(null)
+// const draggedGuest = ref(null)
 
-const handleDragStart = guest => {
-  draggedGuest.value = guest
-}
+// const handleDragStart = guest => {
+//   draggedGuest.value = guest
+// }
 
-const handleDragEnd = () => {
-  draggedGuest.value = null
-}
+// const handleDragEnd = () => {
+//   draggedGuest.value = null
+// }
 
-const handleAssignToTable = (guestId, tableId) => {
-  assignGuestToTable(guestId, tableId)
-}
+// const handleAssignToTable = (guestId, tableId) => {
+//   assignGuestToTable(guestId, tableId)
+// }
 
-// Watch for changes to invited guests and remove uninvited guests from tables
-// This includes when switching between invitation lists
-watch(
-  [nodes, tables, activeInvitationList],
-  () => {
-    // Get the set of currently invited guest IDs for the active list
-    const invitedGuestIds = new Set(invitedGuests.value.map(g => g.id))
+// // Watch for changes to invited guests and remove uninvited guests from tables
+// // This includes when switching between invitation lists
+// watch(
+//   [nodes, tables, activeInvitationList],
+//   () => {
+//     // Get the set of currently invited guest IDs for the active list
+//     const invitedGuestIds = new Set(invitedGuests.value.map(g => g.id))
 
-    // For each table, remove guests that are no longer invited in the active list
-    tables.value.forEach(table => {
-      const uninvitedGuests = table.guestIds.filter(guestId => !invitedGuestIds.has(guestId))
+//     // For each table, remove guests that are no longer invited in the active list
+//     tables.value.forEach(table => {
+//       const uninvitedGuests = table.guestIds.filter(guestId => !invitedGuestIds.has(guestId))
 
-      uninvitedGuests.forEach(guestId => {
-        removeGuestFromTable(guestId, table.id)
-      })
-    })
-  },
-  { deep: true }
-)
+//       uninvitedGuests.forEach(guestId => {
+//         removeGuestFromTable(guestId, table.id)
+//       })
+//     })
+//   },
+//   { deep: true }
+// )
 
-const handleSave = async () => {
-  await saveInvitationList({
-    nodes: nodes.value,
-    edges: edges.value,
-    tables: tablesPerList.value[activeInvitationList.value]
-  })
-}
+// const handleSave = async () => {
+//   await saveInvitationList({
+//     nodes: nodes.value,
+//     edges: edges.value,
+//     tables: tablesPerList.value[activeInvitationList.value]
+//   })
+// }
 
-const handleExport = () => {
-  const data = {
-    nodes: nodes.value,
-    edges: edges.value,
-    tablesPerList: tablesPerList.value, // Export all tables for all invitation lists
-    invitationLists: {
-      available: availableInvitationLists.value,
-      active: activeInvitationList.value
-    }
-  }
+// const handleExport = () => {
+//   const data = {
+//     nodes: nodes.value,
+//     edges: edges.value,
+//     tablesPerList: tablesPerList.value, // Export all tables for all invitation lists
+//     invitationLists: {
+//       available: availableInvitationLists.value,
+//       active: activeInvitationList.value
+//     }
+//   }
 
-  const json = JSON.stringify(data, null, 2)
-  const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
+//   const json = JSON.stringify(data, null, 2)
+//   const blob = new Blob([json], { type: 'application/json' })
+//   const url = URL.createObjectURL(blob)
 
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `wedding-planning-${new Date().toISOString().split('T')[0]}.json`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-}
+//   const link = document.createElement('a')
+//   link.href = url
+//   link.download = `wedding-planning-${new Date().toISOString().split('T')[0]}.json`
+//   document.body.appendChild(link)
+//   link.click()
+//   document.body.removeChild(link)
+//   URL.revokeObjectURL(url)
+// }
 
-const handleImport = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'application/json'
+// const handleImport = () => {
+//   const input = document.createElement('input')
+//   input.type = 'file'
+//   input.accept = 'application/json'
 
-  input.onchange = e => {
-    const file = e.target.files[0]
-    if (!file) return
+//   input.onchange = e => {
+//     const file = e.target.files[0]
+//     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = event => {
-      try {
-        const data = JSON.parse(event.target.result)
+//     const reader = new FileReader()
+//     reader.onload = event => {
+//       try {
+//         const data = JSON.parse(event.target.result)
 
-        if (!data.nodes || !data.edges) {
-          alert('Invalid file format. The file must contain "nodes" and "edges" properties.')
-          return
-        }
+//         if (!data.nodes || !data.edges) {
+//           alert('Invalid file format. The file must contain "nodes" and "edges" properties.')
+//           return
+//         }
 
-        const confirmMessage =
-          'Import this file? This will replace your current family tree, invitation lists, and table seating arrangements.'
+//         const confirmMessage =
+//           'Import this file? This will replace your current family tree, invitation lists, and table seating arrangements.'
 
-        if (confirm(confirmMessage)) {
-          initializeNodesAndEdges(data.nodes, data.edges)
+//         if (confirm(confirmMessage)) {
+//           initializeNodesAndEdges(data.nodes, data.edges)
 
-          // Import tables per list
-          if (data.tablesPerList) {
-            tablesPerList.value = data.tablesPerList
-          }
+//           // Import tables per list
+//           if (data.tablesPerList) {
+//             tablesPerList.value = data.tablesPerList
+//           }
 
-          // Import invitation lists
-          if (data.invitationLists) {
-            availableInvitationLists.value = data.invitationLists.available
-            if (data.invitationLists.active) {
-              activeInvitationList.value = data.invitationLists.active
-            }
-          }
-        }
-      } catch (error) {
-        alert('Error reading file: ' + error.message)
-      }
-    }
-    reader.readAsText(file)
-  }
+//           // Import invitation lists
+//           if (data.invitationLists) {
+//             availableInvitationLists.value = data.invitationLists.available
+//             if (data.invitationLists.active) {
+//               activeInvitationList.value = data.invitationLists.active
+//             }
+//           }
+//         }
+//       } catch (error) {
+//         alert('Error reading file: ' + error.message)
+//       }
+//     }
+//     reader.readAsText(file)
+//   }
 
-  input.click()
-}
+//   input.click()
+// }
 
-const handleSelectInvitationList = async listName => {
-  await setActiveInvitationList(listName)
-}
+// const handleSelectInvitationList = async listName => {
+//   await setActiveInvitationList(listName, initializeNodesAndEdges)
+// }
 
-const handleAddInvitationList = async listName => {
-  try {
-    populateNodesWithNewList(listName)
-    populateListWithTables(listName)
-    await addInvitationList(listName, {
-      nodes: nodes.value,
-      edges: edges.value,
-      tables: tablesPerList.value[listName]
-    })
-    await setActiveInvitationList(listName)
-  } catch (error) {
-    alert(error.message)
-  }
-}
+// const handleAddInvitationList = async listName => {
+//   try {
+//     populateNodesWithNewList(listName)
+//     populateListWithTables(listName)
+//     await addInvitationList(listName, {
+//       nodes: nodes.value,
+//       edges: edges.value,
+//       tables: tablesPerList.value[listName]
+//     })
+//     await setActiveInvitationList(listName, initializeNodesAndEdges)
+//   } catch (error) {
+//     alert(error.message)
+//   }
+// }
 
-const handleRemoveInvitationList = listName => {
-  try {
-    // Remove the list from the state
-    removeInvitationList(listName)
-    // Remove the list from all nodes
-    removeListFromNodes(listName)
-    // Remove the list from table seating
-    delete tablesPerList.value[listName]
-  } catch (error) {
-    alert(error.message)
-  }
-}
+// const handleRemoveInvitationList = listName => {
+//   try {
+//     // Remove the list from the state
+//     removeInvitationList(listName)
+//     // Remove the list from all nodes
+//     removeListFromNodes(listName)
+//     // Remove the list from table seating
+//     delete tablesPerList.value[listName]
+//   } catch (error) {
+//     alert(error.message)
+//   }
+// }
 </script>
 
 <template>
@@ -331,38 +335,11 @@ const handleRemoveInvitationList = listName => {
               ⏻
             </button>
           </div>
-          <InvitationListDropdown
-            :active-invitation-list="activeInvitationList"
-            :available-invitation-lists="availableInvitationLists"
-            @select="handleSelectInvitationList"
-            @add="handleAddInvitationList"
-            @remove="handleRemoveInvitationList"
-          />
         </div>
       </div>
     </header>
     <div class="main-content">
-      <GenealogyTree v-if="activeTab === 'family-tree'" />
-      <TableSeating
-        v-if="activeTab === 'table-seating'"
-        :dragged-guest-from-sidebar="draggedGuest"
-      />
-
-      <TableSeatingSidebar
-        v-if="activeTab === 'table-seating'"
-        :guests="unassignedGuests"
-        :tables="tables"
-        :get-group-name="getGroupName"
-        @drag-start="handleDragStart"
-        @drag-end="handleDragEnd"
-        @assign-to-table="handleAssignToTable"
-      />
-      <GenealogyTreeSidebar
-        v-if="activeTab === 'family-tree'"
-        :guests="invitedGuests"
-        :get-group-name="getGroupName"
-        :get-table-assignment="getTableAssignment"
-      />
+      <GenealogyTree />
     </div>
   </div>
 </template>

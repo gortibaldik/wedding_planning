@@ -1,17 +1,56 @@
-<script setup>
+<script setup lang="ts">
+import { computed, ref, nextTick } from 'vue'
+import { RootData, useStoredData } from '@/composables/useStoredData'
 import NodeBase from './NodeBase.vue'
 
-defineProps({
+const props = defineProps({
   id: String,
   data: Object
 })
+
+const { nodes } = useStoredData()
+
+const node = computed(() => {
+  console.info(`Searching for: id '${props.id}'`)
+  const found = nodes.value.find(n => n.id == props.id)
+  if (!found) {
+    throw new TypeError('Should never happen - not found')
+  }
+  if (!(found.data instanceof RootData)) {
+    console.warn(found.data)
+    throw new TypeError(`Should never happen - invalid type: ${typeof found.data}`)
+  }
+  return found as { id: string; type: string; position: { x: number; y: number }; data: RootData }
+})
+
+const showEditModal = ref(false)
+const editNameInput = ref(null)
+const editNameValue = ref('')
+
+const handleEdit = () => {
+  showEditModal.value = true
+  nextTick(() => {
+    editNameInput.value?.focus()
+  })
+}
+
+const closeEditModal = () => {
+  showEditModal.value = false
+  editNameValue.value = node.value.data.name
+}
+
+const saveEdit = () => {
+  console.info(`node: ${node.value}`)
+  node.value.data.name = editNameValue.value
+  closeEditModal()
+}
 </script>
 
 <template>
-  <NodeBase :id="id" :data="data">
+  <NodeBase :id="id" :data="data" @click="handleEdit">
     <div class="person-node__header">
-      <div class="person-node__name">{{ data.name }}</div>
-      <div class="person-node__role">{{ data.type }}</div>
+      <div class="person-node__name">{{ node.data.name }}</div>
+      <div class="person-node__role">{{ node.type }}</div>
     </div>
 
     <!-- Button for groups with children -->
@@ -20,10 +59,38 @@ defineProps({
         Invite the whole subtree
       </button>
     </div>
+
+    <Teleport to="body">
+      <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
+        <div class="modal" @click.stop>
+          <h3>Edit Person</h3>
+          <form @submit.prevent="saveEdit">
+            <div class="form-group">
+              <label>Name:</label>
+              <input
+                ref="editNameInput"
+                v-model="editNameValue"
+                type="text"
+                :placeholder="editNameValue"
+                required
+              />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Save</button>
+              <button type="button" class="btn btn-secondary" @click="closeEditModal">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
   </NodeBase>
 </template>
 
 <style scoped>
+@import '@/assets/styles/modal.css';
+
 .person-node__header {
   margin-bottom: 8px;
 }

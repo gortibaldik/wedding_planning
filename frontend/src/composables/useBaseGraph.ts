@@ -1,4 +1,5 @@
 import { Ref } from 'vue'
+import { ChartNode, BaseData, useStoredData } from './useStoredData'
 
 const NODE_WIDTH = 180
 const HORIZONTAL_SPACING = 80
@@ -23,25 +24,8 @@ function getNextColor() {
   return color
 }
 
-export type ChartNode<DataType> = {
-  id: string
-  type: string
-  position: {
-    x: number
-    y: number
-  }
-  data: DataType
-}
-
-export class BaseData {
-  constructor(
-    public color: string,
-    public isRoot: boolean,
-    public manuallyPositioned: boolean = false
-  ) {}
-}
-
-export function useBaseGraph(nodes: Ref<ChartNode<BaseData>[]>, edges: Ref<any[]>) {
+export function useBaseGraph() {
+  const { nodes, edges } = useStoredData()
   const groupRootNodes: ChartNode<BaseData>[] = []
 
   const removePersonNode = (nodeId: string) => {
@@ -125,12 +109,6 @@ export function useBaseGraph(nodes: Ref<ChartNode<BaseData>[]>, edges: Ref<any[]
       return null
     }
     return edgeToParent.source
-  }
-
-  /** Clear all nodes and edges from the graph. */
-  const clearAll = () => {
-    nodes.value = []
-    edges.value = []
   }
 
   const calculateNextChildPosition = (parent: ChartNode<any>) => {
@@ -262,20 +240,17 @@ export function useBaseGraph(nodes: Ref<ChartNode<BaseData>[]>, edges: Ref<any[]
     edges.value = [...edges.value, newEdge]
 
     // Resolve any collisions caused by the new node
-    resolveCollisions(childNode)
+    // resolveCollisions(childNode)
 
     return childNode.id
   }
 
   return {
-    nodes,
-    edges,
     removePersonNode,
     updatePersonNode,
     addChildBase,
     findNode,
     addRootBase,
-    clearAll,
     findAllDescendants
   }
 }

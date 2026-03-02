@@ -5,14 +5,7 @@ import { useAuth } from './useAuth'
 const INVITATION_LIST_STORAGE_KEY = 'wedding-invitation-lists'
 const GENERAL_DATA_STORAGE_KEY = 'wedding-general-data'
 
-const availableInvitationLists = ref<string[]>()
-
-// Currently active invitation list
 const activeInvitationListId = ref<string | null>(null)
-
-const nodes = ref<any[]>([])
-const edges = ref<any[]>([])
-const tablesPerList = ref<Record<string, any[]>>({})
 
 function buildHeaders(token: string | null): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -33,7 +26,10 @@ const { checkAuth, getToken } = useAuth()
 const { saveToLocalStorage } = useLocalStorage(INVITATION_LIST_STORAGE_KEY)
 const { saveToLocalStorage: saveDataToLocalStorage } = useLocalStorage(GENERAL_DATA_STORAGE_KEY)
 
-const setActiveInvitationList = async (listName: string) => {
+const setActiveInvitationList = async (
+  listName: string,
+  initializeNodesAndEdges: CallableFunction
+) => {
   if (!availableInvitationLists.value.includes(listName)) {
     throw new Error('List does not exist')
   }
@@ -47,8 +43,7 @@ const setActiveInvitationList = async (listName: string) => {
       const invitationList = await res.json()
       const data = invitationList.data
       if (data) {
-        nodes.value = data.nodes ?? []
-        edges.value = data.edges ?? []
+        initializeNodesAndEdges(data.nodes ?? [], data.edges ?? [])
         tablesPerList.value[listName] = data.tables ?? []
       }
     }
@@ -114,17 +109,6 @@ watch(
 )
 
 // Auto-save nodes/edges/tables to localStorage on every change
-watch(
-  [nodes, edges, tablesPerList],
-  () => {
-    saveDataToLocalStorage({
-      nodes: nodes.value,
-      edges: edges.value,
-      tablesPerList: tablesPerList.value
-    })
-  },
-  { deep: true }
-)
 
 // Auto-save active list to backend every 30 seconds
 setInterval(async () => {

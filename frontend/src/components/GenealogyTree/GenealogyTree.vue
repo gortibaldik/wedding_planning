@@ -7,12 +7,13 @@ import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/core/dist/style.css'
 
-import PersonNode from './nodes/PersonNode.vue'
-import MultiPersonNode from './nodes/MultiPersonNode.vue'
-import GroupNode from './nodes/GroupNode.vue'
-import { useGenealogyData } from '../composables/useGenealogyData'
-import { useSidebarState } from '../composables/useSidebarState'
-import { useBaseGraph } from '../composables/useBaseGraph.ts'
+import PersonNode from '@/components/nodes/PersonNode.vue'
+import MultiPersonNode from '@/components/nodes/MultiPersonNode.vue'
+import GroupNode from '@/components/nodes/GroupNode.vue'
+import { useSidebarState } from '@/composables/useSidebarState'
+import { useBaseGraph } from '@/composables/useBaseGraph'
+import { MultiPersonData, PersonData, useStoredData } from '@/composables/useStoredData'
+import GenealogyTreeAddModal from './GenealogyTreeAddModal.vue'
 
 const nodeTypes = {
   person: markRaw(PersonNode),
@@ -20,94 +21,24 @@ const nodeTypes = {
   group: markRaw(GroupNode)
 }
 
-const genealogyData = useGenealogyData()
-const {
-  nodes: rawNodes,
-  edges,
-  toggleInvited,
-  togglePersonInvited,
-  toggleAllInvited,
-  toggleSubtreeInvited,
-  addPersonToNode,
-  removePersonFromNode,
-  addChildNode,
-  addRootNode,
-  removePersonNode,
-  updatePersonNode,
-  clearAll
-} = genealogyData
-
-const { fitView, updateNode } = useVueFlow()
-
-onMounted(() => {
-  setTimeout(() => {
-    fitView({ padding: 0.2, duration: 200 })
-  }, 100)
-})
-
-const showEditModal = ref(false)
-const editingNodeId = ref(null)
-const editForm = ref({ name: '' })
-const editNameInput = ref(null)
+const { nodes: rawNodes, edges, people, clearAll } = useStoredData()
 
 const showAddModal = ref(false)
+const addModalTitle = ref('')
 const addModalType = ref('')
 const addModalTargetId = ref(null)
 const addForm = ref({ name: '', nodeType: 'person', nodeTypeOptions: [] })
 const addNameInput = ref(null)
 
-const addModalTitle = ref('')
-
-const handleEdit = nodeId => {
-  const node = rawNodes.value.find(n => n.id === nodeId)
-  if (node && node.type !== 'multi-person') {
-    editingNodeId.value = nodeId
-    editForm.value = {
-      name: node.data.name
-    }
-    showEditModal.value = true
-    nextTick(() => {
-      editNameInput.value?.focus()
-    })
-  }
-}
-
-const nodes = computed(() => {
-  return rawNodes.value.map(node => {
-    // Check if this node has children
-    const hasChildren = edges.value.some(e => e.source === node.id)
-
-    return {
-      ...node,
-      data: {
-        ...node.data,
-        onAddChild: handleAddChild,
-        onRemove: handleRemove,
-        onEdit: handleEdit,
-        onToggleInvited: toggleInvited,
-        onTogglePersonInvited: togglePersonInvited,
-        onToggleAllInvited: toggleAllInvited,
-        onToggleSubtreeInvited: toggleSubtreeInvited,
-        hasChildren,
-        type: node.type
-      }
-    }
+const handleAddRoot = () => {
+  addModalType.value = 'root'
+  addModalTargetId.value = null
+  addModalTitle.value = 'Add New Root'
+  addForm.value = { name: '', nodeType: 'group', nodeTypeOptions: ['group'] }
+  showAddModal.value = true
+  nextTick(() => {
+    addNameInput.value?.focus()
   })
-})
-
-const { sidebarCollapsed } = useSidebarState()
-
-const saveEdit = () => {
-  if (editingNodeId.value) {
-    updatePersonNode(editingNodeId.value, editForm.value)
-    closeEditModal()
-  }
-}
-
-const closeEditModal = () => {
-  showEditModal.value = false
-  editingNodeId.value = null
-  editForm.value = { name: '' }
 }
 
 const handleAddChild = parentId => {
@@ -125,61 +56,21 @@ const handleAddChild = parentId => {
   })
 }
 
-const handleAddRoot = () => {
-  addModalType.value = 'root'
-  addModalTargetId.value = null
-  addModalTitle.value = 'Add New Root'
-  addForm.value = { name: '', nodeType: 'group', nodeTypeOptions: ['group'] }
-  showAddModal.value = true
-  nextTick(() => {
-    addNameInput.value?.focus()
+const nodes = computed(() => {
+  return rawNodes.value.map(node => {
+    // Check if this node has children
+    const hasChildren = edges.value.some(e => e.source === node.id)
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        onAddChild: handleAddChild,
+        hasChildren
+      }
+    }
   })
-}
-
-const saveAdd = () => {
-  if (addModalType.value === 'child') {
-    addChildNode(addModalTargetId.value, addForm.value.name, addForm.value.nodeType)
-    closeAddModal()
-  } else if (addModalType.value === 'root') {
-    addRootNode(addForm.value.name)
-    closeAddModal()
-  }
-}
-
-const closeAddModal = () => {
-  showAddModal.value = false
-  addModalType.value = ''
-  addModalTargetId.value = null
-  addForm.value = { name: '', nodeType: 'person', nodeTypeOptions: [] }
-}
-
-const handleRemove = nodeId => {
-  const node = rawNodes.value.find(n => n.id === nodeId)
-  if (!node) return
-
-  // Count descendants
-  const findDescendantCount = id => {
-    const childEdges = edges.value.filter(e => e.source === id)
-    let count = childEdges.length
-
-    childEdges.forEach(edge => {
-      count += findDescendantCount(edge.target)
-    })
-
-    return count
-  }
-
-  const descendantCount = findDescendantCount(nodeId)
-
-  let confirmMessage = `Are you sure you want to remove this ${node.type}?`
-  if (descendantCount > 0) {
-    confirmMessage += ` This will also remove ${descendantCount} descendant${descendantCount > 1 ? 's' : ''}.`
-  }
-
-  if (confirm(confirmMessage)) {
-    removePersonNode(nodeId)
-  }
-}
+})
 
 const handleClearAll = () => {
   if (
@@ -188,6 +79,10 @@ const handleClearAll = () => {
     clearAll()
   }
 }
+
+// const { sidebarCollapsed } = useSidebarState()
+
+const { fitView, updateNode } = useVueFlow()
 
 // Track drag state
 const dragState = ref({
@@ -331,55 +226,14 @@ const onNodeDragStop = ({ node }) => {
       Clear
     </button>
 
-    <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
-      <div class="modal" @click.stop>
-        <h3>Edit Person</h3>
-        <form @submit.prevent="saveEdit">
-          <div class="form-group">
-            <label>Name:</label>
-            <input ref="editNameInput" v-model="editForm.name" type="text" required />
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <button type="button" class="btn btn-secondary" @click="closeEditModal">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div v-if="showAddModal" class="modal-overlay" @click="closeAddModal">
-      <div class="modal" @click.stop>
-        <h3>{{ addModalTitle }}</h3>
-        <form @submit.prevent="saveAdd">
-          <div class="form-group">
-            <label>Name:</label>
-            <input
-              ref="addNameInput"
-              v-model="addForm.name"
-              type="text"
-              :placeholder="
-                addForm.nodeType === 'multi-person'
-                  ? 'Group name (e.g., Frederik and Veronika)'
-                  : 'Enter name'
-              "
-              required
-            />
-          </div>
-          <div v-if="addForm.nodeTypeOptions.length > 1" class="form-group">
-            <label>Node Type:</label>
-            <select v-model="addForm.nodeType" required>
-              <option v-for="option in addForm.nodeTypeOptions" :key="option" :value="option">
-                {{ option.charAt(0).toUpperCase() + option.slice(1) }}
-              </option>
-            </select>
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Add</button>
-            <button type="button" class="btn btn-secondary" @click="closeAddModal">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <GenealogyTreeAddModal
+      v-model:show-add-modal="showAddModal"
+      v-model:add-modal-type="addModalType"
+      v-model:add-modal-title="addModalTitle"
+      v-model:add-name-input="addNameInput"
+      v-model:add-form="addForm"
+      v-model:add-modal-target-id="addModalTargetId"
+    />
   </div>
 </template>
 

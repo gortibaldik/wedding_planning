@@ -1,28 +1,31 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import NodeBase from './NodeBase.vue'
-import { useInvitationLists } from '../../composables/useInvitationLists.ts'
-import { useGenealogyData } from '../../composables/useGenealogyData.ts'
+import { useStoredData, MultiPersonData, PersonInfo } from '@/composables/useStoredData'
 
 const props = defineProps({
   id: String,
   data: Object
 })
 
-const { activeInvitationList } = useInvitationLists()
-const { nodes } = useGenealogyData()
+const { nodes, people } = useStoredData()
 
-// Compute allInvited/someInvited locally instead of relying on class getters,
-// which get lost when GenealogyTree.vue spreads node.data into a plain object.
-const allInvited = computed(() => {
-  const people = props.data.people || []
-  return people.length > 0 && people.every(p => p.invited[activeInvitationList.value] === true)
-})
-
-const someInvited = computed(() => {
-  const people = props.data.people || []
-  const count = people.filter(p => p.invited[activeInvitationList.value] === true).length
-  return count > 0 && count < people.length
+const node = computed(() => {
+  console.info(`Searching for: id '${props.id}'`)
+  const found = nodes.value.find(n => n.id == props.id)
+  if (!found) {
+    throw new TypeError('Should never happen - not found')
+  }
+  if (!(found.data instanceof MultiPersonData)) {
+    console.warn(found.data)
+    throw new TypeError(`Should never happen - invalid type: ${typeof found.data}`)
+  }
+  return found as {
+    id: string
+    type: string
+    position: { x: number; y: number }
+    data: MultiPersonData
+  }
 })
 
 // Modal state
@@ -37,12 +40,9 @@ const localData = computed(() => ({
 }))
 
 const openModal = () => {
-  const node = nodes.value.find(n => n.id === props.id)
-  if (node && node.type === 'multi-person') {
-    modalForm.value.groupName = node.data.name
-    modalForm.value.people = [...node.data.people]
-    showModal.value = true
-  }
+  modalForm.value.groupName = node.value.data.name
+  modalForm.value.people = [...node.value.data.people]
+  showModal.value = true
 }
 
 const closeModal = () => {
@@ -63,6 +63,7 @@ const handleAddPerson = () => {
 
 const handleRemovePerson = personId => {
   modalForm.value.people = modalForm.value.people.filter(p => p.id !== personId)
+  delete people.value[personId]
 }
 
 const handleEditPerson = personId => {
@@ -77,22 +78,26 @@ const handleEditPerson = personId => {
 
 const saveModal = () => {
   if (modalForm.value.groupName.trim()) {
-    const node = nodes.value.find(n => n.id === props.id)
-    if (node && node.type === 'multi-person') {
-      // Update group name
-      node.data.name = modalForm.value.groupName.trim()
+    node.value.data.name = modalForm.value.groupName.trim()
 
-      // Update people, preserving invited status where possible
-      const updatedPeople = modalForm.value.people.map((formPerson, index) => {
-        const existingPerson = node.data.people.find(p => p.name === formPerson.name)
+    const updatedPeople = modalForm.value.people.map((formPerson, index) => {
+      const existingPerson = node.value.data.people.find(p => p.name === formPerson.name)
+
+      if (existingPerson) {
         return {
-          id: existingPerson?.id || `${node.id}-${Date.now()}-${index}`,
-          name: formPerson.name,
-          invited: existingPerson?.invited || {}
+          id: existingPerson.id,
+          name: formPerson.name
         }
-      })
-      node.data.people = updatedPeople
-    }
+      } else {
+        const newId = `${node.value.id}-${Date.now()}-${index}`
+        people.value[newId] = new PersonInfo(false)
+        return {
+          id: newId,
+          name: formPerson.name
+        }
+      }
+    })
+    node.value.data.people = updatedPeople
     closeModal()
   }
 }
@@ -100,38 +105,38 @@ const saveModal = () => {
 
 <template>
   <div>
-    <NodeBase :id="id" :data="localData">
+    <NodeBase :id="id" :data="localData" @click="openModal">
       <div class="person-node__header">
-        <div class="person-node__name">{{ localData.name }}</div>
-        <div class="person-node__role">Multi-person ({{ localData.people.length }})</div>
+        <div class="person-node__name">{{ node.data.name }}</div>
+        <div class="person-node__role">Multi-person ({{ node.data.people.length }})</div>
       </div>
 
       <!-- Checkboxes below role -->
-      <div v-if="localData.people.length > 0" class="person-node__checkboxes">
+      <div v-if="node.data.people.length > 0" class="person-node__checkboxes">
         <label class="person-node__checkbox-row" @click.stop>
           <input
             type="checkbox"
-            :checked="allInvited"
-            :indeterminate.prop="someInvited"
+            :checked="node.data.allInvited"
+            :indeterminate.prop="node.data.someInvited"
             class="person-node__checkbox-master"
-            @change="localData.onToggleAllInvited?.(id)"
+            @change="node.data.inviteAllToggle"
           />
           <span class="person-node__checkbox-label">Invite all?</span>
         </label>
 
         <button
-          v-if="localData.hasChildren"
+          v-if="data.hasChildren"
           class="person-node__subtree-btn"
-          @click.stop="localData.onToggleSubtreeInvited?.(id)"
+          @click.stop="data.onToggleSubtreeInvited?.(id)"
         >
           Invite the whole subtree
         </button>
       </div>
 
       <!-- Individual People List -->
-      <div v-if="localData.people.length > 0" class="person-node__people-list">
+      <div v-if="node.data.people.length > 0" class="person-node__people-list">
         <div
-          v-for="person in localData.people"
+          v-for="person in node.data.people"
           :key="person.id"
           class="person-node__person-item"
           @click.stop
@@ -139,9 +144,13 @@ const saveModal = () => {
           <span class="person-node__person-name">{{ person.name }}</span>
           <input
             type="checkbox"
-            :checked="person.invited[activeInvitationList]"
+            :checked="people[person.id]?.invited"
             class="person-node__checkbox-small"
-            @change="localData.onTogglePersonInvited?.(id, person.id)"
+            @change="
+              () => {
+                people[person.id].invited = !!!people[person.id]?.invited
+              }
+            "
           />
         </div>
       </div>

@@ -1,18 +1,47 @@
 <script setup>
+import { useBaseGraph } from '@/composables/useBaseGraph'
+import { useStoredData } from '@/composables/useStoredData'
 import { Handle, Position } from '@vue-flow/core'
 
-defineProps({
+const props = defineProps({
   id: String,
   data: Object
 })
+
+const { nodes, edges } = useStoredData()
+const { removePersonNode } = useBaseGraph()
+
+const handleRemove = () => {
+  const node = nodes.value.find(n => n.id === props.id)
+  if (!node) return
+
+  // Count descendants
+  const findDescendantCount = id => {
+    const childEdges = edges.value.filter(e => e.source === id)
+    let count = childEdges.length
+
+    childEdges.forEach(edge => {
+      count += findDescendantCount(edge.target)
+    })
+
+    return count
+  }
+
+  const descendantCount = findDescendantCount(props.id)
+
+  let confirmMessage = `Are you sure you want to remove this ${node.type}?`
+  if (descendantCount > 0) {
+    confirmMessage += ` This will also remove ${descendantCount} descendant${descendantCount > 1 ? 's' : ''}.`
+  }
+
+  if (confirm(confirmMessage)) {
+    removePersonNode(props.id)
+  }
+}
 </script>
 
 <template>
-  <div
-    class="person-node"
-    :style="{ '--node-color': data.color || '#3b82f6' }"
-    @click="data.onEdit?.(id)"
-  >
+  <div class="person-node" :style="{ '--node-color': data.color || '#3b82f6' }">
     <Handle type="target" :position="Position.Top" />
 
     <div class="person-node__content">
@@ -30,7 +59,7 @@ defineProps({
       <button
         class="action-btn action-btn--remove"
         title="Remove person"
-        @click.stop="data.onRemove?.(id)"
+        @click.stop="handleRemove"
       >
         ✕
       </button>
