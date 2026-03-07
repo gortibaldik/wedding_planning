@@ -2,6 +2,7 @@
 import { computed, ref, nextTick } from 'vue'
 import { PersonData, useStoredData } from '@/composables/useStoredData'
 import NodeBase from './NodeBase.vue'
+import { useBaseGraph } from '@/composables/useBaseGraph'
 
 const props = defineProps({
   id: String,
@@ -9,6 +10,7 @@ const props = defineProps({
 })
 
 const { people, nodes } = useStoredData()
+const { inviteSubTree } = useBaseGraph()
 
 const isInvited = computed(() => people.value[props.id].invited)
 
@@ -74,7 +76,7 @@ const saveEdit = () => {
       <button
         v-if="data.hasChildren"
         class="person-node__subtree-btn"
-        @click.stop="data.onToggleSubtreeInvited?.(id)"
+        @click.stop="inviteSubTree(node.id)"
       >
         Invite the whole subtree
       </button>

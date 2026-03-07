@@ -1,5 +1,4 @@
-import { Ref } from 'vue'
-import { ChartNode, BaseData, useStoredData } from './useStoredData'
+import { ChartNode, BaseData, useStoredData, MultiPersonData } from './useStoredData'
 
 const NODE_WIDTH = 180
 const HORIZONTAL_SPACING = 80
@@ -25,8 +24,22 @@ function getNextColor() {
 }
 
 export function useBaseGraph() {
-  const { nodes, edges } = useStoredData()
+  const { nodes, edges, people } = useStoredData()
   const groupRootNodes: ChartNode<BaseData>[] = []
+
+  const inviteSubTree = (nodeId: string) => {
+    const descendants = findAllDescendants(nodeId)
+    descendants.forEach(descId => {
+      if (descId in people.value) {
+        people.value[descId].invited = true
+      } else {
+        const node = nodes.value.find(n => n.id == descId)
+        if (node.data instanceof MultiPersonData && !node.data.allInvited) {
+          node.data.inviteAllToggle()
+        }
+      }
+    })
+  }
 
   const removePersonNode = (nodeId: string) => {
     const node = nodes.value.filter(n => n.id === nodeId)[0]
@@ -240,7 +253,7 @@ export function useBaseGraph() {
     edges.value = [...edges.value, newEdge]
 
     // Resolve any collisions caused by the new node
-    // resolveCollisions(childNode)
+    resolveCollisions(childNode)
 
     return childNode.id
   }
@@ -251,6 +264,7 @@ export function useBaseGraph() {
     addChildBase,
     findNode,
     addRootBase,
-    findAllDescendants
+    findAllDescendants,
+    inviteSubTree
   }
 }

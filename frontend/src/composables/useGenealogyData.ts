@@ -12,8 +12,7 @@ import {
 export function useGenealogyData() {
   const { people } = useStoredData()
 
-  const { addRootBase, addChildBase, removePersonNode, updatePersonNode, findAllDescendants } =
-    useBaseGraph()
+  const { addRootBase, addChildBase } = useBaseGraph()
 
   /** Add root node to the chart */
   const addRootNode = (name: string) => {
@@ -135,8 +134,6 @@ export function useGenealogyData() {
 
   return {
     addRootNode,
-    addChildNode,
-    removePersonNode,
-    updatePersonNode
+    addChildNode
   }
 }

@@ -22,12 +22,6 @@ const skipAuth = import.meta.env.VITE_SKIP_AUTH === 'true'
 // }
 
 const activeTab = ref('family-tree')
-try {
-  const { nodes, edges, initializeNodesAndEdges, populateNodesWithNewList, removeListFromNodes } =
-    useGenealogyData()
-} catch (e) {
-  console.error(`There was an error ${e.stack}`)
-}
 // // const {
 // //   tables,
 // //   tablesPerList,

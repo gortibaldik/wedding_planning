@@ -2,6 +2,7 @@
 import { computed, ref, nextTick } from 'vue'
 import { RootData, useStoredData } from '@/composables/useStoredData'
 import NodeBase from './NodeBase.vue'
+import { useBaseGraph } from '@/composables/useBaseGraph'
 
 const props = defineProps({
   id: String,
@@ -9,6 +10,7 @@ const props = defineProps({
 })
 
 const { nodes } = useStoredData()
+const { inviteSubTree } = useBaseGraph()
 
 const node = computed(() => {
   console.info(`Searching for: id '${props.id}'`)
@@ -55,7 +57,7 @@ const saveEdit = () => {
 
     <!-- Button for groups with children -->
     <div v-if="data.hasChildren" class="person-node__checkboxes">
-      <button class="person-node__subtree-btn" @click.stop="data.onToggleSubtreeInvited?.(id)">
+      <button class="person-node__subtree-btn" @click.stop="inviteSubTree(node.id)">
         Invite the whole subtree
       </button>
     </div>

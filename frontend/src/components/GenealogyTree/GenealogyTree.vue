@@ -22,6 +22,7 @@ const nodeTypes = {
 }
 
 const { nodes: rawNodes, edges, people, clearAll } = useStoredData()
+const { findAllDescendants } = useBaseGraph()
 
 const showAddModal = ref(false)
 const addModalTitle = ref('')
@@ -91,29 +92,9 @@ const dragState = ref({
   descendantStartPositions: new Map()
 })
 
-// Find all descendants of a node
-const findDescendants = nodeId => {
-  const descendants = new Set()
-  const toVisit = [nodeId]
-
-  while (toVisit.length > 0) {
-    const currentId = toVisit.pop()
-    const childEdges = edges.value.filter(e => e.source === currentId)
-
-    childEdges.forEach(edge => {
-      if (!descendants.has(edge.target)) {
-        descendants.add(edge.target)
-        toVisit.push(edge.target)
-      }
-    })
-  }
-
-  return Array.from(descendants)
-}
-
 // Handle drag start
 const onNodeDragStart = ({ node }) => {
-  const descendants = findDescendants(node.id)
+  const descendants = findAllDescendants(node.id)
   const descendantPositions = new Map()
 
   // Store initial positions of all descendants
