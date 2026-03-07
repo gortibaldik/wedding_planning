@@ -52,13 +52,13 @@ export function useGenealogyData() {
       }
     } else {
       const personId = `person-${Date.now()}`
-      people.value[personId] = new PersonInfo(false)
+      people.value[personId] = new PersonInfo(false, name)
 
       node = {
         id: personId,
         type: 'person',
         position: { x: 0, y: 0 },
-        data: new PersonData(name)
+        data: new PersonData(personId)
       }
     }
 

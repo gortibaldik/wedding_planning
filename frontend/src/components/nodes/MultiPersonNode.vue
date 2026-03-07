@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, inject, type Ref } from 'vue'
 import NodeBase from './NodeBase.vue'
-import { useStoredData, MultiPersonData, PersonInfo } from '@/composables/useStoredData'
+import {
+  useStoredData,
+  MultiPersonData,
+  PersonInfo,
+  PersonInNode
+} from '@/composables/useStoredData'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 
 const props = defineProps({
@@ -29,12 +34,6 @@ const node = computed(() => {
     data: MultiPersonData
   }
 
-  foundCasted.data.people.forEach(person => {
-    if (!(person.id in people.value)) {
-      console.warn('UNITIALIZED MULTIPERSON PERSON:', person.id)
-      people.value[person.id] = new PersonInfo(false)
-    }
-  })
   return foundCasted
 })
 
@@ -94,20 +93,16 @@ const saveModal = () => {
     const updatedPeople = modalForm.value.people.map((formPerson, index) => {
       const existingPerson = node.value.data.people.find(p => p.name === formPerson.name)
 
-      if (existingPerson) {
-        return {
-          id: existingPerson.id,
-          name: formPerson.name
-        }
-      } else {
+      if (!existingPerson) {
         const newId = `${node.value.id}-${Date.now()}-${index}`
-        people.value[newId] = new PersonInfo(false)
-        return {
-          id: newId,
-          name: formPerson.name
-        }
+        people.value[newId] = new PersonInfo(false, formPerson.name)
+        return new PersonInNode(newId)
+      } else {
+        people.value[existingPerson.id].name = formPerson.name
+        return existingPerson
       }
     })
+    console.info('updated people', updatedPeople)
     node.value.data.people = updatedPeople
     closeModal()
   }

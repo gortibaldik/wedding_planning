@@ -43,7 +43,6 @@ const closeEditModal = () => {
 }
 
 const saveEdit = () => {
-  console.info(`node: ${node.value}`)
   node.value.data.name = editNameValue.value
   closeEditModal()
 }

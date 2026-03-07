@@ -20,14 +20,33 @@ export class BaseData {
   ) {}
 }
 
-export interface PersonInNode {
-  id: string // Unique ID for seating assignments
-  name: string // Can be "+1", "Guest of John", etc.
+export class PersonInNode {
+  constructor(public id: string) {}
+
+  get name(): string {
+    return people.value[this.id]?.name
+  }
+
+  set name(value: string) {
+    if (people.value[this.id]) {
+      people.value[this.id].name = value
+    }
+  }
 }
 
 export class PersonData extends BaseData {
-  constructor(public name: string) {
+  constructor(public id: string) {
     super('invalid-color', false, false)
+  }
+
+  get name(): string {
+    return people.value[this.id]?.name
+  }
+
+  set name(value: string) {
+    if (people.value[this.id]) {
+      people.value[this.id].name = value
+    }
   }
 }
 
@@ -71,7 +90,10 @@ export class MultiPersonData extends BaseData {
 }
 
 export class PersonInfo {
-  constructor(public invited: boolean) {}
+  constructor(
+    public invited: boolean,
+    public name: string
+  ) {}
 }
 
 const nodes = ref<ChartNode<BaseData>[]>([])
@@ -90,9 +112,10 @@ const parseData = (newNodes: ChartNode<BaseData>[]) => {
     if (newNode.type === 'group') {
       data = new RootData(newNode.data['name'])
     } else if (newNode.type === 'person') {
-      data = new PersonData(newNode.data['name'])
+      data = new PersonData(newNode.id)
     } else if (newNode.type === 'multi-person') {
-      data = new MultiPersonData(newNode.data['name'], newNode.data['people'] || [])
+      const people = (newNode.data['people'] || []).map((p: any) => new PersonInNode(p.id))
+      data = new MultiPersonData(newNode.data['name'], people)
     } else {
       throw TypeError(`unexpected node type: ${newNode.type}`)
     }
@@ -161,13 +184,14 @@ async function initStoredData() {
   watch(
     [nodes, edges, people],
     () => {
-      console.info('SAVING TO LOCAL STORAGE')
+      console.info('SAVING TO LOCAL STORAGE', nodes.value)
       saveToLocalStorage({ nodes: nodes.value, edges: edges.value, people: people.value })
     },
     { deep: true }
   )
 
   watch([nodes, edges, loadedFamilyStructureFromBE], () => {
+    console.info('UPDATING UNSYNC')
     if (!loadedFamilyStructureFromBE.value) {
       console.info('No loaded family structure!')
       if (nodes.value || edges.value) {

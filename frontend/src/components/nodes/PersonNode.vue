@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, inject, type Ref } from 'vue'
-import { PersonData, PersonInfo, useStoredData } from '@/composables/useStoredData'
+import { PersonData, useStoredData } from '@/composables/useStoredData'
 import NodeBase from './NodeBase.vue'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 
@@ -14,9 +14,6 @@ const { people, nodes } = useStoredData()
 const { inviteSubTree } = useBaseGraph()
 
 const isInvited = computed(() => {
-  if (!(props.id in people.value)) {
-    people.value[props.id] = new PersonInfo(false) // eslint-disable-line vue/no-side-effects-in-computed-properties
-  }
   return people.value[props.id].invited
 })
 
@@ -43,6 +40,7 @@ const editNameValue = ref('')
 const handleEdit = () => {
   if (readOnly.value) return
   showEditModal.value = true
+  editNameValue.value = node.value.data.name
   nextTick(() => {
     editNameInput.value?.focus()
   })
