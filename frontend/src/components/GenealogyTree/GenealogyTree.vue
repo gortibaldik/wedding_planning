@@ -91,7 +91,7 @@ const handleClearAll = () => {
   }
 }
 
-// const { sidebarCollapsed } = useSidebarState()
+const { sidebarCollapsed } = useSidebarState()
 
 const { fitView, updateNode } = useVueFlow()
 
