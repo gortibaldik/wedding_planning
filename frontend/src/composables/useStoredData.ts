@@ -173,7 +173,7 @@ async function initStoredData() {
   let stored
 
   if (loadedFamilyStructureFromBE.value) {
-    stored = loadedFamilyStructureFromBE.value
+    stored = JSON.parse(JSON.stringify(loadedFamilyStructureFromBE.value))
     const { people: peopleContent } = loadFromLocalStorage()
     stored['people'] = peopleContent
     console.info('COMPOSED STORED:', stored)
@@ -190,32 +190,37 @@ async function initStoredData() {
     { deep: true }
   )
 
-  watch([nodes, edges, loadedFamilyStructureFromBE], () => {
-    console.info('UPDATING UNSYNC')
-    if (!loadedFamilyStructureFromBE.value) {
-      console.info('No loaded family structure!')
-      if (nodes.value || edges.value) {
+  watch(
+    [nodes, edges, loadedFamilyStructureFromBE],
+    () => {
+      console.info('UPDATING UNSYNC')
+      if (!loadedFamilyStructureFromBE.value) {
+        console.info('No loaded family structure!')
+        if (nodes.value || edges.value) {
+          familyStructureUnsync.value = true
+        } else {
+          console.info('!nodes and !edges', nodes.value, edges.value)
+          familyStructureUnsync.value = false
+        }
+        return
+      }
+
+      console.info('Loaded family structure!', loadedFamilyStructureFromBE.value)
+      const currentStr = JSON.stringify({ nodes: nodes.value, edges: edges.value })
+      const loadedStr = JSON.stringify({
+        nodes: loadedFamilyStructureFromBE.value['nodes'],
+        edges: loadedFamilyStructureFromBE.value['edges']
+      })
+      if (currentStr !== loadedStr) {
+        console.info('currentStr', currentStr, 'loadedStr', loadedStr)
         familyStructureUnsync.value = true
       } else {
-        console.info('!nodes and !edges', nodes.value, edges.value)
+        console.info('currentStr', currentStr, 'loadedStr', loadedStr)
         familyStructureUnsync.value = false
       }
-      return
-    }
-
-    console.info('Loaded family structure!', loadedFamilyStructureFromBE.value)
-    const currentStr = JSON.stringify({ nodes: nodes.value, edges: edges.value })
-    const loadedStr = JSON.stringify({
-      nodes: loadedFamilyStructureFromBE.value['nodes'],
-      edges: loadedFamilyStructureFromBE.value['edges']
-    })
-    if (currentStr !== loadedStr) {
-      console.info('currentStr', currentStr, 'loadedStr', loadedStr)
-      familyStructureUnsync.value = true
-    } else {
-      familyStructureUnsync.value = false
-    }
-  })
+    },
+    { deep: true }
+  )
 
   if (stored) {
     if (stored.nodes) {
