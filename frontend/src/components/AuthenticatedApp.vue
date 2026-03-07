@@ -2,6 +2,7 @@
 console.info('RUNING SETUP FOR AuthenticatedApp')
 import { ref, computed, watch } from 'vue'
 import GenealogyTree from './GenealogyTree/GenealogyTree.vue'
+import GenealogyTreeSidebar from './GenealogyTree/GenealogyTreeSidebar.vue'
 // import TableSeating from './TableSeating.vue'
 // import InvitationListDropdown from './InvitationListDropdown.vue'
 // import TableSeatingSidebar from './TableSeatingSidebar.vue'
@@ -287,13 +288,13 @@ const { sidebarCollapsed } = useSidebarState()
           >
             Family Tree
           </button>
-          <button
+          <!-- <button
             class="tab-btn"
             :class="{ active: activeTab === 'table-seating' }"
             @click="activeTab = 'table-seating'"
           >
             Table Seating
-          </button>
+          </button> -->
         </div>
         <div class="header-center">
           <h1>Wedding Planning</h1>
@@ -308,7 +309,7 @@ const { sidebarCollapsed } = useSidebarState()
         </div>
         <div class="header-buttons">
           <div class="buttons-row">
-            <button class="square-btn save-btn" title="Save to server" @click="handleSave">
+            <!-- <button class="square-btn save-btn" title="Save to server" @click="handleSave">
               💾
             </button>
             <button
@@ -324,7 +325,7 @@ const { sidebarCollapsed } = useSidebarState()
               @click="handleImport"
             >
               ⬆
-            </button>
+            </button> -->
             <button
               v-if="!skipAuth"
               class="square-btn logout-btn"
@@ -339,6 +340,7 @@ const { sidebarCollapsed } = useSidebarState()
     </header>
     <div class="main-content">
       <GenealogyTree />
+      <GenealogyTreeSidebar />
     </div>
   </div>
 </template>

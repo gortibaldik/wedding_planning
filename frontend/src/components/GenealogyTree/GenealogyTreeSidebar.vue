@@ -1,22 +1,17 @@
 <script setup>
-import { useSidebarState } from '../composables/useSidebarState'
+import { computed } from 'vue'
+import { useStoredData } from '@/composables/useStoredData'
+import { useSidebarState } from '@/composables/useSidebarState'
 
-const props = defineProps({
-  guests: {
-    type: Array,
-    required: true
-  },
-  getGroupName: {
-    type: Function,
-    required: true
-  },
-  getTableAssignment: {
-    type: Function,
-    required: true
-  }
-})
+const { people } = useStoredData()
 
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
+
+const guests = computed(() => {
+  return Object.entries(people.value)
+    .filter(([, person]) => person.invited)
+    .map(([id, person]) => ({ id, ...person }))
+})
 </script>
 
 <template>
@@ -41,18 +36,18 @@ const { sidebarCollapsed, toggleSidebar } = useSidebarState()
           v-for="guest in guests"
           :key="guest.id"
           class="guest-sidebar__item"
-          :style="{ borderLeft: `4px solid ${guest.data.color}` }"
+          :style="{ borderLeft: `4px solid` }"
         >
           <div class="guest-sidebar__item-name">
-            {{ guest.data.name }}
-            <span v-if="guest.isMultiPerson" class="guest-sidebar__badge">
+            {{ guest.name }}
+            <!-- <span v-if="guest.isMultiPerson" class="guest-sidebar__badge">
               {{ guest.groupName }}
-            </span>
+            </span> -->
           </div>
-          <div class="guest-sidebar__item-group">
+          <!-- <div class="guest-sidebar__item-group">
             {{ getGroupName(guest.id) }}
-          </div>
-          <div
+          </div> -->
+          <!-- <div
             class="guest-sidebar__item-table"
             :class="{ 'guest-sidebar__item-table--warning': !getTableAssignment(guest.id) }"
           >
@@ -61,7 +56,7 @@ const { sidebarCollapsed, toggleSidebar } = useSidebarState()
                 ? `Seated at ${getTableAssignment(guest.id)}`
                 : 'Not seated yet'
             }}
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
