@@ -13,7 +13,6 @@ const { nodes, people } = useStoredData()
 const { inviteSubTree } = useBaseGraph()
 
 const node = computed(() => {
-  console.info(`Searching for: id '${props.id}'`)
   const found = nodes.value.find(n => n.id == props.id)
   if (!found) {
     throw new TypeError('Should never happen - not found')
@@ -22,12 +21,20 @@ const node = computed(() => {
     console.warn(found.data)
     throw new TypeError(`Should never happen - invalid type: ${typeof found.data}`)
   }
-  return found as {
+  const foundCasted = found as {
     id: string
     type: string
     position: { x: number; y: number }
     data: MultiPersonData
   }
+
+  foundCasted.data.people.forEach(person => {
+    if (!(person.id in people.value)) {
+      console.warn('UNITIALIZED MULTIPERSON PERSON:', person.id)
+      people.value[person.id] = new PersonInfo(false)
+    }
+  })
+  return foundCasted
 })
 
 // Modal state

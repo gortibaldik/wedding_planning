@@ -1,6 +1,4 @@
-import base64
 import logging
-import zlib
 from typing import Annotated, Any
 
 import redis.asyncio as aioredis
@@ -8,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend.dependencies import get_current_user, get_redis
+
+from .utils.compression import compress, decompress
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -51,9 +51,7 @@ async def add_invitation_list(
     invitation_list: InvitationListModel,
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
 ):
-    compressed = base64.b64encode(
-        zlib.compress(invitation_list.model_dump_json().encode())
-    ).decode()
+    compressed = compress(invitation_list.model_dump_json())
     await redis.sadd(REDIS_KEY, invitation_list.name)
     await redis.set(name=invitation_list.name, value=compressed)
 
@@ -68,9 +66,7 @@ async def get_invitation_list(
         raise HTTPException(
             status_code=404, detail=f"Invitation list '{name}' not found"
         )
-    return InvitationListModel.model_validate_json(
-        zlib.decompress(base64.b64decode(value)).decode()
-    )
+    return InvitationListModel.model_validate_json(decompress(value))
 
 
 @router.get("/remove-invitation-list/{name}", tags=["invitation_lists"])

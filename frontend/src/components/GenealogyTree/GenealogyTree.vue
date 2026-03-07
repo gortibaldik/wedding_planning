@@ -21,7 +21,14 @@ const nodeTypes = {
   group: markRaw(GroupNode)
 }
 
-const { nodes: rawNodes, edges, people, clearAll } = useStoredData()
+const {
+  nodes: rawNodes,
+  edges,
+  people,
+  clearAll,
+  familyStructureUnsync,
+  saveFamilyStructureToBackend
+} = useStoredData()
 const { findAllDescendants } = useBaseGraph()
 
 const showAddModal = ref(false)
@@ -207,6 +214,17 @@ const onNodeDragStop = ({ node }) => {
       Clear
     </button>
 
+    <button
+      class="save-to-backend-btn"
+      :class="{ 'save-to-backend-btn--disabled': !familyStructureUnsync }"
+      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
+      :title="familyStructureUnsync ? 'Save To Backend' : 'Everything is in sync'"
+      :disabled="!familyStructureUnsync"
+      @click="saveFamilyStructureToBackend"
+    >
+      Save
+    </button>
+
     <GenealogyTreeAddModal
       v-model:show-add-modal="showAddModal"
       v-model:add-modal-type="addModalType"
@@ -368,5 +386,42 @@ const onNodeDragStop = ({ node }) => {
 
 .clear-btn:active {
   transform: translateY(0);
+}
+
+.save-to-backend-btn {
+  position: fixed;
+  bottom: 120px;
+  right: 324px;
+  padding: 12px 24px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  transition:
+    right 0.3s ease,
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s;
+  z-index: 100;
+}
+
+.save-to-backend-btn:hover:not(:disabled) {
+  background: #2563eb;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
+  transform: translateY(-2px);
+}
+
+.save-to-backend-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.save-to-backend-btn--disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 </style>

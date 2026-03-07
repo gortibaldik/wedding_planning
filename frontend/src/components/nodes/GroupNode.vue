@@ -13,7 +13,6 @@ const { nodes } = useStoredData()
 const { inviteSubTree } = useBaseGraph()
 
 const node = computed(() => {
-  console.info(`Searching for: id '${props.id}'`)
   const found = nodes.value.find(n => n.id == props.id)
   if (!found) {
     throw new TypeError('Should never happen - not found')

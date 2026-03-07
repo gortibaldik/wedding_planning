@@ -7,12 +7,6 @@ const GENERAL_DATA_STORAGE_KEY = 'wedding-general-data'
 
 const activeInvitationListId = ref<string | null>(null)
 
-function buildHeaders(token: string | null): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
-
 function getOwnerFromToken(token: string | null): string {
   if (!token) return ''
   try {

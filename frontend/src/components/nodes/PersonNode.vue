@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
-import { PersonData, useStoredData } from '@/composables/useStoredData'
+import { PersonData, PersonInfo, useStoredData } from '@/composables/useStoredData'
 import NodeBase from './NodeBase.vue'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 
@@ -12,10 +12,14 @@ const props = defineProps({
 const { people, nodes } = useStoredData()
 const { inviteSubTree } = useBaseGraph()
 
-const isInvited = computed(() => people.value[props.id].invited)
+const isInvited = computed(() => {
+  if (!(props.id in people.value)) {
+    people.value[props.id] = new PersonInfo(false) // eslint-disable-line vue/no-side-effects-in-computed-properties
+  }
+  return people.value[props.id].invited
+})
 
 const node = computed(() => {
-  console.info(`Searching for: id '${props.id}'`)
   const found = nodes.value.find(n => n.id == props.id)
   if (!found) {
     throw new TypeError('Should never happen - not found')

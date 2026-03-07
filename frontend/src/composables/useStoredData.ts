@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue'
 import { useLocalStorage } from './useLocalStorage'
+import { useBackendStorage } from './useBackendStorage'
 
 export type ChartNode<DataType> = {
   id: string
@@ -75,11 +76,17 @@ export class PersonInfo {
 
 const nodes = ref<ChartNode<BaseData>[]>([])
 const edges = ref<any[]>([])
+const familyStructureUnsync = ref<boolean>(false)
+const loadedFamilyStructureFromBE = ref<any>(null)
 const tables = ref<any[]>([])
 const people = ref<Record<string, PersonInfo>>({})
 const invitationListIds = ref<string[]>()
 
 const { saveToLocalStorage, loadFromLocalStorage } = useLocalStorage('wedding-app::stored-data')
+const {
+  saveToBackendStorage: saveFamilyStructureToBEStorage,
+  loadFromBackendStorage: loadFamilyStructureFromBEStorage
+} = useBackendStorage('family-structure')
 
 const parseData = (newNodes: ChartNode<BaseData>[]) => {
   newNodes.forEach(newNode => {
@@ -101,7 +108,81 @@ const parseData = (newNodes: ChartNode<BaseData>[]) => {
   nodes.value = newNodes
 }
 
-const stored = loadFromLocalStorage()
+function isFamilyStructure(structure: unknown): structure is { nodes: any; edges: any } {
+  return (
+    !!structure &&
+    typeof structure === 'object' &&
+    !Array.isArray(structure) &&
+    'nodes' in structure &&
+    'edges' in structure
+  )
+}
+
+function parseFamilyStructure(structure: unknown) {
+  if (!isFamilyStructure(structure)) {
+    if (structure) {
+      console.warn('WEIRD STRUCTURE:', structure)
+    }
+    return null
+  }
+  return structure
+}
+
+async function saveFamilyStructureToBackend() {
+  await saveFamilyStructureToBEStorage({
+    nodes: nodes.value,
+    edges: edges.value
+  })
+  loadedFamilyStructureFromBE.value = parseFamilyStructure(await loadFamilyStructureFromBEStorage())
+}
+
+loadedFamilyStructureFromBE.value = parseFamilyStructure(await loadFamilyStructureFromBEStorage())
+let stored
+
+if (loadedFamilyStructureFromBE.value) {
+  stored = loadedFamilyStructureFromBE.value
+  const { people: peopleContent } = loadFromLocalStorage()
+  stored['people'] = peopleContent
+  console.info('COMPOSED STORED:', stored)
+} else {
+  stored = loadFromLocalStorage()
+}
+
+watch(
+  [nodes, edges, people],
+  () => {
+    console.info('SAVING TO LOCAL STORAGE')
+    saveToLocalStorage({ nodes: nodes.value, edges: edges.value, people: people.value })
+  },
+  { deep: true }
+)
+
+watch([nodes, edges, loadedFamilyStructureFromBE], () => {
+  if (!loadedFamilyStructureFromBE.value) {
+    console.info('No loaded family structure!')
+    if (nodes.value || edges.value) {
+      familyStructureUnsync.value = true
+    } else {
+      console.info('!nodes and !edges', nodes.value, edges.value)
+      familyStructureUnsync.value = false
+    }
+    return
+  }
+
+  console.info('Loaded family structure!', loadedFamilyStructureFromBE.value)
+  const currentStr = JSON.stringify({ nodes: nodes.value, edges: edges.value })
+  const loadedStr = JSON.stringify({
+    nodes: loadedFamilyStructureFromBE.value['nodes'],
+    edges: loadedFamilyStructureFromBE.value['edges']
+  })
+  if (currentStr !== loadedStr) {
+    console.info('currentStr', currentStr, 'loadedStr', loadedStr)
+    familyStructureUnsync.value = true
+  } else {
+    familyStructureUnsync.value = false
+  }
+})
+
 if (stored) {
   if (stored.nodes) {
     parseData(stored.nodes)
@@ -110,17 +191,10 @@ if (stored) {
     edges.value = stored.edges
   }
   if (stored.people) {
+    console.info('INITIALIZING PEOPLE')
     people.value = stored.people
   }
 }
-
-watch(
-  [nodes, edges, people],
-  () => {
-    saveToLocalStorage({ nodes: nodes.value, edges: edges.value, people: people.value })
-  },
-  { deep: true }
-)
 
 const clearAll = () => {
   nodes.value = []
@@ -135,6 +209,8 @@ export function useStoredData() {
     tables,
     invitationListIds,
     people,
-    clearAll
+    clearAll,
+    familyStructureUnsync,
+    saveFamilyStructureToBackend
   }
 }

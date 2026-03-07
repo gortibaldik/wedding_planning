@@ -1,5 +1,11 @@
 const TOKEN_KEY = 'auth_token'
 
+export function buildHeaders(token: string | null): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
 export function useAuth() {
   const getToken = (): string | null => localStorage.getItem(TOKEN_KEY)
 
