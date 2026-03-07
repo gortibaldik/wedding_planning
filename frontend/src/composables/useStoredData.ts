@@ -21,31 +21,55 @@ export class BaseData {
 }
 
 export class PersonInNode {
-  constructor(public id: string) {}
+  constructor(
+    public id: string,
+    public internalName: string
+  ) {}
 
   get name(): string {
+    if (!(this.id in people.value)) {
+      console.warn(
+        'NEW UNRECOGNIZED PERSON -> creating a new PersonInfo with:',
+        this.id,
+        this.internalName
+      )
+      people.value[this.id] = new PersonInfo(false, this.internalName)
+    }
     return people.value[this.id]?.name
   }
 
   set name(value: string) {
     if (people.value[this.id]) {
       people.value[this.id].name = value
+      this.internalName = value
     }
   }
 }
 
 export class PersonData extends BaseData {
-  constructor(public id: string) {
+  constructor(
+    public id: string,
+    public internalName: string
+  ) {
     super('invalid-color', false, false)
   }
 
   get name(): string {
+    if (!(this.id in people.value)) {
+      console.warn(
+        'NEW UNRECOGNIZED PERSON -> creating a new PersonInfo with:',
+        this.id,
+        this.internalName
+      )
+      people.value[this.id] = new PersonInfo(false, this.internalName)
+    }
     return people.value[this.id]?.name
   }
 
   set name(value: string) {
     if (people.value[this.id]) {
       people.value[this.id].name = value
+      this.internalName = value
     }
   }
 }
@@ -112,9 +136,11 @@ const parseData = (newNodes: ChartNode<BaseData>[]) => {
     if (newNode.type === 'group') {
       data = new RootData(newNode.data['name'])
     } else if (newNode.type === 'person') {
-      data = new PersonData(newNode.id)
+      data = new PersonData(newNode.id, newNode.data['internalName'])
     } else if (newNode.type === 'multi-person') {
-      const people = (newNode.data['people'] || []).map((p: any) => new PersonInNode(p.id))
+      const people = (newNode.data['people'] || []).map(
+        (p: any) => new PersonInNode(p.id, p.internalName)
+      )
       data = new MultiPersonData(newNode.data['name'], people)
     } else {
       throw TypeError(`unexpected node type: ${newNode.type}`)

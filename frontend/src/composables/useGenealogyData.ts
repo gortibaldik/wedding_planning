@@ -58,7 +58,7 @@ export function useGenealogyData() {
         id: personId,
         type: 'person',
         position: { x: 0, y: 0 },
-        data: new PersonData(personId)
+        data: new PersonData(personId, name)
       }
     }
 
