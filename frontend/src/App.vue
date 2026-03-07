@@ -1,4 +1,5 @@
 <script setup>
+console.info('RUNING SETUP FOR APP')
 import { ref, onMounted } from 'vue'
 import { useAuth } from './composables/useAuth.ts'
 import LoginScreen from './components/LoginScreen.vue'
@@ -14,7 +15,9 @@ onMounted(() => {
 
 <template>
   <LoginScreen v-if="!isAuthenticated" />
-  <AuthenticatedApp v-else @logout="isAuthenticated = false" />
+  <Suspense v-else>
+    <AuthenticatedApp @logout="isAuthenticated = false" />
+  </Suspense>
 </template>
 
 <style>

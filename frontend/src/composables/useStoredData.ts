@@ -83,10 +83,6 @@ const people = ref<Record<string, PersonInfo>>({})
 const invitationListIds = ref<string[]>()
 
 const { saveToLocalStorage, loadFromLocalStorage } = useLocalStorage('wedding-app::stored-data')
-const {
-  saveToBackendStorage: saveFamilyStructureToBEStorage,
-  loadFromBackendStorage: loadFamilyStructureFromBEStorage
-} = useBackendStorage('family-structure')
 
 const parseData = (newNodes: ChartNode<BaseData>[]) => {
   newNodes.forEach(newNode => {
@@ -128,7 +124,14 @@ function parseFamilyStructure(structure: unknown) {
   return structure
 }
 
+let initialized = false
+
 async function saveFamilyStructureToBackend() {
+  const {
+    saveToBackendStorage: saveFamilyStructureToBEStorage,
+    loadFromBackendStorage: loadFamilyStructureFromBEStorage
+  } = useBackendStorage('family-structure')
+
   await saveFamilyStructureToBEStorage({
     nodes: nodes.value,
     edges: edges.value
@@ -136,63 +139,71 @@ async function saveFamilyStructureToBackend() {
   loadedFamilyStructureFromBE.value = parseFamilyStructure(await loadFamilyStructureFromBEStorage())
 }
 
-loadedFamilyStructureFromBE.value = parseFamilyStructure(await loadFamilyStructureFromBEStorage())
-let stored
+async function initStoredData() {
+  if (initialized) return
+  initialized = true
 
-if (loadedFamilyStructureFromBE.value) {
-  stored = loadedFamilyStructureFromBE.value
-  const { people: peopleContent } = loadFromLocalStorage()
-  stored['people'] = peopleContent
-  console.info('COMPOSED STORED:', stored)
-} else {
-  stored = loadFromLocalStorage()
-}
+  const { loadFromBackendStorage: loadFamilyStructureFromBEStorage } =
+    useBackendStorage('family-structure')
 
-watch(
-  [nodes, edges, people],
-  () => {
-    console.info('SAVING TO LOCAL STORAGE')
-    saveToLocalStorage({ nodes: nodes.value, edges: edges.value, people: people.value })
-  },
-  { deep: true }
-)
+  loadedFamilyStructureFromBE.value = parseFamilyStructure(await loadFamilyStructureFromBEStorage())
+  let stored
 
-watch([nodes, edges, loadedFamilyStructureFromBE], () => {
-  if (!loadedFamilyStructureFromBE.value) {
-    console.info('No loaded family structure!')
-    if (nodes.value || edges.value) {
+  if (loadedFamilyStructureFromBE.value) {
+    stored = loadedFamilyStructureFromBE.value
+    const { people: peopleContent } = loadFromLocalStorage()
+    stored['people'] = peopleContent
+    console.info('COMPOSED STORED:', stored)
+  } else {
+    stored = loadFromLocalStorage()
+  }
+
+  watch(
+    [nodes, edges, people],
+    () => {
+      console.info('SAVING TO LOCAL STORAGE')
+      saveToLocalStorage({ nodes: nodes.value, edges: edges.value, people: people.value })
+    },
+    { deep: true }
+  )
+
+  watch([nodes, edges, loadedFamilyStructureFromBE], () => {
+    if (!loadedFamilyStructureFromBE.value) {
+      console.info('No loaded family structure!')
+      if (nodes.value || edges.value) {
+        familyStructureUnsync.value = true
+      } else {
+        console.info('!nodes and !edges', nodes.value, edges.value)
+        familyStructureUnsync.value = false
+      }
+      return
+    }
+
+    console.info('Loaded family structure!', loadedFamilyStructureFromBE.value)
+    const currentStr = JSON.stringify({ nodes: nodes.value, edges: edges.value })
+    const loadedStr = JSON.stringify({
+      nodes: loadedFamilyStructureFromBE.value['nodes'],
+      edges: loadedFamilyStructureFromBE.value['edges']
+    })
+    if (currentStr !== loadedStr) {
+      console.info('currentStr', currentStr, 'loadedStr', loadedStr)
       familyStructureUnsync.value = true
     } else {
-      console.info('!nodes and !edges', nodes.value, edges.value)
       familyStructureUnsync.value = false
     }
-    return
-  }
-
-  console.info('Loaded family structure!', loadedFamilyStructureFromBE.value)
-  const currentStr = JSON.stringify({ nodes: nodes.value, edges: edges.value })
-  const loadedStr = JSON.stringify({
-    nodes: loadedFamilyStructureFromBE.value['nodes'],
-    edges: loadedFamilyStructureFromBE.value['edges']
   })
-  if (currentStr !== loadedStr) {
-    console.info('currentStr', currentStr, 'loadedStr', loadedStr)
-    familyStructureUnsync.value = true
-  } else {
-    familyStructureUnsync.value = false
-  }
-})
 
-if (stored) {
-  if (stored.nodes) {
-    parseData(stored.nodes)
-  }
-  if (stored.edges) {
-    edges.value = stored.edges
-  }
-  if (stored.people) {
-    console.info('INITIALIZING PEOPLE')
-    people.value = stored.people
+  if (stored) {
+    if (stored.nodes) {
+      parseData(stored.nodes)
+    }
+    if (stored.edges) {
+      edges.value = stored.edges
+    }
+    if (stored.people) {
+      console.info('INITIALIZING PEOPLE')
+      people.value = stored.people
+    }
   }
 }
 
@@ -211,6 +222,7 @@ export function useStoredData() {
     people,
     clearAll,
     familyStructureUnsync,
-    saveFamilyStructureToBackend
+    saveFamilyStructureToBackend,
+    initStoredData
   }
 }

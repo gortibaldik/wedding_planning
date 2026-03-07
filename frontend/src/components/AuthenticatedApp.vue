@@ -1,4 +1,5 @@
 <script setup>
+console.info('RUNING SETUP FOR AuthenticatedApp')
 import { ref, computed, watch } from 'vue'
 import GenealogyTree from './GenealogyTree/GenealogyTree.vue'
 // import TableSeating from './TableSeating.vue'
@@ -10,16 +11,20 @@ import { useGenealogyData } from '../composables/useGenealogyData.ts'
 import { useSidebarState } from '../composables/useSidebarState'
 // import { useInvitationLists } from '../composables/useInvitationLists.ts'
 import { useAuth } from '../composables/useAuth.ts'
+import { useStoredData } from '../composables/useStoredData.ts'
 
-// const emit = defineEmits(['logout'])
+const emit = defineEmits(['logout'])
 
 const { logout } = useAuth()
+const { initStoredData } = useStoredData()
 const skipAuth = import.meta.env.VITE_SKIP_AUTH === 'true'
 
-// const handleLogout = () => {
-//   logout()
-//   emit('logout')
-// }
+await initStoredData()
+
+const handleLogout = () => {
+  logout()
+  emit('logout')
+}
 
 const activeTab = ref('family-tree')
 // // const {
