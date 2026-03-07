@@ -200,8 +200,13 @@ async function initStoredData() {
 
   if (loadedFamilyStructureFromBE.value) {
     stored = JSON.parse(JSON.stringify(loadedFamilyStructureFromBE.value))
-    const { people: peopleContent } = loadFromLocalStorage()
-    stored['people'] = peopleContent
+    try {
+      const { people: peopleContent } = loadFromLocalStorage()
+      stored['people'] = peopleContent
+    } catch (e) {
+      console.warn('Caught error', e, 'initializing people to empty dict.')
+      stored['people'] = {}
+    }
     console.info('COMPOSED STORED:', stored)
   } else {
     stored = loadFromLocalStorage()
