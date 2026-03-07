@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, markRaw, onMounted, nextTick } from 'vue'
+import { ref, computed, markRaw, onMounted, nextTick, provide } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -30,6 +30,9 @@ const {
   saveFamilyStructureToBackend
 } = useStoredData()
 const { findAllDescendants } = useBaseGraph()
+
+const readOnly = ref(true)
+provide('readOnly', readOnly)
 
 const showAddModal = ref(false)
 const addModalTitle = ref('')
@@ -183,7 +186,7 @@ const onNodeDragStop = ({ node }) => {
       :edges="edges"
       :node-types="nodeTypes"
       :nodes-connectable="false"
-      :nodes-draggable="true"
+      :nodes-draggable="!readOnly"
       :selectable="true"
       :multi-selection-key-code="'Meta'"
       fit-view-on-init
@@ -197,6 +200,7 @@ const onNodeDragStop = ({ node }) => {
     </VueFlow>
 
     <button
+      v-if="!readOnly"
       class="add-root-btn"
       :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
       title="Add New Root"
@@ -206,6 +210,7 @@ const onNodeDragStop = ({ node }) => {
     </button>
 
     <button
+      v-if="!readOnly"
       class="clear-btn"
       :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
       title="Clear All Nodes"
@@ -215,6 +220,7 @@ const onNodeDragStop = ({ node }) => {
     </button>
 
     <button
+      v-if="!readOnly"
       class="save-to-backend-btn"
       :class="{ 'save-to-backend-btn--disabled': !familyStructureUnsync }"
       :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
@@ -224,6 +230,18 @@ const onNodeDragStop = ({ node }) => {
     >
       Save
     </button>
+
+    <label
+      class="read-only-toggle"
+      :class="{ 'read-only-toggle--active': readOnly }"
+      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
+    >
+      <input type="checkbox" v-model="readOnly" class="read-only-toggle__input" />
+      <span class="read-only-toggle__track">
+        <span class="read-only-toggle__thumb" />
+      </span>
+      <span class="read-only-toggle__label">Read-Only Genealogy Tree</span>
+    </label>
 
     <GenealogyTreeAddModal
       v-model:show-add-modal="showAddModal"
@@ -334,9 +352,71 @@ const onNodeDragStop = ({ node }) => {
   background: #d1d5db;
 }
 
-.add-root-btn {
+.read-only-toggle {
   position: fixed;
   bottom: 24px;
+  right: 324px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: right 0.3s ease;
+  z-index: 100;
+  user-select: none;
+}
+
+.read-only-toggle__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.read-only-toggle__track {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background: #d1d5db;
+  border-radius: 11px;
+  transition: background 0.2s;
+}
+
+.read-only-toggle--active .read-only-toggle__track {
+  background: #3b82f6;
+}
+
+.read-only-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.read-only-toggle--active .read-only-toggle__thumb {
+  transform: translateX(18px);
+}
+
+.read-only-toggle__label {
+  line-height: 1;
+}
+
+.add-root-btn {
+  position: fixed;
+  bottom: 72px;
   right: 324px;
   padding: 12px 24px;
   background: #10b981;
@@ -363,7 +443,7 @@ const onNodeDragStop = ({ node }) => {
 
 .clear-btn {
   position: fixed;
-  bottom: 72px;
+  bottom: 120px;
   right: 324px;
   padding: 12px 24px;
   background: #ef4444;
@@ -390,7 +470,7 @@ const onNodeDragStop = ({ node }) => {
 
 .save-to-backend-btn {
   position: fixed;
-  bottom: 120px;
+  bottom: 168px;
   right: 324px;
   padding: 12px 24px;
   background: #3b82f6;

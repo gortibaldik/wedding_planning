@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref, nextTick, inject, type Ref } from 'vue'
 import { RootData, useStoredData } from '@/composables/useStoredData'
 import NodeBase from './NodeBase.vue'
 import { useBaseGraph } from '@/composables/useBaseGraph'
@@ -9,6 +9,7 @@ const props = defineProps({
   data: Object
 })
 
+const readOnly = inject<Ref<boolean>>('readOnly', ref(false))
 const { nodes } = useStoredData()
 const { inviteSubTree } = useBaseGraph()
 
@@ -29,6 +30,7 @@ const editNameInput = ref(null)
 const editNameValue = ref('')
 
 const handleEdit = () => {
+  if (readOnly.value) return
   showEditModal.value = true
   nextTick(() => {
     editNameInput.value?.focus()

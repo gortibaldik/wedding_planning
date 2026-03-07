@@ -1,7 +1,10 @@
 <script setup>
+import { inject, ref } from 'vue'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 import { useStoredData } from '@/composables/useStoredData'
 import { Handle, Position } from '@vue-flow/core'
+
+const readOnly = inject('readOnly', ref(false))
 
 const props = defineProps({
   id: String,
@@ -48,7 +51,7 @@ const handleRemove = () => {
       <slot />
     </div>
 
-    <div class="person-node__actions">
+    <div v-if="!readOnly" class="person-node__actions">
       <button
         class="action-btn action-btn--child"
         title="Add child"

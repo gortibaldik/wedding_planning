@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, inject, type Ref } from 'vue'
 import NodeBase from './NodeBase.vue'
 import { useStoredData, MultiPersonData, PersonInfo } from '@/composables/useStoredData'
 import { useBaseGraph } from '@/composables/useBaseGraph'
@@ -9,6 +9,7 @@ const props = defineProps({
   data: Object
 })
 
+const readOnly = inject<Ref<boolean>>('readOnly', ref(false))
 const { nodes, people } = useStoredData()
 const { inviteSubTree } = useBaseGraph()
 
@@ -49,6 +50,7 @@ const localData = computed(() => ({
 }))
 
 const openModal = () => {
+  if (readOnly.value) return
   modalForm.value.groupName = node.value.data.name
   modalForm.value.people = [...node.value.data.people]
   showModal.value = true
