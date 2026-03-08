@@ -175,6 +175,42 @@ function parseFamilyStructure(structure: unknown) {
 
 let initialized = false
 
+const importGenealogyTree = () => {
+  console.info('IMPORT')
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'application/json'
+
+  input.onchange = e => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = event => {
+      try {
+        const data = JSON.parse(event.target.result)
+
+        if (!data.nodes || !data.edges) {
+          alert('Invalid file format. The file must contain "nodes" and "edges" properties.')
+          return
+        }
+
+        const confirmMessage = 'Import this file? This will replace your current family tree.'
+
+        if (confirm(confirmMessage)) {
+          parseData(data.nodes)
+          edges.value = data.edges
+        }
+      } catch (error) {
+        alert('Error reading file: ' + error.message)
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  input.click()
+}
+
 async function saveFamilyStructureToBackend() {
   const {
     saveToBackendStorage: saveFamilyStructureToBEStorage,
@@ -283,6 +319,7 @@ export function useStoredData() {
     clearAll,
     familyStructureUnsync,
     saveFamilyStructureToBackend,
-    initStoredData
+    initStoredData,
+    importGenealogyTree
   }
 }

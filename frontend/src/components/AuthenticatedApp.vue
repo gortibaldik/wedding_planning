@@ -195,54 +195,6 @@ const { sidebarCollapsed } = useSidebarState()
 //   URL.revokeObjectURL(url)
 // }
 
-// const handleImport = () => {
-//   const input = document.createElement('input')
-//   input.type = 'file'
-//   input.accept = 'application/json'
-
-//   input.onchange = e => {
-//     const file = e.target.files[0]
-//     if (!file) return
-
-//     const reader = new FileReader()
-//     reader.onload = event => {
-//       try {
-//         const data = JSON.parse(event.target.result)
-
-//         if (!data.nodes || !data.edges) {
-//           alert('Invalid file format. The file must contain "nodes" and "edges" properties.')
-//           return
-//         }
-
-//         const confirmMessage =
-//           'Import this file? This will replace your current family tree, invitation lists, and table seating arrangements.'
-
-//         if (confirm(confirmMessage)) {
-//           initializeNodesAndEdges(data.nodes, data.edges)
-
-//           // Import tables per list
-//           if (data.tablesPerList) {
-//             tablesPerList.value = data.tablesPerList
-//           }
-
-//           // Import invitation lists
-//           if (data.invitationLists) {
-//             availableInvitationLists.value = data.invitationLists.available
-//             if (data.invitationLists.active) {
-//               activeInvitationList.value = data.invitationLists.active
-//             }
-//           }
-//         }
-//       } catch (error) {
-//         alert('Error reading file: ' + error.message)
-//       }
-//     }
-//     reader.readAsText(file)
-//   }
-
-//   input.click()
-// }
-
 // const handleSelectInvitationList = async listName => {
 //   await setActiveInvitationList(listName, initializeNodesAndEdges)
 // }
@@ -311,20 +263,13 @@ const { sidebarCollapsed } = useSidebarState()
           <div class="buttons-row">
             <!-- <button class="square-btn save-btn" title="Save to server" @click="handleSave">
               💾
-            </button>
-            <button
+            </button> -->
+            <!-- <button
               class="square-btn export-btn"
               title="Export tree to JSON file"
               @click="handleExport"
             >
               ⬇
-            </button>
-            <button
-              class="square-btn import-btn"
-              title="Import tree from JSON file"
-              @click="handleImport"
-            >
-              ⬆
             </button> -->
             <button
               v-if="!skipAuth"

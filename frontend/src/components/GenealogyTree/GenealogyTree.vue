@@ -27,7 +27,8 @@ const {
   people,
   clearAll,
   familyStructureUnsync,
-  saveFamilyStructureToBackend
+  saveFamilyStructureToBackend,
+  importGenealogyTree
 } = useStoredData()
 const { findAllDescendants } = useBaseGraph()
 
@@ -229,6 +230,16 @@ const onNodeDragStop = ({ node }) => {
       @click="saveFamilyStructureToBackend"
     >
       Save
+    </button>
+
+    <button
+      v-if="!readOnly"
+      class="import-btn"
+      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
+      title="Import tree from JSON file"
+      @click="importGenealogyTree"
+    >
+      ⬆ Import Tree
     </button>
 
     <label
@@ -503,5 +514,32 @@ const onNodeDragStop = ({ node }) => {
   background: #9ca3af;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.import-btn {
+  position: fixed;
+  bottom: 216px;
+  right: 324px;
+  padding: 12px 24px;
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+  transition: right 0.3s ease;
+  z-index: 100;
+}
+
+.import-btn:hover {
+  background: #7c3aed;
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.5);
+  transform: translateY(-2px);
+}
+
+.import-btn:active {
+  transform: translateY(0);
 }
 </style>
