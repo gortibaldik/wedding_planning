@@ -3,14 +3,8 @@ console.info('RUNING SETUP FOR AuthenticatedApp')
 import { ref, computed, watch } from 'vue'
 import GenealogyTree from './GenealogyTree/GenealogyTree.vue'
 import GenealogyTreeSidebar from './GenealogyTree/GenealogyTreeSidebar.vue'
-// import TableSeating from './TableSeating.vue'
-// import InvitationListDropdown from './InvitationListDropdown.vue'
-// import TableSeatingSidebar from './TableSeatingSidebar.vue'
-// import GenealogyTreeSidebar from './GenealogyTreeSidebar.vue'
 import { useGenealogyData } from '../composables/useGenealogyData.ts'
-// import { useTableSeating } from '../composables/useTableSeating'
 import { useSidebarState } from '../composables/useSidebarState'
-// import { useInvitationLists } from '../composables/useInvitationLists.ts'
 import { useAuth } from '../composables/useAuth.ts'
 import { useStoredData } from '../composables/useStoredData.ts'
 
@@ -28,180 +22,8 @@ const handleLogout = () => {
 }
 
 const activeTab = ref('family-tree')
-// // const {
-// //   tables,
-// //   tablesPerList,
-// //   getAssignedGuestIds,
-// //   removeGuestFromTable,
-// //   assignGuestToTable,
-// //   populateListWithTables
-// // } = useTableSeating()
 
 const { sidebarCollapsed } = useSidebarState()
-// // const {
-// //   activeInvitationList,
-// //   availableInvitationLists,
-// //   addInvitationList,
-// //   removeInvitationList,
-// //   setActiveInvitationList,
-// //   saveInvitationList
-// // } = useInvitationLists()
-
-// // Helper function to find the group (root) name for a guest
-// const getGroupName = guestId => {
-//   // First check if this is a person within a multi-person node
-//   const multiPersonNode = nodes.value.find(
-//     node => node.type === 'multi-person' && node.data.people.some(p => p.id === guestId)
-//   )
-
-//   if (multiPersonNode) {
-//     // Use the multi-person node ID to traverse up the tree
-//     return getGroupNameForNode(multiPersonNode.id)
-//   }
-
-//   // Otherwise, it's a regular person node
-//   return getGroupNameForNode(guestId)
-// }
-
-// const getGroupNameForNode = nodeId => {
-//   const visited = new Set()
-//   let currentId = nodeId
-
-//   // Traverse up to find the root
-//   while (!visited.has(currentId)) {
-//     visited.add(currentId)
-//     const parentEdge = edges.value.find(e => e.target === currentId)
-//     if (!parentEdge) {
-//       // Found the root
-//       const rootNode = nodes.value.find(n => n.id === currentId)
-//       return rootNode ? rootNode.data.name : 'Unknown'
-//     }
-//     currentId = parentEdge.source
-//   }
-
-//   return 'Unknown'
-// }
-
-// // Helper function to get the table assignment for a guest
-// const getTableAssignment = guestId => {
-//   const table = tables.value.find(t => t.guestIds.includes(guestId))
-//   return table ? table.name : null
-// }
-
-// const invitedGuests = computed(() => {
-//   const guests = []
-
-//   nodes.value.forEach(node => {
-//     if (node.type === 'person' && node.data.invited[activeInvitationList.value]) {
-//       // Regular person node
-//       guests.push({
-//         id: node.id,
-//         data: {
-//           name: node.data.name,
-//           color: node.data.color
-//         },
-//         nodeId: node.id,
-//         isMultiPerson: false
-//       })
-//     } else if (node.type === 'multi-person') {
-//       // Multi-person node - add each invited person
-//       node.data.people.forEach(person => {
-//         if (person.invited[activeInvitationList.value]) {
-//           guests.push({
-//             id: person.id, // Use person.id for seating
-//             data: {
-//               name: person.name,
-//               color: node.data.color
-//             },
-//             nodeId: node.id, // Track which node they belong to
-//             isMultiPerson: true,
-//             groupName: node.data.name // The multi-person node's group name
-//           })
-//         }
-//       })
-//     }
-//   })
-
-//   return guests
-// })
-
-// const unassignedGuests = computed(() => {
-//   return invitedGuests.value.filter(guest => !getAssignedGuestIds.value.has(guest.id))
-// })
-
-// const draggedGuest = ref(null)
-
-// const handleDragStart = guest => {
-//   draggedGuest.value = guest
-// }
-
-// const handleDragEnd = () => {
-//   draggedGuest.value = null
-// }
-
-// const handleAssignToTable = (guestId, tableId) => {
-//   assignGuestToTable(guestId, tableId)
-// }
-
-// // Watch for changes to invited guests and remove uninvited guests from tables
-// // This includes when switching between invitation lists
-// watch(
-//   [nodes, tables, activeInvitationList],
-//   () => {
-//     // Get the set of currently invited guest IDs for the active list
-//     const invitedGuestIds = new Set(invitedGuests.value.map(g => g.id))
-
-//     // For each table, remove guests that are no longer invited in the active list
-//     tables.value.forEach(table => {
-//       const uninvitedGuests = table.guestIds.filter(guestId => !invitedGuestIds.has(guestId))
-
-//       uninvitedGuests.forEach(guestId => {
-//         removeGuestFromTable(guestId, table.id)
-//       })
-//     })
-//   },
-//   { deep: true }
-// )
-
-// const handleSave = async () => {
-//   await saveInvitationList({
-//     nodes: nodes.value,
-//     edges: edges.value,
-//     tables: tablesPerList.value[activeInvitationList.value]
-//   })
-// }
-
-// const handleSelectInvitationList = async listName => {
-//   await setActiveInvitationList(listName, initializeNodesAndEdges)
-// }
-
-// const handleAddInvitationList = async listName => {
-//   try {
-//     populateNodesWithNewList(listName)
-//     populateListWithTables(listName)
-//     await addInvitationList(listName, {
-//       nodes: nodes.value,
-//       edges: edges.value,
-//       tables: tablesPerList.value[listName]
-//     })
-//     await setActiveInvitationList(listName, initializeNodesAndEdges)
-//   } catch (error) {
-//     alert(error.message)
-//   }
-// }
-
-// const handleRemoveInvitationList = listName => {
-//   try {
-//     // Remove the list from the state
-//     removeInvitationList(listName)
-//     // Remove the list from all nodes
-//     removeListFromNodes(listName)
-//     // Remove the list from table seating
-//     delete tablesPerList.value[listName]
-//   } catch (error) {
-//     alert(error.message)
-//   }
-// }
 </script>
 
 <template>
@@ -216,13 +38,6 @@ const { sidebarCollapsed } = useSidebarState()
           >
             Family Tree
           </button>
-          <!-- <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'table-seating' }"
-            @click="activeTab = 'table-seating'"
-          >
-            Table Seating
-          </button> -->
         </div>
         <div class="header-center">
           <h1>Wedding Planning</h1>

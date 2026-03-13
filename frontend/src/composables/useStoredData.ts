@@ -1,4 +1,4 @@
-import { Ref, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useLocalStorage } from './useLocalStorage'
 import { useBackendStorage } from './useBackendStorage'
 
@@ -266,8 +266,6 @@ async function initStoredData() {
     try {
       const { people: peopleContentUntyped } = loadFromLocalStorage()
       const peopleContent = peopleContentUntyped as Record<string, PersonInfo>
-
-      Object.entries(peopleContent).forEach(([id, info]) => {})
 
       stored['people'] = peopleContent
     } catch (e) {
