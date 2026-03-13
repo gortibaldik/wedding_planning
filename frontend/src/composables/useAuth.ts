@@ -30,5 +30,16 @@ export function useAuth() {
     localStorage.removeItem(TOKEN_KEY)
   }
 
-  return { checkAuth, getToken, logout }
+  const getRoles = (): string[] => {
+    const token = getToken()
+    if (!token) return []
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      return payload.roles || []
+    } catch {
+      return []
+    }
+  }
+
+  return { checkAuth, getToken, getRoles, logout }
 }

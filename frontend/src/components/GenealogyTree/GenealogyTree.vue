@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, markRaw, onMounted, nextTick, provide } from 'vue'
+import { ref, computed, markRaw, onMounted, nextTick, provide, watch } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -13,6 +13,8 @@ import GroupNode from '@/components/nodes/GroupNode.vue'
 import { useSidebarState } from '@/composables/useSidebarState'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 import { MultiPersonData, PersonData, useStoredData } from '@/composables/useStoredData'
+import { useBackendStorage } from '@/composables/useBackendStorage'
+import { useAuth } from '@/composables/useAuth'
 import GenealogyTreeAddModal from './GenealogyTreeAddModal.vue'
 
 const nodeTypes = {
@@ -33,8 +35,23 @@ const {
 } = useStoredData()
 const { findAllDescendants } = useBaseGraph()
 
+const { fetchStatus, toggleStatus } = useBackendStorage('family-structure')
+const { getRoles } = useAuth()
+const canChangeStatus = getRoles().includes('change-genealogy-tree-rw-status')
+
+const status = ref('read')
+fetchStatus().then(s => {
+  status.value = s
+})
+
 const readOnly = ref(true)
 provide('readOnly', readOnly)
+
+watch(status, newStatus => {
+  if (newStatus === 'read') {
+    readOnly.value = true
+  }
+})
 
 const showAddModal = ref(false)
 const addModalTitle = ref('')
@@ -254,6 +271,7 @@ const onNodeDragStop = ({ node }) => {
     </button>
 
     <label
+      v-if="status === 'read-write'"
       class="read-only-toggle"
       :class="{ 'read-only-toggle--active': readOnly }"
       :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
@@ -264,6 +282,21 @@ const onNodeDragStop = ({ node }) => {
       </span>
       <span class="read-only-toggle__label">Read-Only Genealogy Tree</span>
     </label>
+
+    <button
+      v-if="canChangeStatus"
+      class="change-status-btn"
+      :class="{ 'change-status-btn--active': status === 'read-write' }"
+      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
+      :title="status === 'read-write' ? 'Switch to Read-Only' : 'Switch to Read-Write'"
+      @click="
+        toggleStatus().then(s => {
+          status = s
+        })
+      "
+    >
+      {{ status === 'read-write' ? 'Set Read-Only' : 'Set Read-Write' }}
+    </button>
 
     <GenealogyTreeAddModal
       v-model:show-add-modal="showAddModal"
@@ -579,5 +612,42 @@ const onNodeDragStop = ({ node }) => {
 
 .export-btn:active {
   transform: translateY(0);
+}
+
+.change-status-btn {
+  position: fixed;
+  bottom: 312px;
+  right: 324px;
+  padding: 12px 24px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  transition: right 0.3s ease;
+  z-index: 100;
+}
+
+.change-status-btn:hover {
+  background: #d97706;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
+  transform: translateY(-2px);
+}
+
+.change-status-btn:active {
+  transform: translateY(0);
+}
+
+.change-status-btn--active {
+  background: #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.change-status-btn--active:hover {
+  background: #059669;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
 }
 </style>

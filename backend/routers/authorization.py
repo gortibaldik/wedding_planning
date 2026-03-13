@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from urllib.parse import urlencode
 
@@ -10,6 +11,7 @@ from backend.config import Config
 from backend.dependencies import get_config
 
 router = APIRouter(prefix="/auth")
+logger = logging.getLogger(__name__)
 
 
 @router.get("/google", tags=["authorization"])
@@ -59,8 +61,14 @@ async def google_auth_callback(
         )
         user_info = user_resp.json()
 
+    email = user_info.get("email", "")
+    roles = []
+    logger.info(f"User with email '{email}' logged in.")
+    if email == "ferotre@gmail.com":
+        roles.append("change-genealogy-tree-rw-status")
+
     jwt_token = jwt.encode(
-        {"sub": user_info.get("email", ""), "name": user_info.get("name", "")},
+        {"sub": email, "name": user_info.get("name", ""), "roles": roles},
         config.secret_key,
         algorithm=config.algorithm,
     )
