@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { Ref, ref, watch } from 'vue'
 import { useLocalStorage } from './useLocalStorage'
 import { useBackendStorage } from './useBackendStorage'
 
@@ -34,6 +34,14 @@ export class PersonInNode {
         this.internalName
       )
       people.value[this.id] = new PersonInfo(false, this.internalName)
+    } else if (people.value[this.id].name != this.internalName) {
+      console.warn(
+        'PERSON WITH DIFFERENT NAME',
+        this.id,
+        this.internalName,
+        people.value[this.id].name
+      )
+      people.value[this.id].name = this.internalName
     }
     return people.value[this.id]?.name
   }
@@ -62,6 +70,14 @@ export class PersonData extends BaseData {
         this.internalName
       )
       people.value[this.id] = new PersonInfo(false, this.internalName)
+    } else if (people.value[this.id].name != this.internalName) {
+      console.warn(
+        'PERSON WITH DIFFERENT NAME',
+        this.id,
+        this.internalName,
+        people.value[this.id].name
+      )
+      people.value[this.id].name = this.internalName
     }
     return people.value[this.id]?.name
   }
@@ -248,7 +264,11 @@ async function initStoredData() {
   if (loadedFamilyStructureFromBE.value) {
     stored = JSON.parse(JSON.stringify(loadedFamilyStructureFromBE.value))
     try {
-      const { people: peopleContent } = loadFromLocalStorage()
+      const { people: peopleContentUntyped } = loadFromLocalStorage()
+      const peopleContent = peopleContentUntyped as Record<string, PersonInfo>
+
+      Object.entries(peopleContent).forEach(([id, info]) => {})
+
       stored['people'] = peopleContent
     } catch (e) {
       console.warn('Caught error', e, 'initializing people to empty dict.')
@@ -290,10 +310,10 @@ async function initStoredData() {
         edges: loadedFamilyStructureFromBE.value['edges']
       })
       if (currentStr !== loadedStr) {
-        console.info('currentStr', currentStr, 'loadedStr', loadedStr)
+        console.info('NOT EQUAL -> currentStr', currentStr, 'loadedStr', loadedStr)
         familyStructureUnsync.value = true
       } else {
-        console.info('currentStr', currentStr, 'loadedStr', loadedStr)
+        console.info('EQUAL -> currentStr', currentStr, 'loadedStr', loadedStr)
         familyStructureUnsync.value = false
       }
     },
