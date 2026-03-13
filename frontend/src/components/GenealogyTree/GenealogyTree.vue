@@ -10,12 +10,12 @@ import '@vue-flow/core/dist/style.css'
 import PersonNode from '@/components/nodes/PersonNode.vue'
 import MultiPersonNode from '@/components/nodes/MultiPersonNode.vue'
 import GroupNode from '@/components/nodes/GroupNode.vue'
-import { useSidebarState } from '@/composables/useSidebarState'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 import { MultiPersonData, PersonData, useStoredData } from '@/composables/useStoredData'
 import { useBackendStorage } from '@/composables/useBackendStorage'
 import { useAuth } from '@/composables/useAuth'
 import GenealogyTreeAddModal from './GenealogyTreeAddModal.vue'
+import GenealogyTreeEditMenu from './GenealogyTreeEditMenu.vue'
 
 const nodeTypes = {
   person: markRaw(PersonNode),
@@ -109,8 +109,6 @@ const handleClearAll = () => {
     clearAll()
   }
 }
-
-const { sidebarCollapsed } = useSidebarState()
 
 const { fitView, updateNode } = useVueFlow()
 
@@ -218,85 +216,23 @@ const onNodeDragStop = ({ node }) => {
       <Controls />
     </VueFlow>
 
-    <button
-      v-if="!readOnly"
-      class="add-root-btn"
-      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
-      title="Add New Root"
-      @click="handleAddRoot"
-    >
-      + Add Root
-    </button>
-
-    <button
-      v-if="!readOnly"
-      class="clear-btn"
-      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
-      title="Clear All Nodes"
-      @click="handleClearAll"
-    >
-      Clear
-    </button>
-
-    <button
-      v-if="!readOnly"
-      class="save-to-backend-btn"
-      :class="{ 'save-to-backend-btn--disabled': !familyStructureUnsync }"
-      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
-      :title="familyStructureUnsync ? 'Save To Backend' : 'Everything is in sync'"
-      :disabled="!familyStructureUnsync"
-      @click="saveFamilyStructureToBackend"
-    >
-      Save
-    </button>
-
-    <button
-      v-if="!readOnly"
-      class="import-btn"
-      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
-      title="Import tree from JSON file"
-      @click="importGenealogyTree"
-    >
-      ⬆ Import Tree
-    </button>
-
-    <button
-      v-if="!readOnly"
-      class="export-btn"
-      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
-      title="Export tree to JSON file"
-      @click="exportGenealogyTree"
-    >
-      ⬇ Export Tree
-    </button>
-
-    <label
-      v-if="status === 'read-write'"
-      class="read-only-toggle"
-      :class="{ 'read-only-toggle--active': readOnly }"
-      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
-    >
-      <input type="checkbox" v-model="readOnly" class="read-only-toggle__input" />
-      <span class="read-only-toggle__track">
-        <span class="read-only-toggle__thumb" />
-      </span>
-      <span class="read-only-toggle__label">Read-Only Genealogy Tree</span>
-    </label>
-
-    <button
-      v-if="canChangeStatus"
-      class="change-status-btn"
-      :class="{ 'change-status-btn--active': status === 'read-write' }"
-      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
-      :title="status === 'read-write' ? 'Switch to Read-Only' : 'Switch to Read-Write'"
-      @click="
+    <GenealogyTreeEditMenu
+      :status="status"
+      :read-only="readOnly"
+      :can-change-status="canChangeStatus"
+      :family-structure-unsync="familyStructureUnsync"
+      @update:read-only="readOnly = $event"
+      @toggle-status="
         toggleStatus().then(s => {
           status = s
         })
       "
-    >
-      {{ status === 'read-write' ? 'Set Read-Only' : 'Set Read-Write' }}
-    </button>
+      @add-root="handleAddRoot"
+      @save="saveFamilyStructureToBackend"
+      @import="importGenealogyTree"
+      @export="exportGenealogyTree"
+      @clear-all="handleClearAll"
+    />
 
     <GenealogyTreeAddModal
       v-model:show-add-modal="showAddModal"
@@ -405,249 +341,5 @@ const onNodeDragStop = ({ node }) => {
 
 .btn-secondary:hover {
   background: #d1d5db;
-}
-
-.read-only-toggle {
-  position: fixed;
-  bottom: 24px;
-  right: 324px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px;
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: right 0.3s ease;
-  z-index: 100;
-  user-select: none;
-}
-
-.read-only-toggle__input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-.read-only-toggle__track {
-  position: relative;
-  width: 40px;
-  height: 22px;
-  background: #d1d5db;
-  border-radius: 11px;
-  transition: background 0.2s;
-}
-
-.read-only-toggle--active .read-only-toggle__track {
-  background: #3b82f6;
-}
-
-.read-only-toggle__thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
-  background: white;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s;
-}
-
-.read-only-toggle--active .read-only-toggle__thumb {
-  transform: translateX(18px);
-}
-
-.read-only-toggle__label {
-  line-height: 1;
-}
-
-.add-root-btn {
-  position: fixed;
-  bottom: 72px;
-  right: 324px;
-  padding: 12px 24px;
-  background: #10b981;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-  transition: right 0.3s ease;
-  z-index: 100;
-}
-
-.add-root-btn:hover {
-  background: #059669;
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
-  transform: translateY(-2px);
-}
-
-.add-root-btn:active {
-  transform: translateY(0);
-}
-
-.clear-btn {
-  position: fixed;
-  bottom: 120px;
-  right: 324px;
-  padding: 12px 24px;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-  transition: right 0.3s ease;
-  z-index: 100;
-}
-
-.clear-btn:hover {
-  background: #dc2626;
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
-  transform: translateY(-2px);
-}
-
-.clear-btn:active {
-  transform: translateY(0);
-}
-
-.save-to-backend-btn {
-  position: fixed;
-  bottom: 168px;
-  right: 324px;
-  padding: 12px 24px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-  transition:
-    right 0.3s ease,
-    background 0.2s,
-    box-shadow 0.2s,
-    transform 0.2s;
-  z-index: 100;
-}
-
-.save-to-backend-btn:hover:not(:disabled) {
-  background: #2563eb;
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
-  transform: translateY(-2px);
-}
-
-.save-to-backend-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.save-to-backend-btn--disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.import-btn {
-  position: fixed;
-  bottom: 216px;
-  right: 324px;
-  padding: 12px 24px;
-  background: #8b5cf6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
-  transition: right 0.3s ease;
-  z-index: 100;
-}
-
-.import-btn:hover {
-  background: #7c3aed;
-  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.5);
-  transform: translateY(-2px);
-}
-
-.import-btn:active {
-  transform: translateY(0);
-}
-
-.export-btn {
-  position: fixed;
-  bottom: 264px;
-  right: 324px;
-  padding: 12px 24px;
-  background: #6366f1;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-  transition: right 0.3s ease;
-  z-index: 100;
-}
-
-.export-btn:hover {
-  background: #4f46e5;
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
-  transform: translateY(-2px);
-}
-
-.export-btn:active {
-  transform: translateY(0);
-}
-
-.change-status-btn {
-  position: fixed;
-  bottom: 312px;
-  right: 324px;
-  padding: 12px 24px;
-  background: #f59e0b;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-  transition: right 0.3s ease;
-  z-index: 100;
-}
-
-.change-status-btn:hover {
-  background: #d97706;
-  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
-  transform: translateY(-2px);
-}
-
-.change-status-btn:active {
-  transform: translateY(0);
-}
-
-.change-status-btn--active {
-  background: #10b981;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-}
-
-.change-status-btn--active:hover {
-  background: #059669;
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
 }
 </style>

@@ -406,4 +406,50 @@ const { sidebarCollapsed } = useSidebarState()
   display: flex;
   overflow: hidden;
 }
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 8px 12px;
+    width: 100% !important;
+  }
+
+  .header-content {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+
+  .header-center {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    text-align: left;
+  }
+
+  .app-header h1 {
+    font-size: 16px;
+    margin-bottom: 0;
+  }
+
+  .app-header .instructions {
+    display: none;
+  }
+
+  .header-tabs {
+    grid-row: 2;
+  }
+
+  .tab-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .header-buttons {
+    grid-row: 2;
+  }
+
+  .square-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+}
 </style>
