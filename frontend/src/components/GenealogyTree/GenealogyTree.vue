@@ -28,7 +28,8 @@ const {
   clearAll,
   familyStructureUnsync,
   saveFamilyStructureToBackend,
-  importGenealogyTree
+  importGenealogyTree,
+  exportGenealogyTree
 } = useStoredData()
 const { findAllDescendants } = useBaseGraph()
 
@@ -240,6 +241,16 @@ const onNodeDragStop = ({ node }) => {
       @click="importGenealogyTree"
     >
       ⬆ Import Tree
+    </button>
+
+    <button
+      v-if="!readOnly"
+      class="export-btn"
+      :style="{ right: sidebarCollapsed ? '24px' : '324px' }"
+      title="Export tree to JSON file"
+      @click="exportGenealogyTree"
+    >
+      ⬇ Export Tree
     </button>
 
     <label
@@ -540,6 +551,33 @@ const onNodeDragStop = ({ node }) => {
 }
 
 .import-btn:active {
+  transform: translateY(0);
+}
+
+.export-btn {
+  position: fixed;
+  bottom: 264px;
+  right: 324px;
+  padding: 12px 24px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  transition: right 0.3s ease;
+  z-index: 100;
+}
+
+.export-btn:hover {
+  background: #4f46e5;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
+  transform: translateY(-2px);
+}
+
+.export-btn:active {
   transform: translateY(0);
 }
 </style>

@@ -171,30 +171,6 @@ const { sidebarCollapsed } = useSidebarState()
 //   })
 // }
 
-// const handleExport = () => {
-//   const data = {
-//     nodes: nodes.value,
-//     edges: edges.value,
-//     tablesPerList: tablesPerList.value, // Export all tables for all invitation lists
-//     invitationLists: {
-//       available: availableInvitationLists.value,
-//       active: activeInvitationList.value
-//     }
-//   }
-
-//   const json = JSON.stringify(data, null, 2)
-//   const blob = new Blob([json], { type: 'application/json' })
-//   const url = URL.createObjectURL(blob)
-
-//   const link = document.createElement('a')
-//   link.href = url
-//   link.download = `wedding-planning-${new Date().toISOString().split('T')[0]}.json`
-//   document.body.appendChild(link)
-//   link.click()
-//   document.body.removeChild(link)
-//   URL.revokeObjectURL(url)
-// }
-
 // const handleSelectInvitationList = async listName => {
 //   await setActiveInvitationList(listName, initializeNodesAndEdges)
 // }
@@ -261,16 +237,6 @@ const { sidebarCollapsed } = useSidebarState()
         </div>
         <div class="header-buttons">
           <div class="buttons-row">
-            <!-- <button class="square-btn save-btn" title="Save to server" @click="handleSave">
-              💾
-            </button> -->
-            <!-- <button
-              class="square-btn export-btn"
-              title="Export tree to JSON file"
-              @click="handleExport"
-            >
-              ⬇
-            </button> -->
             <button
               v-if="!skipAuth"
               class="square-btn logout-btn"

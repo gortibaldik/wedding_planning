@@ -211,6 +211,17 @@ const importGenealogyTree = () => {
   input.click()
 }
 
+const exportGenealogyTree = () => {
+  const data = JSON.stringify({ nodes: nodes.value, edges: edges.value }, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'genealogy-tree.json'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 async function saveFamilyStructureToBackend() {
   const {
     saveToBackendStorage: saveFamilyStructureToBEStorage,
@@ -320,6 +331,7 @@ export function useStoredData() {
     familyStructureUnsync,
     saveFamilyStructureToBackend,
     initStoredData,
-    importGenealogyTree
+    importGenealogyTree,
+    exportGenealogyTree
   }
 }
