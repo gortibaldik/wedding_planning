@@ -237,13 +237,8 @@ const { sidebarCollapsed } = useSidebarState()
         </div>
         <div class="header-buttons">
           <div class="buttons-row">
-            <button
-              v-if="!skipAuth"
-              class="square-btn logout-btn"
-              title="Log out"
-              @click="handleLogout"
-            >
-              ⏻
+            <button v-if="!skipAuth" class="logout-btn" title="Log out" @click="handleLogout">
+              Log out
             </button>
           </div>
         </div>
@@ -386,8 +381,16 @@ const { sidebarCollapsed } = useSidebarState()
 }
 
 .logout-btn {
+  padding: 8px 16px;
   background: #6b7280;
   color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .logout-btn:hover {
