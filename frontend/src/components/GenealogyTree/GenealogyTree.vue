@@ -10,6 +10,7 @@ import '@vue-flow/core/dist/style.css'
 import PersonNode from '@/components/nodes/PersonNode.vue'
 import MultiPersonNode from '@/components/nodes/MultiPersonNode.vue'
 import GroupNode from '@/components/nodes/GroupNode.vue'
+import { useSidebarState } from '@/composables/useSidebarState'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 import { MultiPersonData, PersonData, useStoredData } from '@/composables/useStoredData'
 import { useBackendStorage } from '@/composables/useBackendStorage'
@@ -110,6 +111,7 @@ const handleClearAll = () => {
   }
 }
 
+const { sidebarCollapsed } = useSidebarState()
 const { fitView, updateNode } = useVueFlow()
 
 // Track drag state
@@ -216,7 +218,16 @@ const onNodeDragStop = ({ node }) => {
       <Controls />
     </VueFlow>
 
+    <div
+      v-if="status !== 'read-write' && !canChangeStatus"
+      class="read-only-badge"
+      :style="{ right: sidebarCollapsed ? '16px' : '316px' }"
+    >
+      Read-Only
+    </div>
+
     <GenealogyTreeEditMenu
+      v-if="status === 'read-write' || canChangeStatus"
       :status="status"
       :read-only="readOnly"
       :can-change-status="canChangeStatus"
@@ -341,5 +352,20 @@ const onNodeDragStop = ({ node }) => {
 
 .btn-secondary:hover {
   background: #d1d5db;
+}
+
+.read-only-badge {
+  position: fixed;
+  bottom: 16px;
+  padding: 10px 18px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #9ca3af;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: right 0.3s ease;
+  z-index: 100;
 }
 </style>
