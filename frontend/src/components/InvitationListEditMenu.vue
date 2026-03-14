@@ -169,8 +169,10 @@ onMounted(() => {
         <button
           class="il-section__btn il-section__btn--secondary"
           @click="
-            showNewListInput = false
-            newListName = ''
+            () => {
+              showNewListInput = false
+              newListName = ''
+            }
           "
         >
           Cancel

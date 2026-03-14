@@ -3,6 +3,7 @@ console.info('RUNING SETUP FOR AuthenticatedApp')
 import { ref, computed, watch } from 'vue'
 import GenealogyTree from './GenealogyTree/GenealogyTree.vue'
 import GenealogyTreeSidebar from './GenealogyTree/GenealogyTreeSidebar.vue'
+import InvitationComparisonTable from './InvitationComparisonTable.vue'
 import { useGenealogyData } from '../composables/useGenealogyData.ts'
 import { useSidebarState } from '../composables/useSidebarState'
 import { useAuth } from '../composables/useAuth.ts'
@@ -28,7 +29,12 @@ const { sidebarCollapsed } = useSidebarState()
 
 <template>
   <div class="app">
-    <header class="app-header" :style="{ width: sidebarCollapsed ? '100%' : 'calc(100% - 300px)' }">
+    <header
+      class="app-header"
+      :style="{
+        width: activeTab !== 'family-tree' || sidebarCollapsed ? '100%' : 'calc(100% - 300px)'
+      }"
+    >
       <div class="header-content">
         <div class="header-tabs">
           <button
@@ -37,6 +43,13 @@ const { sidebarCollapsed } = useSidebarState()
             @click="activeTab = 'family-tree'"
           >
             Family Tree
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeTab === 'invited-table' }"
+            @click="activeTab = 'invited-table'"
+          >
+            Invitations Comparison
           </button>
         </div>
         <div class="header-center">
@@ -60,8 +73,11 @@ const { sidebarCollapsed } = useSidebarState()
       </div>
     </header>
     <div class="main-content">
-      <GenealogyTree />
-      <GenealogyTreeSidebar />
+      <div v-show="activeTab === 'family-tree'" class="tab-content">
+        <GenealogyTree />
+        <GenealogyTreeSidebar />
+      </div>
+      <InvitationComparisonTable v-show="activeTab === 'invited-table'" />
     </div>
   </div>
 </template>
@@ -223,6 +239,12 @@ const { sidebarCollapsed } = useSidebarState()
   position: relative;
   display: flex;
   overflow: hidden;
+}
+
+.tab-content {
+  display: flex;
+  width: 100%;
+  height: 100%;
 }
 
 @media (max-width: 768px) {
