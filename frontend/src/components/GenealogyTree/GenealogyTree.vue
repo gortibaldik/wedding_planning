@@ -112,7 +112,13 @@ const handleClearAll = () => {
 }
 
 const { sidebarCollapsed } = useSidebarState()
-const { fitView, updateNode } = useVueFlow()
+const { fitView, updateNode, setCenter } = useVueFlow()
+
+const handleRootAdded = node => {
+  nextTick(() => {
+    setCenter(node.position.x + 90, node.position.y + 50, { zoom: 0.8, duration: 300 })
+  })
+}
 
 // Track drag state
 const dragState = ref({
@@ -252,6 +258,7 @@ const onNodeDragStop = ({ node }) => {
       v-model:add-name-input="addNameInput"
       v-model:add-form="addForm"
       v-model:add-modal-target-id="addModalTargetId"
+      @root-added="handleRootAdded"
     />
   </div>
 </template>

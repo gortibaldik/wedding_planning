@@ -13,6 +13,8 @@ const addForm = defineModel('addForm', {
   default: () => ({ name: '', nodeType: 'person', nodeTypeOptions: [''] })
 })
 
+const emit = defineEmits(['root-added'])
+
 const closeAddModal = () => {
   showAddModal.value = false
   addModalType.value = ''
@@ -27,8 +29,9 @@ const addAction = () => {
     addChildNode(addModalTargetId.value, addForm.value.name, addForm.value.nodeType)
     closeAddModal()
   } else if (addModalType.value === 'root') {
-    addRootNode(addForm.value.name)
+    const newRoot = addRootNode(addForm.value.name)
     closeAddModal()
+    emit('root-added', newRoot)
   }
 }
 </script>
