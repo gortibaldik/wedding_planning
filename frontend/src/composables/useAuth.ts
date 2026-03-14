@@ -41,5 +41,20 @@ export function useAuth() {
     }
   }
 
-  return { checkAuth, getToken, getRoles, logout }
+  const getUserInfo = (): { sub: string; name: string; roles: string[] } => {
+    const token = getToken()
+    if (!token) return { sub: '', name: '', roles: [] }
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      return {
+        sub: payload.sub || '',
+        name: payload.name || '',
+        roles: payload.roles || []
+      }
+    } catch {
+      return { sub: '', name: '', roles: [] }
+    }
+  }
+
+  return { checkAuth, getToken, getRoles, getUserInfo, logout }
 }

@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useSidebarState } from '@/composables/useSidebarState'
+import InvitationListEditMenu from '@/components/InvitationListEditMenu.vue'
 
 const props = defineProps({
   status: { type: String, required: true },
@@ -80,6 +81,9 @@ const toolbarOpen = ref(false)
             Clear All
           </button>
         </div>
+
+        <!-- Invitation Lists section -->
+        <InvitationListEditMenu />
       </div>
     </transition>
 

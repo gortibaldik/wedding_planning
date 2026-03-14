@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/auth': process.env.BACKEND_URL || 'http://localhost:8000',
-      '/invitation_lists': process.env.BACKEND_URL || 'http://localhost:8000',
+      '/invitation-lists': process.env.BACKEND_URL || 'http://localhost:8000',
       '/family-structure': process.env.BACKEND_URL || 'http://localhost:8000'
     }
   },
