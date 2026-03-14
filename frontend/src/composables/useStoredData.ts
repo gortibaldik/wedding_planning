@@ -185,6 +185,7 @@ const importGenealogyTree = () => {
         if (confirm(confirmMessage)) {
           parseData(data.nodes)
           edges.value = data.edges
+          rebuildPeople()
         }
       } catch (error) {
         alert('Error reading file: ' + error.message)
