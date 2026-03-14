@@ -19,6 +19,10 @@ If you want to run without authentication, just set the `VITE_SKIP_AUTH` to empt
 
 - we deploy in Basic Dynos which run for at most $7 per month
 
+Use `release.sh`.
+
+### Manual Process
+
 Tag the container so that Heroku would understand where it should be deployed:
 
 ```shell

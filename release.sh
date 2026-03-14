@@ -1,0 +1,1 @@
+sudo docker compose build && sudo docker tag wedding_planning-wedding-planning registry.heroku.com/wedding-planning/web && sudo docker push registry.heroku.com/wedding-planning/web && sudo heroku container:release web
