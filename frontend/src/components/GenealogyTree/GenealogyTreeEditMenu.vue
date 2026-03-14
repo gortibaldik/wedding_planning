@@ -29,6 +29,11 @@ const toolbarOpen = ref(false)
     <!-- Expanded panel -->
     <transition name="toolbar-slide">
       <div v-if="toolbarOpen" class="toolbar__panel">
+        <!-- Read-Only badge (when fully read-only with no ability to change) -->
+        <div v-if="status !== 'read-write' && !canChangeStatus" class="toolbar__read-only-badge">
+          Read-Only
+        </div>
+
         <!-- Mode section -->
         <div v-if="status === 'read-write' || canChangeStatus" class="toolbar__section">
           <div class="toolbar__section-title">Mode</div>
@@ -173,6 +178,17 @@ const toolbarOpen = ref(false)
 .toolbar__section + .toolbar__section {
   border-top: 1px solid #e5e7eb;
   padding-top: 10px;
+}
+
+.toolbar__read-only-badge {
+  padding: 8px 14px;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400e;
+  text-align: center;
 }
 
 .toolbar__section-title {
