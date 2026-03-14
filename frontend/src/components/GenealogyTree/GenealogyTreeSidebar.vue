@@ -14,11 +14,14 @@ const guests = computed(() => {
     .filter(([, person]) => person.invited)
     .map(([id, person]) => {
       const root = findRootNode(person.nodeId)
+      const node = findNode(person.nodeId)
+      const multiPersonName = node?.type === 'multi-person' ? node.data.name : ''
       return {
         id,
         ...person,
         color: root?.data?.color ?? '#3b82f6',
-        rootName: root?.data?.name ?? ''
+        rootName: root?.data?.name ?? '',
+        multiPersonName
       }
     })
 })
@@ -50,6 +53,9 @@ const guests = computed(() => {
         >
           <div class="guest-sidebar__item-name">
             {{ guest.name }}
+            <span v-if="guest.multiPersonName" class="guest-sidebar__item-group"
+              >({{ guest.multiPersonName }})</span
+            >
           </div>
           <div v-if="guest.rootName" class="guest-sidebar__item-group">
             {{ guest.rootName }}
@@ -167,6 +173,7 @@ const guests = computed(() => {
   font-size: 12px;
   color: #9ca3af;
   font-weight: 400;
+  margin-left: 4px;
   margin-bottom: 2px;
 }
 

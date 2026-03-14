@@ -5,7 +5,7 @@ import { useStoredData } from '@/composables/useStoredData'
 import { useAuth, buildHeaders } from '@/composables/useAuth'
 
 const { allLists, initInvitationLists } = useInvitationLists()
-const { people } = useStoredData()
+const { people, nodes } = useStoredData()
 const { getUserInfo, getToken } = useAuth()
 const userInfo = getUserInfo()
 
@@ -75,6 +75,13 @@ const compareInvitedIds = computed(() => {
 
 const personName = id => {
   return people.value[id]?.name ?? id
+}
+
+const multiPersonName = id => {
+  const nodeId = people.value[id]?.nodeId
+  if (!nodeId) return ''
+  const node = nodes.value.find(n => n.id === nodeId)
+  return node?.type === 'multi-person' ? node.data.name : ''
 }
 
 const onlyMine = computed(() => {
@@ -226,7 +233,12 @@ onMounted(async () => {
             :checked="myInvitedIds.has(id)"
             @change="toggleInvitation(id)"
           />
-          <span class="it__person-name">{{ personName(id) }}</span>
+          <span class="it__person-name">
+            {{ personName(id) }}
+            <span v-if="multiPersonName(id)" class="it__person-group"
+              >({{ multiPersonName(id) }})</span
+            >
+          </span>
         </label>
       </div>
 
@@ -243,7 +255,12 @@ onMounted(async () => {
             :checked="myInvitedIds.has(id)"
             @change="toggleInvitation(id)"
           />
-          <span class="it__person-name">{{ personName(id) }}</span>
+          <span class="it__person-name">
+            {{ personName(id) }}
+            <span v-if="multiPersonName(id)" class="it__person-group"
+              >({{ multiPersonName(id) }})</span
+            >
+          </span>
         </label>
       </div>
 
@@ -260,7 +277,12 @@ onMounted(async () => {
             :checked="myInvitedIds.has(id)"
             @change="toggleInvitation(id)"
           />
-          <span class="it__person-name">{{ personName(id) }}</span>
+          <span class="it__person-name">
+            {{ personName(id) }}
+            <span v-if="multiPersonName(id)" class="it__person-group"
+              >({{ multiPersonName(id) }})</span
+            >
+          </span>
         </label>
       </div>
 
@@ -279,7 +301,12 @@ onMounted(async () => {
             :checked="myInvitedIds.has(id)"
             @change="toggleInvitation(id)"
           />
-          <span class="it__person-name">{{ personName(id) }}</span>
+          <span class="it__person-name">
+            {{ personName(id) }}
+            <span v-if="multiPersonName(id)" class="it__person-group"
+              >({{ multiPersonName(id) }})</span
+            >
+          </span>
         </label>
       </div>
     </template>
@@ -490,6 +517,12 @@ onMounted(async () => {
 .it__person-name {
   font-size: 14px;
   color: #374151;
+}
+
+.it__person-group {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: 4px;
 }
 
 @media (max-width: 768px) {
