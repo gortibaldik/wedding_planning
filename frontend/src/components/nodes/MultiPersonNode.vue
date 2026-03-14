@@ -95,7 +95,7 @@ const saveModal = () => {
 
       if (!existingPerson) {
         const newId = `${node.value.id}-${Date.now()}-${index}`
-        people.value[newId] = new PersonInfo(false, formPerson.name)
+        people.value[newId] = new PersonInfo(false, formPerson.name, node.value.id)
         return new PersonInNode(newId, formPerson.name)
       } else {
         people.value[existingPerson.id].name = formPerson.name

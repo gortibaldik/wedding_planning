@@ -68,6 +68,3 @@ Set the application name to `wedding-planning`
 ```shell
 heroku git:remote -a wedding-planning
 ```
-
-
-

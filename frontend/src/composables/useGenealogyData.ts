@@ -52,7 +52,7 @@ export function useGenealogyData() {
       }
     } else {
       const personId = `person-${Date.now()}`
-      people.value[personId] = new PersonInfo(false, name)
+      people.value[personId] = new PersonInfo(false, name, personId)
 
       node = {
         id: personId,

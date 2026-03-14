@@ -27,30 +27,14 @@ export class PersonInNode {
   ) {}
 
   get name(): string {
-    if (!(this.id in people.value)) {
-      console.warn(
-        'NEW UNRECOGNIZED PERSON -> creating a new PersonInfo with:',
-        this.id,
-        this.internalName
-      )
-      people.value[this.id] = new PersonInfo(false, this.internalName)
-    } else if (people.value[this.id].name != this.internalName) {
-      console.warn(
-        'PERSON WITH DIFFERENT NAME',
-        this.id,
-        this.internalName,
-        people.value[this.id].name
-      )
-      people.value[this.id].name = this.internalName
-    }
-    return people.value[this.id]?.name
+    return people.value[this.id]?.name ?? this.internalName
   }
 
   set name(value: string) {
     if (people.value[this.id]) {
       people.value[this.id].name = value
-      this.internalName = value
     }
+    this.internalName = value
   }
 }
 
@@ -63,30 +47,14 @@ export class PersonData extends BaseData {
   }
 
   get name(): string {
-    if (!(this.id in people.value)) {
-      console.warn(
-        'NEW UNRECOGNIZED PERSON -> creating a new PersonInfo with:',
-        this.id,
-        this.internalName
-      )
-      people.value[this.id] = new PersonInfo(false, this.internalName)
-    } else if (people.value[this.id].name != this.internalName) {
-      console.warn(
-        'PERSON WITH DIFFERENT NAME',
-        this.id,
-        this.internalName,
-        people.value[this.id].name
-      )
-      people.value[this.id].name = this.internalName
-    }
-    return people.value[this.id]?.name
+    return people.value[this.id]?.name ?? this.internalName
   }
 
   set name(value: string) {
     if (people.value[this.id]) {
       people.value[this.id].name = value
-      this.internalName = value
     }
+    this.internalName = value
   }
 }
 
@@ -132,7 +100,8 @@ export class MultiPersonData extends BaseData {
 export class PersonInfo {
   constructor(
     public invited: boolean,
-    public name: string
+    public name: string,
+    public nodeId: string = ''
   ) {}
 }
 
@@ -265,14 +234,10 @@ async function initStoredData() {
     stored = JSON.parse(JSON.stringify(loadedFamilyStructureFromBE.value))
     try {
       const { people: peopleContentUntyped } = loadFromLocalStorage()
-      const peopleContent = peopleContentUntyped as Record<string, PersonInfo>
-
-      stored['people'] = peopleContent
+      people.value = (peopleContentUntyped as Record<string, PersonInfo>) ?? {}
     } catch (e) {
-      console.warn('Caught error', e, 'initializing people to empty dict.')
-      stored['people'] = {}
+      console.warn('Caught error loading people from localStorage:', e)
     }
-    console.info('COMPOSED STORED:', stored)
   } else {
     stored = loadFromLocalStorage()
   }
@@ -325,11 +290,25 @@ async function initStoredData() {
     if (stored.edges) {
       edges.value = stored.edges
     }
-    if (stored.people) {
-      console.info('INITIALIZING PEOPLE')
-      people.value = stored.people
+    rebuildPeople()
+  }
+}
+
+const rebuildPeople = () => {
+  const oldPeople = people.value
+  const newPeople: Record<string, PersonInfo> = {}
+  for (const node of nodes.value) {
+    if (node.type === 'person' && node.data instanceof PersonData) {
+      const invited = oldPeople[node.id]?.invited ?? false
+      newPeople[node.id] = new PersonInfo(invited, node.data.internalName, node.id)
+    } else if (node.type === 'multi-person' && node.data instanceof MultiPersonData) {
+      for (const person of node.data.people) {
+        const invited = oldPeople[person.id]?.invited ?? false
+        newPeople[person.id] = new PersonInfo(invited, person.internalName, node.id)
+      }
     }
   }
+  people.value = newPeople
 }
 
 const clearAll = () => {
