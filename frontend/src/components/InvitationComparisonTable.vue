@@ -290,6 +290,7 @@ onMounted(async () => {
 .it {
   width: 100%;
   height: 100%;
+  min-height: 0;
   overflow-y: auto;
   padding: 24px;
   display: flex;
@@ -415,6 +416,7 @@ onMounted(async () => {
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .it__section-title {
