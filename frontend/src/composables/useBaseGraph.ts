@@ -15,17 +15,16 @@ const GROUP_COLORS = [
   '#f97316'
 ]
 
-let nextColorIndex = 0
-
-function getNextColor() {
-  const color = GROUP_COLORS[nextColorIndex % GROUP_COLORS.length]
-  nextColorIndex++
-  return color
-}
-
 export function useBaseGraph() {
   const { nodes, edges, people } = useStoredData()
   const groupRootNodes: ChartNode<BaseData>[] = []
+
+  function getNextColor() {
+    const usedColors = new Set(nodes.value.filter(n => n.data.isRoot).map(n => n.data.color))
+    const unused = GROUP_COLORS.find(c => !usedColors.has(c))
+    if (!unused) throw new Error('All group colors are already in use')
+    return unused
+  }
 
   const inviteSubTree = (nodeId: string) => {
     const descendants = findAllDescendants(nodeId)
