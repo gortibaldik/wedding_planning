@@ -399,6 +399,7 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   align-items: flex-end;
+  flex-wrap: wrap;
 }
 
 .it__revert-btn {
@@ -537,6 +538,15 @@ onMounted(async () => {
 
   .it__select-group {
     min-width: 0;
+  }
+
+  .it__btn-group {
+    flex-direction: column;
+  }
+
+  .it__save-btn,
+  .it__revert-btn {
+    white-space: normal;
   }
 }
 </style>
