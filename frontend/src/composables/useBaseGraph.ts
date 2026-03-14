@@ -258,11 +258,22 @@ export function useBaseGraph() {
     return childNode.id
   }
 
+  const findRootNode = (nodeId: string) => {
+    let currentId = nodeId
+    while (currentId) {
+      const parentId = findParentId(currentId)
+      if (!parentId) break
+      currentId = parentId
+    }
+    return findNode(currentId)
+  }
+
   return {
     removePersonNode,
     updatePersonNode,
     addChildBase,
     findNode,
+    findRootNode,
     addRootBase,
     findAllDescendants,
     inviteSubTree

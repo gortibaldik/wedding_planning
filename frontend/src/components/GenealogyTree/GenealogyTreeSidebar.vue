@@ -2,15 +2,25 @@
 import { computed } from 'vue'
 import { useStoredData } from '@/composables/useStoredData'
 import { useSidebarState } from '@/composables/useSidebarState'
+import { useBaseGraph } from '@/composables/useBaseGraph'
 
 const { people } = useStoredData()
 
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
+const { findNode, findRootNode } = useBaseGraph()
 
 const guests = computed(() => {
   return Object.entries(people.value)
     .filter(([, person]) => person.invited)
-    .map(([id, person]) => ({ id, ...person }))
+    .map(([id, person]) => {
+      const root = findRootNode(person.nodeId)
+      return {
+        id,
+        ...person,
+        color: root?.data?.color ?? '#3b82f6',
+        rootName: root?.data?.name ?? ''
+      }
+    })
 })
 </script>
 
@@ -36,27 +46,14 @@ const guests = computed(() => {
           v-for="guest in guests"
           :key="guest.id"
           class="guest-sidebar__item"
-          :style="{ borderLeft: `4px solid` }"
+          :style="{ borderLeft: `4px solid ${guest.color}` }"
         >
           <div class="guest-sidebar__item-name">
             {{ guest.name }}
-            <!-- <span v-if="guest.isMultiPerson" class="guest-sidebar__badge">
-              {{ guest.groupName }}
-            </span> -->
           </div>
-          <!-- <div class="guest-sidebar__item-group">
-            {{ getGroupName(guest.id) }}
-          </div> -->
-          <!-- <div
-            class="guest-sidebar__item-table"
-            :class="{ 'guest-sidebar__item-table--warning': !getTableAssignment(guest.id) }"
-          >
-            {{
-              getTableAssignment(guest.id)
-                ? `Seated at ${getTableAssignment(guest.id)}`
-                : 'Not seated yet'
-            }}
-          </div> -->
+          <div v-if="guest.rootName" class="guest-sidebar__item-group">
+            {{ guest.rootName }}
+          </div>
         </div>
       </div>
     </div>
