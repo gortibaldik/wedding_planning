@@ -76,25 +76,6 @@ export class MultiPersonData extends BaseData {
   get invitedPeople(): PersonInNode[] {
     return this.people.filter(p => people.value[p.id]?.invited === true)
   }
-
-  // Helper: Are all people invited for the active list?
-  get allInvited(): boolean {
-    return this.people.length > 0 && this.people.every(p => people.value[p.id]?.invited === true)
-  }
-
-  // Helper: Are some (but not all) people invited for the active list?
-  get someInvited(): boolean {
-    const invitedCount = this.people.filter(p => people.value[p.id]?.invited === true).length
-    return invitedCount > 0 && invitedCount < this.people.length
-  }
-
-  /**
-   * inviteAll
-   */
-  public inviteAllToggle() {
-    let previousState = this.allInvited
-    this.people.map(p => (people.value[p.id].invited = !previousState))
-  }
 }
 
 export class PersonInfo {
@@ -295,7 +276,7 @@ async function initStoredData() {
   }
 }
 
-const rebuildPeople = () => {
+export const rebuildPeople = () => {
   const oldPeople = people.value
   const newPeople: Record<string, PersonInfo> = {}
   for (const node of nodes.value) {

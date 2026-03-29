@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, inject, type Ref } from 'vue'
 import { PersonData, useStoredData } from '@/composables/useStoredData'
+import { useInvitationLists } from '@/composables/useInvitationLists'
 import NodeBase from './NodeBase.vue'
-import { useBaseGraph } from '@/composables/useBaseGraph'
+import { useAuth } from '@/composables/useAuth'
 
 const props = defineProps({
   id: String,
@@ -10,11 +11,13 @@ const props = defineProps({
 })
 
 const readOnly = inject<Ref<boolean>>('readOnly', ref(false))
-const { people, nodes } = useStoredData()
-const { inviteSubTree } = useBaseGraph()
+const { nodes } = useStoredData()
+const { togglePersonInvite, isPersonInvited } = useInvitationLists()
+const { getUserInfo } = useAuth()
+const userInfo = getUserInfo()
 
 const isInvited = computed(() => {
-  return people.value[props.id].invited
+  return isPersonInvited(props.id)
 })
 
 const node = computed(() => {
@@ -30,7 +33,7 @@ const node = computed(() => {
 })
 
 const onToggleInvited = () => {
-  people.value[props.id].invited = !isInvited.value
+  togglePersonInvite(node.value.id)
 }
 
 const showEditModal = ref(false)
@@ -76,14 +79,6 @@ const saveEdit = () => {
         />
         <span class="person-node__checkbox-label">Invited?</span>
       </label>
-
-      <button
-        v-if="data.hasChildren"
-        class="person-node__subtree-btn"
-        @click.stop="inviteSubTree(node.id)"
-      >
-        Invite the whole subtree
-      </button>
     </div>
 
     <Teleport to="body">
@@ -168,31 +163,5 @@ const saveEdit = () => {
   height: 18px;
   cursor: pointer;
   accent-color: var(--node-color, #3b82f6);
-}
-
-.person-node__subtree-btn {
-  width: 100%;
-  padding: 6px 12px;
-  background: #6898e4;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.person-node__subtree-btn:hover {
-  opacity: 0.85;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.person-node__subtree-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 </style>

@@ -1,7 +1,8 @@
-<script setup>
+<script setup lang="ts">
+import { useGenealogyData } from '@/composables/useGenealogyData'
 import { inject, ref } from 'vue'
-import { useBaseGraph } from '@/composables/useBaseGraph'
 import { useStoredData } from '@/composables/useStoredData'
+import { useBaseGraph } from '@/composables/useBaseGraph'
 import { Handle, Position } from '@vue-flow/core'
 
 const readOnly = inject('readOnly', ref(false))
@@ -12,7 +13,8 @@ const props = defineProps({
 })
 
 const { nodes, edges } = useStoredData()
-const { removePersonNode } = useBaseGraph()
+const { hasChildren } = useBaseGraph()
+const { removeNodeAndPeople, inviteSubTree } = useGenealogyData()
 
 const handleRemove = () => {
   const node = nodes.value.find(n => n.id === props.id)
@@ -38,7 +40,7 @@ const handleRemove = () => {
   }
 
   if (confirm(confirmMessage)) {
-    removePersonNode(props.id)
+    removeNodeAndPeople(node)
   }
 }
 </script>
@@ -51,19 +53,23 @@ const handleRemove = () => {
       <slot />
     </div>
 
+    <button
+      v-if="hasChildren(props.id)"
+      class="person-node__subtree-btn"
+      @click.stop="inviteSubTree(props.id)"
+    >
+      Invite the whole subtree
+    </button>
+
     <div v-if="!readOnly" class="person-node__actions">
       <button
         class="action-btn action-btn--child"
-        title="Add child"
+        title="Add child node"
         @click.stop="data.onAddChild?.(id)"
       >
         ↓
       </button>
-      <button
-        class="action-btn action-btn--remove"
-        title="Remove person"
-        @click.stop="handleRemove"
-      >
+      <button class="action-btn action-btn--remove" title="Remove node" @click.stop="handleRemove">
         ✕
       </button>
     </div>
@@ -150,5 +156,32 @@ const handleRemove = () => {
   background: #fee2e2;
   border-color: #ef4444;
   color: #ef4444;
+}
+
+.person-node__subtree-btn {
+  width: 100%;
+  padding: 6px 12px;
+  background: #6898e4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5em;
+}
+
+.person-node__subtree-btn:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.person-node__subtree-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 </style>

@@ -2,7 +2,6 @@
 import { computed, ref, nextTick, inject, type Ref } from 'vue'
 import { RootData, useStoredData } from '@/composables/useStoredData'
 import NodeBase from './NodeBase.vue'
-import { useBaseGraph } from '@/composables/useBaseGraph'
 
 const props = defineProps({
   id: String,
@@ -11,7 +10,6 @@ const props = defineProps({
 
 const readOnly = inject<Ref<boolean>>('readOnly', ref(false))
 const { nodes } = useStoredData()
-const { inviteSubTree } = useBaseGraph()
 
 const node = computed(() => {
   const found = nodes.value.find(n => n.id == props.id)
@@ -53,13 +51,6 @@ const saveEdit = () => {
     <div class="person-node__header">
       <div class="person-node__name">{{ node.data.name }}</div>
       <div class="person-node__role">{{ node.type }}</div>
-    </div>
-
-    <!-- Button for groups with children -->
-    <div v-if="data.hasChildren" class="person-node__checkboxes">
-      <button class="person-node__subtree-btn" @click.stop="inviteSubTree(node.id)">
-        Invite the whole subtree
-      </button>
     </div>
 
     <Teleport to="body">
@@ -116,31 +107,5 @@ const saveEdit = () => {
   flex-direction: column;
   gap: 6px;
   margin-bottom: 8px;
-}
-
-.person-node__subtree-btn {
-  width: 100%;
-  padding: 6px 12px;
-  background: #6898e4;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.person-node__subtree-btn:hover {
-  opacity: 0.85;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.person-node__subtree-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 </style>

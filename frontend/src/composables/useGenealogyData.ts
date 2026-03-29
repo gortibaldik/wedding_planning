@@ -1,4 +1,5 @@
 import { useBaseGraph } from './useBaseGraph'
+import { useInvitationLists } from './useInvitationLists'
 import {
   ChartNode,
   PersonData,
@@ -6,13 +7,48 @@ import {
   MultiPersonData,
   PersonInNode,
   useStoredData,
-  PersonInfo
+  PersonInfo,
+  BaseData
 } from './useStoredData'
 
 export function useGenealogyData() {
-  const { people } = useStoredData()
+  const { people, nodes } = useStoredData()
 
-  const { addRootBase, addChildBase } = useBaseGraph()
+  const { addRootBase, addChildBase, findAllDescendants, removeNode } = useBaseGraph()
+  const { togglePersonInvite, isAllMultiPersonInvited, toggleAllMultiPersonInvite, deletePerson } =
+    useInvitationLists()
+
+  const inviteWholeNode = (nodeData: BaseData) => {
+    if (nodeData instanceof MultiPersonData && !isAllMultiPersonInvited(nodeData)) {
+      toggleAllMultiPersonInvite(nodeData)
+    } else if (nodeData instanceof PersonData) {
+      togglePersonInvite(nodeData.id)
+    }
+  }
+
+  const inviteSubTree = (nodeId: string) => {
+    const descendants = findAllDescendants(nodeId)
+    descendants.forEach(descId => {
+      const node = nodes.value.find(n => n.id == descId)
+      inviteWholeNode(node.data)
+    })
+  }
+
+  const onRemoveSingleNode = (node: ChartNode<BaseData>) => {
+    if (node.data instanceof PersonData) {
+      deletePerson(node.data.id)
+    } else if (node.data instanceof MultiPersonData) {
+      node.data.people.forEach(p => deletePerson(p.id))
+    }
+  }
+
+  /**
+   * Remove node, all it's descendants and all the people associated to these nodes.
+   */
+  const removeNodeAndPeople = (node: ChartNode<BaseData>) => {
+    const removedNodes = removeNode(node)
+    removedNodes.forEach(onRemoveSingleNode)
+  }
 
   /** Add root node to the chart */
   const addRootNode = (name: string) => {
@@ -69,6 +105,8 @@ export function useGenealogyData() {
 
   return {
     addRootNode,
-    addChildNode
+    addChildNode,
+    inviteSubTree,
+    removeNodeAndPeople
   }
 }

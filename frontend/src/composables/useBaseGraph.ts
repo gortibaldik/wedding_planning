@@ -1,4 +1,4 @@
-import { ChartNode, BaseData, useStoredData, MultiPersonData } from './useStoredData'
+import { ChartNode, BaseData, useStoredData } from './useStoredData'
 
 const NODE_WIDTH = 180
 const HORIZONTAL_SPACING = 80
@@ -16,7 +16,7 @@ const GROUP_COLORS = [
 ]
 
 export function useBaseGraph() {
-  const { nodes, edges, people } = useStoredData()
+  const { nodes, edges } = useStoredData()
   const groupRootNodes: ChartNode<BaseData>[] = []
 
   function getNextColor() {
@@ -26,23 +26,8 @@ export function useBaseGraph() {
     return unused
   }
 
-  const inviteSubTree = (nodeId: string) => {
-    const descendants = findAllDescendants(nodeId)
-    descendants.forEach(descId => {
-      if (descId in people.value) {
-        people.value[descId].invited = true
-      } else {
-        const node = nodes.value.find(n => n.id == descId)
-        if (node.data instanceof MultiPersonData && !node.data.allInvited) {
-          node.data.inviteAllToggle()
-        }
-      }
-    })
-  }
-
-  const removePersonNode = (nodeId: string) => {
-    const node = nodes.value.filter(n => n.id === nodeId)[0]
-    const nodesToRemove = findAllDescendants(nodeId)
+  const removeNode = (node: ChartNode<BaseData>) => {
+    const nodeIdsToRemove = findAllDescendants(node.id)
 
     if (node.data.isRoot) {
       const rootNodesIndex = groupRootNodes.indexOf(node)
@@ -51,10 +36,13 @@ export function useBaseGraph() {
       }
     }
 
-    nodes.value = nodes.value.filter(n => !nodesToRemove.has(n.id))
+    const removedNodes = nodes.value.filter(n => nodeIdsToRemove.has(n.id))
+    nodes.value = nodes.value.filter(n => !nodeIdsToRemove.has(n.id))
     edges.value = edges.value.filter(
-      e => !nodesToRemove.has(e.source) && !nodesToRemove.has(e.target)
+      e => !nodeIdsToRemove.has(e.source) && !nodeIdsToRemove.has(e.target)
     )
+
+    return removedNodes
   }
 
   const updatePersonNode = (nodeId: string, data: any) => {
@@ -267,14 +255,16 @@ export function useBaseGraph() {
     return findNode(currentId)
   }
 
+  const hasChildren = (nodeId: string) => edges.value.some(e => e.source === nodeId)
+
   return {
-    removePersonNode,
+    removeNode,
     updatePersonNode,
     addChildBase,
     findNode,
     findRootNode,
     addRootBase,
     findAllDescendants,
-    inviteSubTree
+    hasChildren
   }
 }

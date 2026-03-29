@@ -7,7 +7,7 @@ import {
   PersonInfo,
   PersonInNode
 } from '@/composables/useStoredData'
-import { useBaseGraph } from '@/composables/useBaseGraph'
+import { useInvitationLists } from '@/composables/useInvitationLists'
 
 const props = defineProps({
   id: String,
@@ -15,8 +15,16 @@ const props = defineProps({
 })
 
 const readOnly = inject<Ref<boolean>>('readOnly', ref(false))
-const { nodes, people } = useStoredData()
-const { inviteSubTree } = useBaseGraph()
+const { nodes } = useStoredData()
+const {
+  toggleAllMultiPersonInvite,
+  isAllMultiPersonInvited,
+  deletePerson,
+  createPerson,
+  updatePersonName,
+  isPersonInvited,
+  togglePersonInvite
+} = useInvitationLists()
 
 const node = computed(() => {
   const found = nodes.value.find(n => n.id == props.id)
@@ -35,6 +43,12 @@ const node = computed(() => {
   }
 
   return foundCasted
+})
+
+const allInvited = computed(() => isAllMultiPersonInvited(node.value.data))
+const someInvited = computed(() => {
+  const invitedCount = node.value.data.people.filter(p => isPersonInvited(p.id)).length
+  return invitedCount > 0 && invitedCount < node.value.data.people.length
 })
 
 // Modal state
@@ -73,7 +87,7 @@ const handleAddPerson = () => {
 
 const handleRemovePerson = personId => {
   modalForm.value.people = modalForm.value.people.filter(p => p.id !== personId)
-  delete people.value[personId]
+  deletePerson(personId)
 }
 
 const handleEditPerson = personId => {
@@ -95,10 +109,10 @@ const saveModal = () => {
 
       if (!existingPerson) {
         const newId = `${node.value.id}-${Date.now()}-${index}`
-        people.value[newId] = new PersonInfo(false, formPerson.name, node.value.id)
+        createPerson(newId, new PersonInfo(false, formPerson.name, node.value.id))
         return new PersonInNode(newId, formPerson.name)
       } else {
-        people.value[existingPerson.id].name = formPerson.name
+        updatePersonName(existingPerson.id, formPerson.name)
         return existingPerson
       }
     })
@@ -122,21 +136,13 @@ const saveModal = () => {
         <label class="person-node__checkbox-row" @click.stop>
           <input
             type="checkbox"
-            :checked="node.data.allInvited"
-            :indeterminate.prop="node.data.someInvited"
+            :checked="allInvited"
+            :indeterminate.prop="someInvited"
             class="person-node__checkbox-master"
-            @change="node.data.inviteAllToggle"
+            @change="toggleAllMultiPersonInvite(node.data)"
           />
           <span class="person-node__checkbox-label">Invite all?</span>
         </label>
-
-        <button
-          v-if="data.hasChildren"
-          class="person-node__subtree-btn"
-          @click.stop="inviteSubTree(node.id)"
-        >
-          Invite the whole subtree
-        </button>
       </div>
 
       <!-- Individual People List -->
@@ -150,13 +156,9 @@ const saveModal = () => {
           <span class="person-node__person-name">{{ person.name }}</span>
           <input
             type="checkbox"
-            :checked="people[person.id]?.invited"
+            :checked="isPersonInvited(person.id)"
             class="person-node__checkbox-small"
-            @change="
-              () => {
-                people[person.id].invited = !!!people[person.id]?.invited
-              }
-            "
+            @change="togglePersonInvite(person.id)"
           />
         </div>
       </div>
@@ -290,32 +292,6 @@ const saveModal = () => {
   height: 20px;
   cursor: pointer;
   accent-color: var(--node-color, #3b82f6);
-}
-
-.person-node__subtree-btn {
-  width: 100%;
-  padding: 6px 12px;
-  background: #6898e4;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.person-node__subtree-btn:hover {
-  opacity: 0.85;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.person-node__subtree-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .person-node__people-list {

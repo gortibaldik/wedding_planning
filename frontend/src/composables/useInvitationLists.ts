@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useAuth, buildHeaders } from './useAuth'
-import { useStoredData } from './useStoredData'
+import { MultiPersonData, useStoredData, PersonInfo, rebuildPeople } from './useStoredData'
 
 export interface ListMetadata {
   id: string
@@ -28,7 +28,7 @@ const savedInvitedSnapshot = ref<string>('')
 let initialized = false
 
 export function useInvitationLists() {
-  const { getToken } = useAuth()
+  const { getToken, getUserInfo } = useAuth()
   const { people } = useStoredData()
 
   const currentInvitedSnapshot = () => {
@@ -47,15 +47,28 @@ export function useInvitationLists() {
     return currentInvitedSnapshot() !== savedInvitedSnapshot.value
   })
 
+  /**
+   * Fetch all the ids of the invitation lists.
+   *
+   * If the currently selected invitation list id is not set, then set it to the
+   * first invitation list of this owner
+   */
   const fetchAllIds = async () => {
     const token = getToken()
+    const userInfo = getUserInfo()
     try {
       const res = await fetch('/invitation-lists/get-all-ids', {
         headers: buildHeaders(token)
       })
       if (res.ok) {
         allLists.value = await res.json()
-        if (allLists.value.length > 0 && !selectedListId.value) {
+        if (allLists.value.length == 0 || selectedListId.value) {
+          return
+        }
+        const listsByUser = allLists.value.filter(l => l.owner_sub == userInfo.sub)
+        if (listsByUser.length > 0) {
+          selectedListId.value = listsByUser[listsByUser.length - 1].id
+        } else {
           selectedListId.value = allLists.value[allLists.value.length - 1].id
         }
       }
@@ -64,10 +77,43 @@ export function useInvitationLists() {
     }
   }
 
+  const deletePerson = (personId: string) => {
+    delete people.value[personId]
+  }
+
+  const createPerson = (personId: string, info: PersonInfo) => {
+    people.value[personId] = info
+  }
+
+  const updatePersonName = (personId: string, newName: string) => {
+    people.value[personId].name = newName
+  }
+
+  const isAllMultiPersonInvited = (nodeData: MultiPersonData) => {
+    return (
+      nodeData.people.length > 0 && nodeData.people.every(p => people.value[p.id]?.invited === true)
+    )
+  }
+
+  const toggleAllMultiPersonInvite = (nodeData: MultiPersonData) => {
+    const prev = isAllMultiPersonInvited(nodeData)
+    nodeData.people.forEach(p => {
+      people.value[p.id].invited = !prev
+    })
+  }
+
+  const isPersonInvited = (personId: string) => people.value[personId]?.invited
+
+  const togglePersonInvite = (personId: string) => {
+    people.value[personId].invited = !!!people.value[personId]?.invited
+  }
+
   /** If there are no lists at all, create one from the current people state. */
   const ensureDefaultList = async () => {
     await fetchAllIds()
-    if (allLists.value.length > 0) return
+    const userInfo = getUserInfo()
+    const listsByUser = allLists.value.filter(l => l.owner_sub == userInfo.sub)
+    if (listsByUser.length > 0) return
     const listId = crypto.randomUUID()
     await saveList(listId, 'First Invitation List')
     selectedListId.value = listId
@@ -106,6 +152,7 @@ export function useInvitationLists() {
       }
     }
 
+    rebuildPeople()
     takeSnapshot()
   }
 
@@ -154,6 +201,13 @@ export function useInvitationLists() {
     saveList,
     ensureDefaultList,
     initInvitationLists,
-    invitationsDirty
+    invitationsDirty,
+    toggleAllMultiPersonInvite,
+    isAllMultiPersonInvited,
+    deletePerson,
+    createPerson,
+    updatePersonName,
+    togglePersonInvite,
+    isPersonInvited
   }
 }

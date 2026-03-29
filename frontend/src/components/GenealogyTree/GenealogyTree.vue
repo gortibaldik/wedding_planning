@@ -89,15 +89,11 @@ const handleAddChild = parentId => {
 
 const nodes = computed(() => {
   return rawNodes.value.map(node => {
-    // Check if this node has children
-    const hasChildren = edges.value.some(e => e.source === node.id)
-
     return {
       ...node,
       data: {
         ...node.data,
-        onAddChild: handleAddChild,
-        hasChildren
+        onAddChild: handleAddChild
       }
     }
   })
