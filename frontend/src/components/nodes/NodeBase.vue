@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useGenealogyData } from '@/composables/useGenealogyData'
-import { inject, ref } from 'vue'
+import { inject, ref, computed } from 'vue'
 import { useStoredData } from '@/composables/useStoredData'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 import { Handle, Position } from '@vue-flow/core'
+import { useInvitationLists } from '@/composables/useInvitationLists'
 
 const readOnly = inject('readOnly', ref(false))
 
@@ -13,8 +14,10 @@ const props = defineProps({
 })
 
 const { nodes, edges } = useStoredData()
+const { canUserInvite } = useInvitationLists()
 const { hasChildren } = useBaseGraph()
 const { removeNodeAndPeople, inviteSubTree } = useGenealogyData()
+const showInviteSubtreeButton = computed(() => canUserInvite())
 
 const handleRemove = () => {
   const node = nodes.value.find(n => n.id === props.id)
@@ -54,7 +57,7 @@ const handleRemove = () => {
     </div>
 
     <button
-      v-if="hasChildren(props.id)"
+      v-if="showInviteSubtreeButton && hasChildren(props.id)"
       class="person-node__subtree-btn"
       @click.stop="inviteSubTree(props.id)"
     >
