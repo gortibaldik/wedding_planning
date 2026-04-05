@@ -111,7 +111,7 @@ export function useInvitationLists() {
   const canUserInvite = () => {
     const result = selectedList.value !== null && selectedList.value.metadata !== null
     if (result) {
-      return storedUserInfo.value.sub !== selectedList.value.metadata.owner_sub
+      return storedUserInfo.value.sub === selectedList.value.metadata.owner_sub
     } else {
       return false
     }
