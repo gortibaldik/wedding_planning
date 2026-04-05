@@ -14,6 +14,34 @@ router = APIRouter(prefix="/auth")
 logger = logging.getLogger(__name__)
 
 
+def _create_token_and_redirect(
+    email: str, name: str, config: Config
+) -> RedirectResponse:
+    roles = []
+    if email == "ferotre@gmail.com":
+        roles.append("change-genealogy-tree-rw-status")
+
+    jwt_token = jwt.encode(
+        {"sub": email, "name": name, "roles": roles},
+        config.secret_key,
+        algorithm=config.algorithm,
+    )
+    return RedirectResponse(
+        url=f"{config.redirect_url_after_auth_base}/?token={jwt_token}"
+    )
+
+
+@router.get("/local", tags=["authorization"])
+async def local_auth(username: str, config: Annotated[Config, Depends(get_config)]):
+    """Dev-only endpoint: create a JWT from just a username."""
+    if not config.enable_local_auth:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    return _create_token_and_redirect(
+        email=username + "@gmail.com", name=username, config=config
+    )
+
+
 @router.get("/google", tags=["authorization"])
 async def google_auth(request: Request, config: Annotated[Config, Depends(get_config)]):
     if not config.google_client_id:
@@ -62,16 +90,7 @@ async def google_auth_callback(
         user_info = user_resp.json()
 
     email = user_info.get("email", "")
-    roles = []
     logger.info(f"User with email '{email}' logged in.")
-    if email == "ferotre@gmail.com":
-        roles.append("change-genealogy-tree-rw-status")
-
-    jwt_token = jwt.encode(
-        {"sub": email, "name": user_info.get("name", ""), "roles": roles},
-        config.secret_key,
-        algorithm=config.algorithm,
-    )
-    return RedirectResponse(
-        url=f"{config.redirect_url_after_auth_base}/?token={jwt_token}"
+    return _create_token_and_redirect(
+        email=email, name=user_info.get("name", ""), config=config
     )

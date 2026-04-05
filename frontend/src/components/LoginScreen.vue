@@ -1,6 +1,13 @@
 <script setup>
 const login = () => {
-  window.location.href = '/auth/google'
+  if (import.meta.env.VITE_ENABLE_LOCAL_AUTH === 'true') {
+    const username = prompt('Meno')
+    if (username) {
+      window.location.href = `/auth/local?username=${encodeURIComponent(username)}`
+    }
+  } else {
+    window.location.href = '/auth/google'
+  }
 }
 </script>
 
