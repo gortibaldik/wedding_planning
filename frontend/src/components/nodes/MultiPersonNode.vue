@@ -23,7 +23,8 @@ const {
   createPerson,
   updatePersonName,
   isPersonInvited,
-  togglePersonInvite
+  togglePersonInvite,
+  canUserInvite
 } = useInvitationLists()
 
 const node = computed(() => {
@@ -45,6 +46,7 @@ const node = computed(() => {
   return foundCasted
 })
 
+const disableInvitationCheckbox = computed(() => !canUserInvite())
 const allInvited = computed(() => isAllMultiPersonInvited(node.value.data))
 const someInvited = computed(() => {
   const invitedCount = node.value.data.people.filter(p => isPersonInvited(p.id)).length
@@ -137,6 +139,7 @@ const saveModal = () => {
           <input
             type="checkbox"
             :checked="allInvited"
+            :disabled="disableInvitationCheckbox"
             :indeterminate.prop="someInvited"
             class="person-node__checkbox-master"
             @change="toggleAllMultiPersonInvite(node.data)"
@@ -156,6 +159,7 @@ const saveModal = () => {
           <span class="person-node__person-name">{{ person.name }}</span>
           <input
             type="checkbox"
+            :disabled="disableInvitationCheckbox"
             :checked="isPersonInvited(person.id)"
             class="person-node__checkbox-small"
             @change="togglePersonInvite(person.id)"
