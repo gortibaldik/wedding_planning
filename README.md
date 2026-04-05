@@ -13,7 +13,15 @@ Run the dev frontend server and the backend server. Hot-reload for frontend is s
 docker compose up --build
 ```
 
-If you want to run without authentication, just set the `VITE_SKIP_AUTH` to empty variable in the file `frontend/.env.local`.
+### Local FE Configuration
+
+The local FE is configurable by setting the following variables in the [`docker-compose.yml`](./docker-compose.yml):
+
+| Variable Name | Value | Description |
+| --- | --- | --- |
+| `VITE_SKIP_AUTH` | `<empty>` | if you want to run without authentication, just set the `VITE_SKIP_AUTH=` to empty variable |
+| `VITE_ENABLE_LOCAL_AUTH` | `true` | if you want to run with mocked authentication (e.g., to be able to test the behavior with multiple users), set the `VITE_ENABLE_LOCAL_AUTH=true`. *You also have to set the `ENABLE_LOCAL_AUTH` to `true` in the backend container*
+
 
 ## How to Deploy to Heroku
 

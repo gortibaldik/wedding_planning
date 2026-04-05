@@ -15,22 +15,37 @@ export function useGenealogyData() {
   const { people, nodes } = useStoredData()
 
   const { addRootBase, addChildBase, findAllDescendants, removeNode } = useBaseGraph()
-  const { togglePersonInvite, isAllMultiPersonInvited, toggleAllMultiPersonInvite, deletePerson } =
-    useInvitationLists()
+  const {
+    togglePersonInvite,
+    isPersonInvited,
+    isAllMultiPersonInvited,
+    toggleAllMultiPersonInvite,
+    deletePerson
+  } = useInvitationLists()
 
-  const inviteWholeNode = (nodeData: BaseData) => {
-    if (nodeData instanceof MultiPersonData && !isAllMultiPersonInvited(nodeData)) {
-      toggleAllMultiPersonInvite(nodeData)
+  const isFullNodeInvited = (nodeId: string): boolean | null => {
+    const node = nodes.value.find(n => n.id == nodeId)
+    if (node.data instanceof MultiPersonData) {
+      return isAllMultiPersonInvited(node.data)
+    } else if (node.data instanceof PersonData) {
+      return isPersonInvited(node.data.id)
+    }
+    return null
+  }
+
+  const inviteWholeNode = (nodeData: BaseData, desiredValue: boolean) => {
+    if (nodeData instanceof MultiPersonData) {
+      toggleAllMultiPersonInvite(nodeData, desiredValue)
     } else if (nodeData instanceof PersonData) {
-      togglePersonInvite(nodeData.id)
+      togglePersonInvite(nodeData.id, desiredValue)
     }
   }
 
-  const inviteSubTree = (nodeId: string) => {
+  const inviteSubTree = (nodeId: string, desiredValue: boolean = true) => {
     const descendants = findAllDescendants(nodeId)
     descendants.forEach(descId => {
       const node = nodes.value.find(n => n.id == descId)
-      inviteWholeNode(node.data)
+      inviteWholeNode(node.data, desiredValue)
     })
   }
 
@@ -107,6 +122,7 @@ export function useGenealogyData() {
     addRootNode,
     addChildNode,
     inviteSubTree,
-    removeNodeAndPeople
+    removeNodeAndPeople,
+    isFullNodeInvited
   }
 }

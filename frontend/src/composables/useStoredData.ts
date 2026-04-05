@@ -227,7 +227,7 @@ async function initStoredData() {
   watch(
     [nodes, edges, people],
     () => {
-      console.info('SAVING TO LOCAL STORAGE', nodes.value)
+      console.info('watch ([nodes, edges, people]) -> save to local storage', nodes.value)
       saveToLocalStorage({ nodes: nodes.value, edges: edges.value, people: people.value })
     },
     { deep: true }

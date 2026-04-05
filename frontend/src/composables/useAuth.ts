@@ -1,14 +1,54 @@
+import { ref, computed } from 'vue'
+
 const TOKEN_KEY = 'auth_token'
 
-export function buildHeaders(token: string | null): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
+export interface UserInfo {
+  /**
+   * Subject of the logged in user -> usually their email
+   */
+  sub: string
+
+  /**
+   * Full name of the logged in user
+   */
+  name: string
+
+  /**
+   * The attributed roles.
+   */
+  roles: string[]
 }
 
-export function useAuth() {
-  const getToken = (): string | null => localStorage.getItem(TOKEN_KEY)
+const getUserInfo = (token: string): UserInfo | null => {
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return {
+      sub: payload.sub || '',
+      name: payload.name || '',
+      roles: payload.roles || []
+    }
+  } catch {
+    return null
+  }
+}
 
+const storedToken = ref<null | string>(null)
+const storedUserInfo = computed(() => getUserInfo(storedToken.value))
+const isLoggedIn = computed(() => {
+  return storedUserInfo.value !== null
+})
+
+export function useAuth() {
+  function buildHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (storedToken.value) {
+      headers['Authorization'] = `Bearer ${storedToken.value}`
+    } else {
+      console.info('There is no stored token!')
+    }
+    return headers
+  }
   const checkAuth = (): boolean => {
     if (import.meta.env.VITE_SKIP_AUTH === 'true') {
       return true
@@ -20,41 +60,19 @@ export function useAuth() {
     if (urlToken) {
       localStorage.setItem(TOKEN_KEY, urlToken)
       window.history.replaceState({}, '', '/')
-      return true
+      storedToken.value = urlToken
+      console.info('Loaded stored token from url!', storedToken.value)
+      return
     }
 
-    return !!getToken()
+    storedToken.value = localStorage.getItem(TOKEN_KEY)
+    console.info('Loaded stored token from local storage!', storedToken.value)
   }
 
   const logout = () => {
     localStorage.removeItem(TOKEN_KEY)
+    storedToken.value = null
   }
 
-  const getRoles = (): string[] => {
-    const token = getToken()
-    if (!token) return []
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      return payload.roles || []
-    } catch {
-      return []
-    }
-  }
-
-  const getUserInfo = (): { sub: string; name: string; roles: string[] } => {
-    const token = getToken()
-    if (!token) return { sub: '', name: '', roles: [] }
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      return {
-        sub: payload.sub || '',
-        name: payload.name || '',
-        roles: payload.roles || []
-      }
-    } catch {
-      return { sub: '', name: '', roles: [] }
-    }
-  }
-
-  return { checkAuth, getToken, getRoles, getUserInfo, logout }
+  return { checkAuth, logout, isLoggedIn, storedUserInfo, buildHeaders }
 }

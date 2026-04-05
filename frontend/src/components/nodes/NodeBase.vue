@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useGenealogyData } from '@/composables/useGenealogyData'
-import { inject, ref } from 'vue'
+import { inject, ref, computed } from 'vue'
 import { useStoredData } from '@/composables/useStoredData'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 import { Handle, Position } from '@vue-flow/core'
+import { useInvitationLists } from '@/composables/useInvitationLists'
 
 const readOnly = inject('readOnly', ref(false))
 
@@ -13,8 +14,10 @@ const props = defineProps({
 })
 
 const { nodes, edges } = useStoredData()
-const { hasChildren } = useBaseGraph()
-const { removeNodeAndPeople, inviteSubTree } = useGenealogyData()
+const { canUserInvite } = useInvitationLists()
+const { hasChildren, findAllDescendants } = useBaseGraph()
+const { removeNodeAndPeople, inviteSubTree, isFullNodeInvited } = useGenealogyData()
+const showInviteSubtreeButton = computed(() => canUserInvite())
 
 const handleRemove = () => {
   const node = nodes.value.find(n => n.id === props.id)
@@ -43,6 +46,18 @@ const handleRemove = () => {
     removeNodeAndPeople(node)
   }
 }
+
+const allDescendantsInvited = computed(() => {
+  const descendants = findAllDescendants(props.id)
+  let somebodyUninvited = false
+  descendants.forEach(descendantId => {
+    const result = isFullNodeInvited(descendantId)
+    if (result !== null) {
+      somebodyUninvited ||= !result
+    }
+  })
+  return !somebodyUninvited
+})
 </script>
 
 <template>
@@ -54,11 +69,11 @@ const handleRemove = () => {
     </div>
 
     <button
-      v-if="hasChildren(props.id)"
+      v-if="showInviteSubtreeButton && hasChildren(props.id)"
       class="person-node__subtree-btn"
-      @click.stop="inviteSubTree(props.id)"
+      @click.stop="inviteSubTree(props.id, !allDescendantsInvited)"
     >
-      Invite the whole subtree
+      {{ allDescendantsInvited ? 'Un-invite the whole subtree' : 'Invite the whole subtree' }}
     </button>
 
     <div v-if="!readOnly" class="person-node__actions">

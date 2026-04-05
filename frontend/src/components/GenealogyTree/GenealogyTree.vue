@@ -37,8 +37,6 @@ const {
 const { findAllDescendants } = useBaseGraph()
 
 const { fetchStatus, toggleStatus } = useBackendStorage('family-structure')
-const { getRoles } = useAuth()
-const canChangeStatus = getRoles().includes('change-genealogy-tree-rw-status')
 
 const status = ref('read')
 fetchStatus().then(s => {
@@ -223,7 +221,6 @@ const onNodeDragStop = ({ node }) => {
     <GenealogyTreeEditMenu
       :status="status"
       :read-only="readOnly"
-      :can-change-status="canChangeStatus"
       :family-structure-unsync="familyStructureUnsync"
       @update:read-only="readOnly = $event"
       @toggle-status="
