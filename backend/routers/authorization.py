@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from urllib.parse import urlencode
 
@@ -22,7 +23,12 @@ def _create_token_and_redirect(
         roles.append("change-genealogy-tree-rw-status")
 
     jwt_token = jwt.encode(
-        {"sub": email, "name": name, "roles": roles},
+        {
+            "sub": email,
+            "name": name,
+            "roles": roles,
+            "exp": datetime.now(UTC) + timedelta(hours=config.token_expiration_hours),
+        },
         config.secret_key,
         algorithm=config.algorithm,
     )

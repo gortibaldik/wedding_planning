@@ -12,4 +12,5 @@ class Config(BaseSettings):
     redirect_url_during_auth_base: str = ""
     algorithm: str = "HS256"
     enable_local_auth: bool = False
+    token_expiration_hours: int = 6
     rediscloud_url: str = ""
