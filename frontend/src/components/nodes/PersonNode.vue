@@ -17,7 +17,7 @@ const isInvited = computed(() => {
   return isPersonInvited(props.id)
 })
 
-const enableInvitationCheckbox = computed(() => canUserInvite())
+const disableInvitationCheckbox = computed(() => !canUserInvite())
 
 const node = computed(() => {
   const found = nodes.value.find(n => n.id == props.id)
@@ -72,7 +72,7 @@ const saveEdit = () => {
       <label class="person-node__checkbox-row" @click.stop>
         <input
           type="checkbox"
-          :disabled="!enableInvitationCheckbox"
+          :disabled="disableInvitationCheckbox"
           :checked="isInvited"
           class="person-node__checkbox"
           @change="onToggleInvited"
