@@ -93,10 +93,16 @@ export function useInvitationLists() {
     )
   }
 
-  const toggleAllMultiPersonInvite = (nodeData: MultiPersonData) => {
-    const prev = isAllMultiPersonInvited(nodeData)
+  const toggleAllMultiPersonInvite = (
+    nodeData: MultiPersonData,
+    desiredValue: boolean | null = null
+  ) => {
+    if (desiredValue === null) {
+      const prev = isAllMultiPersonInvited(nodeData)
+      desiredValue = !prev
+    }
     nodeData.people.forEach(p => {
-      people.value[p.id].invited = !prev
+      people.value[p.id].invited = desiredValue
     })
   }
 
@@ -117,11 +123,15 @@ export function useInvitationLists() {
     }
   }
 
-  const togglePersonInvite = (personId: string) => {
+  const togglePersonInvite = (personId: string, desiredValue: boolean | null = null) => {
     if (!canUserInvite()) {
       return // if the person is not the owner, ignore
     }
-    people.value[personId].invited = !!!people.value[personId]?.invited
+    if (desiredValue === null) {
+      const prev = !!people.value[personId]?.invited
+      desiredValue = !prev
+    }
+    people.value[personId].invited = desiredValue
   }
 
   /** If there are no lists at all, create one from the current people state. */

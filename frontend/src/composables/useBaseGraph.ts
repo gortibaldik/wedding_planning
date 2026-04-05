@@ -80,6 +80,11 @@ export function useBaseGraph() {
     return node
   }
 
+  /**
+   * Return the ids of all the descendants of the node
+   * @param nodeId the root node for the listing
+   * @returns ids of all the descendants - including the nodeId
+   */
   const findAllDescendants = (nodeId: string) => {
     const descendants: Set<string> = new Set()
     const toProcess = [nodeId]

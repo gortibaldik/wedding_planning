@@ -15,8 +15,8 @@ const props = defineProps({
 
 const { nodes, edges } = useStoredData()
 const { canUserInvite } = useInvitationLists()
-const { hasChildren } = useBaseGraph()
-const { removeNodeAndPeople, inviteSubTree } = useGenealogyData()
+const { hasChildren, findAllDescendants } = useBaseGraph()
+const { removeNodeAndPeople, inviteSubTree, isFullNodeInvited } = useGenealogyData()
 const showInviteSubtreeButton = computed(() => canUserInvite())
 
 const handleRemove = () => {
@@ -46,6 +46,18 @@ const handleRemove = () => {
     removeNodeAndPeople(node)
   }
 }
+
+const allDescendantsInvited = computed(() => {
+  const descendants = findAllDescendants(props.id)
+  let somebodyUninvited = false
+  descendants.forEach(descendantId => {
+    const result = isFullNodeInvited(descendantId)
+    if (result !== null) {
+      somebodyUninvited ||= !result
+    }
+  })
+  return !somebodyUninvited
+})
 </script>
 
 <template>
@@ -59,9 +71,9 @@ const handleRemove = () => {
     <button
       v-if="showInviteSubtreeButton && hasChildren(props.id)"
       class="person-node__subtree-btn"
-      @click.stop="inviteSubTree(props.id)"
+      @click.stop="inviteSubTree(props.id, !allDescendantsInvited)"
     >
-      Invite the whole subtree
+      {{ allDescendantsInvited ? 'Un-invite the whole subtree' : 'Invite the whole subtree' }}
     </button>
 
     <div v-if="!readOnly" class="person-node__actions">
