@@ -1,15 +1,13 @@
-import { useAuth, buildHeaders } from './useAuth'
+import { useAuth } from './useAuth'
 
-const { getToken } = useAuth()
+const { buildHeaders } = useAuth()
 
 export function useBackendStorage(endpoint: string) {
-  const token = getToken()
-
   const saveToBackendStorage = async (data: { [key: string]: any }) => {
     try {
       const res = await fetch(`${endpoint}/set`, {
         method: 'POST',
-        headers: buildHeaders(token),
+        headers: buildHeaders(),
         body: JSON.stringify(data)
       })
       if (!res.ok) {
@@ -23,7 +21,7 @@ export function useBackendStorage(endpoint: string) {
   const loadFromBackendStorage = async () => {
     try {
       const res = await fetch(`${endpoint}/get`, {
-        headers: buildHeaders(token)
+        headers: buildHeaders()
       })
       if (res.ok) {
         console.info('GOT', res)
@@ -42,7 +40,7 @@ export function useBackendStorage(endpoint: string) {
   const fetchStatus = async (): Promise<string> => {
     try {
       const res = await fetch(`${endpoint}/get-status`, {
-        headers: buildHeaders(token)
+        headers: buildHeaders()
       })
       if (res.ok) {
         return await res.json()
@@ -57,7 +55,7 @@ export function useBackendStorage(endpoint: string) {
     try {
       const res = await fetch(`${endpoint}/change-status`, {
         method: 'POST',
-        headers: buildHeaders(token)
+        headers: buildHeaders()
       })
       if (res.ok) {
         return await res.json()

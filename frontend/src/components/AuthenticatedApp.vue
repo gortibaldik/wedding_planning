@@ -1,6 +1,6 @@
 <script setup>
 console.info('RUNING SETUP FOR AuthenticatedApp')
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import GenealogyTree from './GenealogyTree/GenealogyTree.vue'
 import GenealogyTreeSidebar from './GenealogyTree/GenealogyTreeSidebar.vue'
 import InvitationComparisonTable from './InvitationComparisonTable.vue'

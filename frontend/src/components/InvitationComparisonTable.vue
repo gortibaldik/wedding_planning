@@ -2,12 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useInvitationLists } from '@/composables/useInvitationLists'
 import { useStoredData } from '@/composables/useStoredData'
-import { useAuth, buildHeaders } from '@/composables/useAuth'
+import { useAuth } from '@/composables/useAuth'
 
 const { allLists, initInvitationLists } = useInvitationLists()
 const { people, nodes } = useStoredData()
-const { getUserInfo, getToken } = useAuth()
-const userInfo = getUserInfo()
+const { storedUserInfo, buildHeaders } = useAuth()
 
 const myListId = ref('')
 const compareListId = ref('')
@@ -18,7 +17,7 @@ const savedSnapshot = ref('')
 const loading = ref(false)
 const saving = ref(false)
 
-const myLists = computed(() => allLists.value.filter(l => l.owner_sub === userInfo.sub))
+const myLists = computed(() => allLists.value.filter(l => l.owner_sub === storedUserInfo.value.sub))
 
 const comparableLists = computed(() => allLists.value.filter(l => l.id !== myListId.value))
 
@@ -27,9 +26,8 @@ const dirty = computed(() => {
 })
 
 const fetchFullList = async listId => {
-  const token = getToken()
   const res = await fetch(`/invitation-lists/get/${listId}`, {
-    headers: buildHeaders(token)
+    headers: buildHeaders()
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return await res.json()
@@ -131,11 +129,10 @@ const handleSave = async () => {
   if (!myListId.value || !myList.value) return
   saving.value = true
   try {
-    const token = getToken()
     const entries = [...myInvitedIds.value].map(id => ({ person_id: id, invited: true }))
     const res = await fetch(`/invitation-lists/set/${myListId.value}`, {
       method: 'POST',
-      headers: buildHeaders(token),
+      headers: buildHeaders(),
       body: JSON.stringify({ list_name: myList.value.metadata.name, entries })
     })
     if (!res.ok) {

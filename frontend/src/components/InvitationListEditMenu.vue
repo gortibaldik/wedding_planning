@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useInvitationLists } from '@/composables/useInvitationLists'
 import { useAuth } from '@/composables/useAuth'
 
-const { getUserInfo } = useAuth()
+const { storedUserInfo } = useAuth()
 const {
   allLists,
   selectedListId,
@@ -15,7 +15,6 @@ const {
   invitationsDirty
 } = useInvitationLists()
 
-const userInfo = getUserInfo()
 const saving = ref(false)
 const newListName = ref('')
 const showNewListInput = ref(false)
@@ -33,7 +32,7 @@ const hasChanges = computed(() => {
 
 const isOwner = () => {
   if (!selectedList.value) return false
-  return selectedList.value.metadata.owner_sub === userInfo.sub
+  return selectedList.value.metadata.owner_sub === storedUserInfo.value.sub
 }
 
 const ownerName = () => {

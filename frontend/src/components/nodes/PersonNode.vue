@@ -3,7 +3,6 @@ import { computed, ref, nextTick, inject, type Ref } from 'vue'
 import { PersonData, useStoredData } from '@/composables/useStoredData'
 import { useInvitationLists } from '@/composables/useInvitationLists'
 import NodeBase from './NodeBase.vue'
-import { useAuth } from '@/composables/useAuth'
 
 const props = defineProps({
   id: String,
@@ -12,13 +11,13 @@ const props = defineProps({
 
 const readOnly = inject<Ref<boolean>>('readOnly', ref(false))
 const { nodes } = useStoredData()
-const { togglePersonInvite, isPersonInvited } = useInvitationLists()
-const { getUserInfo } = useAuth()
-const userInfo = getUserInfo()
+const { togglePersonInvite, isPersonInvited, canUserInvite } = useInvitationLists()
 
 const isInvited = computed(() => {
   return isPersonInvited(props.id)
 })
+
+const enableInvitationCheckbox = computed(() => canUserInvite())
 
 const node = computed(() => {
   const found = nodes.value.find(n => n.id == props.id)
@@ -73,6 +72,7 @@ const saveEdit = () => {
       <label class="person-node__checkbox-row" @click.stop>
         <input
           type="checkbox"
+          :disabled="!enableInvitationCheckbox"
           :checked="isInvited"
           class="person-node__checkbox"
           @change="onToggleInvited"

@@ -1,12 +1,12 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useSidebarState } from '@/composables/useSidebarState'
+import { useAuth } from '@/composables/useAuth'
 import InvitationListEditMenu from '@/components/InvitationListEditMenu.vue'
 
 const props = defineProps({
   status: { type: String, required: true },
   readOnly: { type: Boolean, required: true },
-  canChangeStatus: { type: Boolean, required: true },
   familyStructureUnsync: { type: Boolean, required: true }
 })
 
@@ -22,6 +22,11 @@ const emit = defineEmits([
 
 const { sidebarCollapsed } = useSidebarState()
 const toolbarOpen = ref(false)
+
+const { storedUserInfo } = useAuth()
+const canChangeStatus = computed(() =>
+  storedUserInfo.value.roles.includes('change-genealogy-tree-rw-status')
+)
 </script>
 
 <template>

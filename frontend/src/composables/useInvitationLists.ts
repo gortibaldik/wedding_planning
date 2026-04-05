@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { useAuth, buildHeaders } from './useAuth'
+import { useAuth } from './useAuth'
 import { MultiPersonData, useStoredData, PersonInfo, rebuildPeople } from './useStoredData'
 
 export interface ListMetadata {
@@ -28,7 +28,7 @@ const savedInvitedSnapshot = ref<string>('')
 let initialized = false
 
 export function useInvitationLists() {
-  const { getToken, getUserInfo } = useAuth()
+  const { buildHeaders, storedUserInfo } = useAuth()
   const { people } = useStoredData()
 
   const currentInvitedSnapshot = () => {
@@ -54,18 +54,16 @@ export function useInvitationLists() {
    * first invitation list of this owner
    */
   const fetchAllIds = async () => {
-    const token = getToken()
-    const userInfo = getUserInfo()
     try {
       const res = await fetch('/invitation-lists/get-all-ids', {
-        headers: buildHeaders(token)
+        headers: buildHeaders()
       })
       if (res.ok) {
         allLists.value = await res.json()
         if (allLists.value.length == 0 || selectedListId.value) {
           return
         }
-        const listsByUser = allLists.value.filter(l => l.owner_sub == userInfo.sub)
+        const listsByUser = allLists.value.filter(l => l.owner_sub == storedUserInfo.value.sub)
         if (listsByUser.length > 0) {
           selectedListId.value = listsByUser[listsByUser.length - 1].id
         } else {
@@ -104,15 +102,32 @@ export function useInvitationLists() {
 
   const isPersonInvited = (personId: string) => people.value[personId]?.invited
 
+  /**
+   * Whether the user can click on invite toggle.
+   *
+   * In case that the user cannot invite anybody, the invite toggle
+   * should be turned off.
+   */
+  const canUserInvite = () => {
+    const result = selectedList.value !== null && selectedList.value.metadata !== null
+    if (result) {
+      return storedUserInfo.value.sub !== selectedList.value.metadata.owner_sub
+    } else {
+      return false
+    }
+  }
+
   const togglePersonInvite = (personId: string) => {
+    if (!canUserInvite()) {
+      return // if the person is not the owner, ignore
+    }
     people.value[personId].invited = !!!people.value[personId]?.invited
   }
 
   /** If there are no lists at all, create one from the current people state. */
   const ensureDefaultList = async () => {
     await fetchAllIds()
-    const userInfo = getUserInfo()
-    const listsByUser = allLists.value.filter(l => l.owner_sub == userInfo.sub)
+    const listsByUser = allLists.value.filter(l => l.owner_sub == storedUserInfo.value.sub)
     if (listsByUser.length > 0) return
     const listId = crypto.randomUUID()
     await saveList(listId, 'First Invitation List')
@@ -120,11 +135,10 @@ export function useInvitationLists() {
   }
 
   const fetchList = async (listId: string) => {
-    const token = getToken()
     loading.value = true
     try {
       const res = await fetch(`/invitation-lists/get/${listId}`, {
-        headers: buildHeaders(token)
+        headers: buildHeaders()
       })
       if (res.ok) {
         selectedList.value = await res.json()
@@ -166,7 +180,6 @@ export function useInvitationLists() {
   }
 
   const saveList = async (listId: string, listName: string) => {
-    const token = getToken()
     const entries: InvitationEntry[] = Object.entries(people.value)
       .filter(([, person]) => person.invited)
       .map(([id]) => ({ person_id: id, invited: true }))
@@ -174,7 +187,7 @@ export function useInvitationLists() {
     try {
       const res = await fetch(`/invitation-lists/set/${listId}`, {
         method: 'POST',
-        headers: buildHeaders(token),
+        headers: buildHeaders(),
         body: JSON.stringify({ list_name: listName, entries })
       })
       if (!res.ok) {
@@ -208,6 +221,7 @@ export function useInvitationLists() {
     createPerson,
     updatePersonName,
     togglePersonInvite,
-    isPersonInvited
+    isPersonInvited,
+    canUserInvite
   }
 }

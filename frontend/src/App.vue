@@ -5,18 +5,17 @@ import { useAuth } from './composables/useAuth.ts'
 import LoginScreen from './components/LoginScreen.vue'
 import AuthenticatedApp from './components/AuthenticatedApp.vue'
 
-const { checkAuth } = useAuth()
-const isAuthenticated = ref(false)
+const { checkAuth, isLoggedIn } = useAuth()
 
 onMounted(() => {
-  isAuthenticated.value = checkAuth()
+  checkAuth()
 })
 </script>
 
 <template>
-  <LoginScreen v-if="!isAuthenticated" />
+  <LoginScreen v-if="!isLoggedIn" />
   <Suspense v-else>
-    <AuthenticatedApp @logout="isAuthenticated = false" />
+    <AuthenticatedApp />
   </Suspense>
 </template>
 
