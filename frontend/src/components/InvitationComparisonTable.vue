@@ -7,7 +7,7 @@ import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 
 const { allLists, usersLists, initInvitationLists, getPersonName } = useInvitationLists()
 const { people } = useStoredData()
-const { authFetch } = useAuth()
+const { authFetch, storedUserInfo } = useAuth()
 
 const mainListId = ref<string>('')
 const compareListId = ref<string>('')
@@ -24,11 +24,16 @@ const dirty = computed(() => {
   return [...myInvitedIds.value].sort().join(',') !== savedSnapshot.value
 })
 
-const fetchFullList = async (listId: string) => {
+const fetchFullList = async (listId: string): Promise<InvitationList> => {
   const res = await authFetch(`/invitation-lists/get/${listId}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return await res.json()
 }
+
+const isMainListOwner = computed(() => {
+  if (!mainList.value) return false
+  return mainList.value.metadata.owner_sub === storedUserInfo.value?.sub
+})
 
 /**
  * Take a snapshot of all the ids that are invited in the main invitation list.
@@ -44,11 +49,7 @@ const handleSelectMainList = async (listId: string) => {
   try {
     const list = await fetchFullList(listId)
     mainList.value = list
-    myInvitedIds.value = new Set(
-      list.entries
-        .filter((e: { invited: boolean }) => e.invited)
-        .map((e: { person_id: string }) => e.person_id)
-    )
+    myInvitedIds.value = new Set(list.entries.filter(e => e.invited).map(e => e.person_id))
     takeMainListSnapshot()
   } catch (e) {
     console.warn('Failed to fetch list:', e)
@@ -190,7 +191,7 @@ onMounted(async () => {
         </select>
       </div>
 
-      <div class="it__btn-group">
+      <div v-if="isMainListOwner" class="it__btn-group">
         <button
           class="it__save-btn"
           :class="{ 'it__save-btn--disabled': !dirty || saving }"
@@ -225,6 +226,7 @@ onMounted(async () => {
         <div v-if="onlyMainListInvitedIds.length === 0" class="it__empty">No unique entries</div>
         <label v-for="id in onlyMainListInvitedIds" :key="id" class="it__entry">
           <input
+            v-if="isMainListOwner"
             type="checkbox"
             class="it__checkbox"
             :checked="myInvitedIds.has(id)"
@@ -242,6 +244,7 @@ onMounted(async () => {
         <div v-if="onlyCompareListInvitedIds.length === 0" class="it__empty">No unique entries</div>
         <label v-for="id in onlyCompareListInvitedIds" :key="id" class="it__entry">
           <input
+            v-if="isMainListOwner"
             type="checkbox"
             class="it__checkbox"
             :checked="myInvitedIds.has(id)"
@@ -259,6 +262,7 @@ onMounted(async () => {
         <div v-if="commonIds.length === 0" class="it__empty">No common entries</div>
         <label v-for="id in commonIds" :key="id" class="it__entry">
           <input
+            v-if="isMainListOwner"
             type="checkbox"
             class="it__checkbox"
             :checked="myInvitedIds.has(id)"
@@ -278,6 +282,7 @@ onMounted(async () => {
         </div>
         <label v-for="id in notInvitedByAnybody" :key="id" class="it__entry">
           <input
+            v-if="isMainListOwner"
             type="checkbox"
             class="it__checkbox"
             :checked="myInvitedIds.has(id)"
