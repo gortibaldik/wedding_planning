@@ -4,6 +4,7 @@ import { ref, watch } from 'vue'
 import GenealogyTree from './GenealogyTree/GenealogyTree.vue'
 import GenealogyTreeSidebar from './GenealogyTree/GenealogyTreeSidebar.vue'
 import InvitationComparisonTable from './InvitationComparisonTable.vue'
+import SeatingArrangement from './SeatingArrangement/SeatingArrangement.vue'
 import { useGenealogyData } from '@/composables/useGenealogyData.ts'
 import { useSidebarState } from '@/composables/useSidebarState'
 import { useAuth } from '@/composables/useAuth.ts'
@@ -51,6 +52,13 @@ const { sidebarCollapsed } = useSidebarState()
           >
             Invitations Comparison
           </button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeTab === 'seating' }"
+            @click="activeTab = 'seating'"
+          >
+            Seating Arrangement
+          </button>
         </div>
         <div class="header-center">
           <h1>Wedding Planning</h1>
@@ -58,9 +66,11 @@ const { sidebarCollapsed } = useSidebarState()
             Click on any person to edit their details. Use the ↑ button to add parents, ↓ button to
             add children. Use the zoom controls to navigate the tree.
           </p>
+          <p v-else-if="activeTab === 'invited-table'" class="instructions">
+            Compare invitation lists across different users.
+          </p>
           <p v-else class="instructions">
-            Organize your invited guests into round tables. Drag guests from the unassigned list to
-            tables or between tables.
+            Drag guests from the sidebar onto table seats. Drag table headers to reposition them.
           </p>
         </div>
         <div class="header-buttons">
@@ -78,6 +88,9 @@ const { sidebarCollapsed } = useSidebarState()
         <GenealogyTreeSidebar />
       </div>
       <InvitationComparisonTable v-show="activeTab === 'invited-table'" />
+      <Suspense>
+        <SeatingArrangement v-if="activeTab === 'seating'" />
+      </Suspense>
     </div>
   </div>
 </template>
