@@ -39,15 +39,9 @@ const personRootName = computed(() => {
 </script>
 <template>
   <div class="person__item" :style="{ borderLeft: `4px solid ${personColor}` }">
-    <div class="person__item-name">
-      <span class="it__person-name">
-        {{ personName }}
-        <span v-if="multiPersonName" class="it__person-group"> ({{ multiPersonName }}) </span>
-      </span>
-    </div>
-    <div v-if="personRootName" class="guest-sidebar__item-group">
-      {{ personRootName }}
-    </div>
+    <span class="it__person-name">{{ personName }}</span>
+    <span v-if="multiPersonName" class="it__person-group">({{ multiPersonName }})</span>
+    <span v-if="personRootName" class="guest-sidebar__item-group">{{ personRootName }}</span>
   </div>
 </template>
 <style scoped>
@@ -63,6 +57,10 @@ const personRootName = computed(() => {
 }
 
 .person__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
   background: white;
   border: 1px solid #e5e7eb;
   border-left: 4px solid;
@@ -81,7 +79,6 @@ const personRootName = computed(() => {
   font-size: 14px;
   color: #1f2937;
   font-weight: 500;
-  margin-bottom: 2px;
 }
 
 .guest-sidebar__item-group {
@@ -89,6 +86,5 @@ const personRootName = computed(() => {
   color: #9ca3af;
   font-weight: 400;
   margin-left: 4px;
-  margin-bottom: 2px;
 }
 </style>

@@ -28,7 +28,7 @@ interface Position {
 }
 
 const SEAT_WIDTH = 130
-const SEAT_HEIGHT = 60
+const SEAT_HEIGHT = 80
 const SEAT_GAP = 16
 const PADDING = 20
 
@@ -293,7 +293,8 @@ const handleUnassign = (guestId: string): void => {
 .seat {
   position: absolute;
   width: 130px;
-  height: 60px;
+  min-height: 60px;
+  max-height: 80px;
   border-radius: 8px;
   background: white;
   border: 2px solid #d1d5db;
