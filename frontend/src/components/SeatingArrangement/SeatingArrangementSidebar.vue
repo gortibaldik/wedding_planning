@@ -10,6 +10,17 @@ const collapsed = ref(false)
 const onGuestDragStart = (e: DragEvent, guestId: string): void => {
   e.dataTransfer!.setData('text/guest-id', guestId)
   e.dataTransfer!.effectAllowed = 'move'
+
+  // Create a smaller drag image
+  const el = e.target as HTMLElement
+  const clone = el.cloneNode(true) as HTMLElement
+  clone.style.transform = 'scale(0.6)'
+  clone.style.transformOrigin = 'top left'
+  clone.style.position = 'absolute'
+  clone.style.top = '-9999px'
+  document.body.appendChild(clone)
+  e.dataTransfer!.setDragImage(clone, 0, 0)
+  requestAnimationFrame(() => document.body.removeChild(clone))
 }
 
 const onSidebarDrop = (e: DragEvent): void => {

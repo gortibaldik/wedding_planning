@@ -73,13 +73,40 @@ const onPointerUp = (): void => {
   window.removeEventListener('pointerup', onPointerUp)
 }
 
+const guestDragActive = ref(false)
+
+const onCanvasDragEnter = (e: DragEvent): void => {
+  if (e.dataTransfer?.types.includes('text/guest-id')) {
+    guestDragActive.value = true
+  }
+}
+
+const onCanvasDragLeave = (e: DragEvent): void => {
+  // Only deactivate when leaving the canvas entirely
+  const related = e.relatedTarget as Node | null
+  const canvas = e.currentTarget as HTMLElement
+  if (!related || !canvas.contains(related)) {
+    guestDragActive.value = false
+  }
+}
+
+const onCanvasDrop = (): void => {
+  guestDragActive.value = false
+}
+
 const onCanvasDragOver = (e: DragEvent): void => {
   e.preventDefault()
 }
 </script>
 
 <template>
-  <div class="seating-canvas" @dragover="onCanvasDragOver">
+  <div
+    class="seating-canvas"
+    @dragover="onCanvasDragOver"
+    @dragenter="onCanvasDragEnter"
+    @dragleave="onCanvasDragLeave"
+    @drop="onCanvasDrop"
+  >
     <div v-if="tables.length === 0" class="canvas-empty">Click "Add Table" to get started</div>
     <div
       v-for="table in tables"
@@ -91,6 +118,7 @@ const onCanvasDragOver = (e: DragEvent): void => {
       <TableNode
         :table="table"
         :editable="editable"
+        :guest-drag-active="guestDragActive"
         @assign-guest="emit('assign-guest', $event)"
         @unassign-guest="emit('unassign-guest', $event)"
         @remove-table="emit('remove-table', $event)"
