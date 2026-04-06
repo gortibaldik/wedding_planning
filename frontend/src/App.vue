@@ -2,7 +2,7 @@
 console.info('RUNING SETUP FOR APP')
 import { ref, onMounted } from 'vue'
 import { useAuth } from './composables/useAuth.ts'
-import LoginScreen from './components/LoginScreen.vue'
+import LandingPage from './components/LandingPage.vue'
 import AuthenticatedApp from './components/AuthenticatedApp.vue'
 
 const { checkAuth, isLoggedIn } = useAuth()
@@ -13,7 +13,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <LoginScreen v-if="!isLoggedIn" />
+  <LandingPage v-if="!isLoggedIn" />
   <Suspense v-else>
     <AuthenticatedApp />
   </Suspense>
