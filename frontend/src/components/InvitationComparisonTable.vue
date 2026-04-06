@@ -24,7 +24,7 @@ const dirty = computed(() => {
   return [...myInvitedIds.value].sort().join(',') !== savedSnapshot.value
 })
 
-const fetchFullList = async listId => {
+const fetchFullList = async (listId: string) => {
   const res = await authFetch(`/invitation-lists/get/${listId}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return await res.json()
@@ -44,7 +44,11 @@ const handleSelectMainList = async (listId: string) => {
   try {
     const list = await fetchFullList(listId)
     mainList.value = list
-    myInvitedIds.value = new Set(list.entries.filter(e => e.invited).map(e => e.person_id))
+    myInvitedIds.value = new Set(
+      list.entries
+        .filter((e: { invited: boolean }) => e.invited)
+        .map((e: { person_id: string }) => e.person_id)
+    )
     takeMainListSnapshot()
   } catch (e) {
     console.warn('Failed to fetch list:', e)
@@ -53,7 +57,7 @@ const handleSelectMainList = async (listId: string) => {
   }
 }
 
-const handleSelectCompareList = async listId => {
+const handleSelectCompareList = async (listId: string) => {
   // do not allow selecting the same list for compare
   if (!listId || listId === mainListId.value) return
   compareListId.value = listId
@@ -112,7 +116,7 @@ const notInvitedByAnybody = computed(() => {
     )
 })
 
-const toggleInvitation = personId => {
+const toggleInvitation = (personId: string) => {
   const newSet = new Set(myInvitedIds.value)
   if (newSet.has(personId)) {
     newSet.delete(personId)
@@ -141,7 +145,7 @@ const handleSave = async () => {
     }
     takeMainListSnapshot()
   } catch (e) {
-    alert('Failed to save: ' + e.message)
+    alert('Failed to save: ' + (e instanceof Error ? e.message : String(e)))
   } finally {
     saving.value = false
   }
@@ -159,11 +163,11 @@ onMounted(async () => {
   <div class="it">
     <div class="it__controls">
       <div class="it__select-group">
-        <label class="it__label">My List</label>
+        <label class="it__label">Main List</label>
         <select
           class="it__select"
           :value="mainListId"
-          @change="handleSelectMainList($event.target.value)"
+          @change="handleSelectMainList(($event.target as HTMLSelectElement).value)"
         >
           <option value="" disabled>Select main list for comparison...</option>
           <option v-for="list in allLists" :key="list.id" :value="list.id">
@@ -177,7 +181,7 @@ onMounted(async () => {
         <select
           class="it__select"
           :value="compareListId"
-          @change="handleSelectCompareList($event.target.value)"
+          @change="handleSelectCompareList(($event.target as HTMLSelectElement).value)"
         >
           <option value="" disabled>Select list to compare...</option>
           <option v-for="list in comparableLists" :key="list.id" :value="list.id">
