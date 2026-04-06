@@ -80,3 +80,8 @@ Set the application name to `wedding-planning`
 ```shell
 heroku git:remote -a wedding-planning
 ```
+
+## Internals
+
+- the `node_modules` in frontend are put into a separate volume
+- when new npm dependencies are installed as a breaking change, on local one must run `docker compose down -v` to remove the volume with `node_modules`
