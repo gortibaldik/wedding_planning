@@ -6,7 +6,7 @@ import { useAuth } from '@/composables/useAuth'
 
 const { allLists, initInvitationLists } = useInvitationLists()
 const { people, nodes } = useStoredData()
-const { storedUserInfo, buildHeaders } = useAuth()
+const { storedUserInfo, authFetch } = useAuth()
 
 const myListId = ref('')
 const compareListId = ref('')
@@ -26,9 +26,7 @@ const dirty = computed(() => {
 })
 
 const fetchFullList = async listId => {
-  const res = await fetch(`/invitation-lists/get/${listId}`, {
-    headers: buildHeaders()
-  })
+  const res = await authFetch(`/invitation-lists/get/${listId}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return await res.json()
 }
@@ -130,9 +128,8 @@ const handleSave = async () => {
   saving.value = true
   try {
     const entries = [...myInvitedIds.value].map(id => ({ person_id: id, invited: true }))
-    const res = await fetch(`/invitation-lists/set/${myListId.value}`, {
+    const res = await authFetch(`/invitation-lists/set/${myListId.value}`, {
       method: 'POST',
-      headers: buildHeaders(),
       body: JSON.stringify({ list_name: myList.value.metadata.name, entries })
     })
     if (!res.ok) {

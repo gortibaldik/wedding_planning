@@ -49,6 +49,16 @@ export function useAuth() {
     }
     return headers
   }
+
+  async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const headers = buildHeaders()
+    const res = await fetch(input, { ...init, headers: { ...headers, ...init?.headers } })
+    if (res.status === 401) {
+      localStorage.removeItem(TOKEN_KEY)
+      storedToken.value = null
+    }
+    return res
+  }
   const checkAuth = (): boolean => {
     if (import.meta.env.VITE_SKIP_AUTH === 'true') {
       return true
@@ -74,5 +84,5 @@ export function useAuth() {
     storedToken.value = null
   }
 
-  return { checkAuth, logout, isLoggedIn, storedUserInfo, buildHeaders }
+  return { checkAuth, logout, isLoggedIn, storedUserInfo, buildHeaders, authFetch }
 }

@@ -28,7 +28,7 @@ const savedInvitedSnapshot = ref<string>('')
 let initialized = false
 
 export function useInvitationLists() {
-  const { buildHeaders, storedUserInfo } = useAuth()
+  const { authFetch, storedUserInfo } = useAuth()
   const { people } = useStoredData()
 
   const currentInvitedSnapshot = () => {
@@ -55,9 +55,7 @@ export function useInvitationLists() {
    */
   const fetchAllIds = async () => {
     try {
-      const res = await fetch('/invitation-lists/get-all-ids', {
-        headers: buildHeaders()
-      })
+      const res = await authFetch('/invitation-lists/get-all-ids')
       if (res.ok) {
         allLists.value = await res.json()
         if (allLists.value.length == 0 || selectedListId.value) {
@@ -147,9 +145,7 @@ export function useInvitationLists() {
   const fetchList = async (listId: string) => {
     loading.value = true
     try {
-      const res = await fetch(`/invitation-lists/get/${listId}`, {
-        headers: buildHeaders()
-      })
+      const res = await authFetch(`/invitation-lists/get/${listId}`)
       if (res.ok) {
         selectedList.value = await res.json()
         applyInvitations()
@@ -195,9 +191,8 @@ export function useInvitationLists() {
       .map(([id]) => ({ person_id: id, invited: true }))
 
     try {
-      const res = await fetch(`/invitation-lists/set/${listId}`, {
+      const res = await authFetch(`/invitation-lists/set/${listId}`, {
         method: 'POST',
-        headers: buildHeaders(),
         body: JSON.stringify({ list_name: listName, entries })
       })
       if (!res.ok) {

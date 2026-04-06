@@ -1,13 +1,12 @@
 import { useAuth } from './useAuth'
 
-const { buildHeaders } = useAuth()
+const { authFetch } = useAuth()
 
 export function useBackendStorage(endpoint: string) {
   const saveToBackendStorage = async (data: { [key: string]: any }) => {
     try {
-      const res = await fetch(`${endpoint}/set`, {
+      const res = await authFetch(`${endpoint}/set`, {
         method: 'POST',
-        headers: buildHeaders(),
         body: JSON.stringify(data)
       })
       if (!res.ok) {
@@ -20,9 +19,7 @@ export function useBackendStorage(endpoint: string) {
 
   const loadFromBackendStorage = async () => {
     try {
-      const res = await fetch(`${endpoint}/get`, {
-        headers: buildHeaders()
-      })
+      const res = await authFetch(`${endpoint}/get`)
       if (res.ok) {
         console.info('GOT', res)
         const data = await res.json()
@@ -39,9 +36,7 @@ export function useBackendStorage(endpoint: string) {
 
   const fetchStatus = async (): Promise<string> => {
     try {
-      const res = await fetch(`${endpoint}/get-status`, {
-        headers: buildHeaders()
-      })
+      const res = await authFetch(`${endpoint}/get-status`)
       if (res.ok) {
         return await res.json()
       }
@@ -53,9 +48,8 @@ export function useBackendStorage(endpoint: string) {
 
   const toggleStatus = async (): Promise<string> => {
     try {
-      const res = await fetch(`${endpoint}/change-status`, {
-        method: 'POST',
-        headers: buildHeaders()
+      const res = await authFetch(`${endpoint}/change-status`, {
+        method: 'POST'
       })
       if (res.ok) {
         return await res.json()
