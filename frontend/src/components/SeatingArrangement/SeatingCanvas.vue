@@ -90,6 +90,38 @@ const onWheel = (e: WheelEvent): void => {
 
 const zoomPercent = computed(() => Math.round(zoom.value * 100))
 
+// Pinch-to-zoom for mobile
+let lastPinchDist: number | null = null
+
+const onTouchStart = (e: TouchEvent): void => {
+  if (e.touches.length === 2) {
+    e.preventDefault()
+    lastPinchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    )
+  }
+}
+
+const onTouchMove = (e: TouchEvent): void => {
+  if (e.touches.length === 2 && lastPinchDist !== null) {
+    e.preventDefault()
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    )
+    const scale = dist / lastPinchDist
+    zoom.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom.value * scale))
+    lastPinchDist = dist
+  }
+}
+
+const onTouchEnd = (e: TouchEvent): void => {
+  if (e.touches.length < 2) {
+    lastPinchDist = null
+  }
+}
+
 const guestDragActive = ref(false)
 
 const onCanvasDragEnter = (e: DragEvent): void => {
@@ -158,6 +190,9 @@ const contentStyle = computed(() => ({
     @dragleave="onCanvasDragLeave"
     @drop="onCanvasDrop"
     @wheel.prevent="onWheel"
+    @touchstart="onTouchStart"
+    @touchmove="onTouchMove"
+    @touchend="onTouchEnd"
   >
     <div class="canvas-content" :style="contentStyle">
       <div v-if="tables.length === 0" class="canvas-empty">Click "Add Table" to get started</div>
@@ -193,6 +228,7 @@ const contentStyle = computed(() => ({
   background: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
   background-size: 20px 20px;
   min-height: 100%;
+  touch-action: pan-x pan-y;
 }
 
 .canvas-content {
