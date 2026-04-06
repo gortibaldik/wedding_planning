@@ -169,4 +169,43 @@ const onSidebarDragOver = (e: DragEvent): void => {
   font-size: 14px;
   padding: 40px 20px;
 }
+
+@media (pointer: coarse) {
+  .seating-sidebar {
+    width: 180px;
+  }
+
+  .seating-sidebar--collapsed {
+    width: 48px;
+  }
+
+  .seating-sidebar__header {
+    padding: 10px 12px;
+  }
+
+  .seating-sidebar__title {
+    font-size: 14px;
+  }
+
+  .seating-sidebar__list {
+    padding: 8px;
+    padding-right: 40px;
+  }
+
+  .seating-sidebar__list :deep(.person__item) {
+    padding: 6px 8px;
+  }
+
+  .seating-sidebar__list :deep(.it__person-name) {
+    font-size: 11px;
+  }
+
+  .seating-sidebar__list :deep(.it__person-group) {
+    font-size: 9px;
+  }
+
+  .seating-sidebar__list :deep(.guest-sidebar__item-group) {
+    font-size: 9px;
+  }
+}
 </style>
