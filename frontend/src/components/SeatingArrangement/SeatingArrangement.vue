@@ -89,6 +89,7 @@ const cancelNewSeating = (): void => {
   }
 }
 
+const toolbarCollapsed = ref(false)
 const showAddModal = ref(false)
 const addModalRef = ref<InstanceType<typeof AddTableModal> | null>(null)
 
@@ -120,60 +121,80 @@ const handleUpdateTablePosition = (event: {
 <template>
   <div class="seating-arrangement">
     <div class="seating-arrangement__toolbar">
-      <div class="toolbar-left">
-        <label class="list-selector">
-          <span class="list-selector__label">Invitation List:</span>
-          <select class="list-selector__select" :value="selectedListId" @change="onListChange">
-            <option v-for="list in allLists" :key="list.id" :value="list.id">
-              {{ list.name }} ({{ list.owner_name }})
-            </option>
-          </select>
-        </label>
-        <label class="list-selector seating-selector">
-          <span class="list-selector__label">Seating:</span>
-          <template v-if="showNewSeatingInput">
-            <input
-              v-model="newSeatingName"
-              class="list-selector__select"
-              type="text"
-              placeholder="Seating name..."
-              @keyup.enter="confirmNewSeating"
-              @keyup.escape="cancelNewSeating"
-            />
-            <button class="btn btn-small btn-primary" @click="confirmNewSeating">Create</button>
-            <button class="btn btn-small btn-cancel" @click="cancelNewSeating">Cancel</button>
-          </template>
-          <select
-            v-else
-            class="list-selector__select"
-            :value="selectedSeatingId"
-            @change="onSeatingChange"
+      <div class="toolbar-toggle-row">
+        <button class="toolbar-toggle" @click="toolbarCollapsed = !toolbarCollapsed">
+          {{ toolbarCollapsed ? '&#9660;' : '&#9650;' }} Controls
+        </button>
+        <div v-if="toolbarCollapsed" class="toolbar-summary">
+          {{ currentMetadata?.name || 'No seating selected' }}
+          <button
+            v-if="isSeatingOwner && currentMetadata"
+            class="btn btn-small"
+            :class="seatingUnsync ? 'btn-save--unsync' : 'btn-save'"
+            @click="saveSeatingToBackend"
           >
-            <option v-if="!selectedSeatingId" value="" disabled>Select a seating...</option>
-            <option v-for="s in seatingsForList" :key="s.id" :value="s.id">
-              {{ s.name }} ({{ s.owner_name }})
-            </option>
-            <option value="__new__">+ New seating arrangement</option>
-          </select>
-        </label>
+            Save
+          </button>
+        </div>
       </div>
-      <div class="toolbar-right">
-        <button
-          class="btn btn-primary"
-          :disabled="!currentMetadata || !isSeatingOwner"
-          @click="handleOpenAddModal"
-        >
-          + Add Table
-        </button>
-        <button
-          class="btn"
-          :class="seatingUnsync ? 'btn-save--unsync' : 'btn-save'"
-          :disabled="!currentMetadata || !isSeatingOwner"
-          @click="saveSeatingToBackend"
-        >
-          Save
-        </button>
-      </div>
+      <template v-if="!toolbarCollapsed">
+        <div class="toolbar-content">
+          <div class="toolbar-left">
+            <label class="list-selector">
+              <span class="list-selector__label">Invitation List:</span>
+              <select class="list-selector__select" :value="selectedListId" @change="onListChange">
+                <option v-for="list in allLists" :key="list.id" :value="list.id">
+                  {{ list.name }} ({{ list.owner_name }})
+                </option>
+              </select>
+            </label>
+            <label class="list-selector seating-selector">
+              <span class="list-selector__label">Seating:</span>
+              <template v-if="showNewSeatingInput">
+                <input
+                  v-model="newSeatingName"
+                  class="list-selector__select"
+                  type="text"
+                  placeholder="Seating name..."
+                  @keyup.enter="confirmNewSeating"
+                  @keyup.escape="cancelNewSeating"
+                />
+                <button class="btn btn-small btn-primary" @click="confirmNewSeating">Create</button>
+                <button class="btn btn-small btn-cancel" @click="cancelNewSeating">Cancel</button>
+              </template>
+              <select
+                v-else
+                class="list-selector__select"
+                :value="selectedSeatingId"
+                @change="onSeatingChange"
+              >
+                <option v-if="!selectedSeatingId" value="" disabled>Select a seating...</option>
+                <option v-for="s in seatingsForList" :key="s.id" :value="s.id">
+                  {{ s.name }} ({{ s.owner_name }})
+                </option>
+                <option value="__new__">+ New seating arrangement</option>
+              </select>
+            </label>
+          </div>
+          <div class="toolbar-right">
+            <button
+              class="btn btn-primary"
+              :disabled="!currentMetadata || !isSeatingOwner"
+              @click="handleOpenAddModal"
+            >
+              + Add Table
+            </button>
+            <button
+              class="btn"
+              :class="seatingUnsync ? 'btn-save--unsync' : 'btn-save'"
+              :disabled="!currentMetadata || !isSeatingOwner"
+              @click="saveSeatingToBackend"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </template>
     </div>
     <div class="seating-arrangement__body">
       <SeatingCanvas
@@ -204,18 +225,54 @@ const handleUpdateTablePosition = (event: {
 }
 
 .seating-arrangement__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
   background: white;
   border-bottom: 1px solid #e5e7eb;
+  padding: 8px 16px;
+}
+
+.toolbar-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolbar-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #6b7280;
+  padding: 4px 0;
+  white-space: nowrap;
+}
+
+.toolbar-toggle:hover {
+  color: #374151;
+}
+
+.toolbar-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.toolbar-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
 }
 
 .toolbar-left {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 8px 16px;
 }
 
 .toolbar-right {
@@ -244,6 +301,7 @@ const handleUpdateTablePosition = (event: {
   color: #374151;
   background: white;
   cursor: pointer;
+  min-width: 0;
 }
 
 .list-selector__select:focus {
@@ -255,6 +313,34 @@ const handleUpdateTablePosition = (event: {
 .seating-selector {
   border-left: 1px solid #e5e7eb;
   padding-left: 16px;
+}
+
+@media (max-width: 600px) {
+  .seating-arrangement__toolbar {
+    padding: 8px 12px;
+  }
+
+  .list-selector {
+    flex: 1 1 100%;
+  }
+
+  .list-selector__select {
+    flex: 1;
+    max-width: 100%;
+  }
+
+  .seating-selector {
+    border-left: none;
+    padding-left: 0;
+  }
+
+  .toolbar-right {
+    flex: 1 1 100%;
+  }
+
+  .toolbar-right .btn {
+    flex: 1;
+  }
 }
 
 .seating-arrangement__body {
