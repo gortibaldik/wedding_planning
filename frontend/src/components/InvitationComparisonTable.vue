@@ -17,6 +17,58 @@ const myInvitedIds = ref<Set<string>>(new Set())
 const savedSnapshot = ref<string>('')
 const loading = ref(false)
 const saving = ref(false)
+const expandedSections = ref<Record<string, boolean>>({
+  mine: true,
+  theirs: true,
+  common: true,
+  nobody: true
+})
+
+const toggleSection = (section: string) => {
+  expandedSections.value[section] = !expandedSections.value[section]
+}
+
+interface ComparisonSection {
+  key: string
+  variant: string
+  title: string
+  ids: string[]
+  emptyText: string
+}
+
+const sections = computed<ComparisonSection[]>(() => {
+  if (!mainList.value || !compareList.value) return []
+  return [
+    {
+      key: 'mine',
+      variant: 'mine',
+      title: `Only in ${mainList.value.metadata.name}`,
+      ids: onlyMainListInvitedIds.value,
+      emptyText: 'No unique entries'
+    },
+    {
+      key: 'theirs',
+      variant: 'theirs',
+      title: `Only in ${compareList.value.metadata.name}`,
+      ids: onlyCompareListInvitedIds.value,
+      emptyText: 'No unique entries'
+    },
+    {
+      key: 'common',
+      variant: 'common',
+      title: 'Common',
+      ids: commonIds.value,
+      emptyText: 'No common entries'
+    },
+    {
+      key: 'nobody',
+      variant: 'nobody',
+      title: 'Not invited by anybody',
+      ids: notInvitedByAnybody.value,
+      emptyText: 'Everyone is invited by at least one list'
+    }
+  ]
+})
 
 const comparableLists = computed(() => allLists.value.filter(l => l.id !== mainListId.value))
 
@@ -218,78 +270,34 @@ onMounted(async () => {
     </div>
 
     <template v-if="mainList && compareList && !loading">
-      <div class="it__section it__section--mine">
-        <h3 class="it__section-title">
-          <span class="it__section-dot it__section-dot--mine"></span>
-          Only in {{ mainList.metadata.name }} ({{ onlyMainListInvitedIds.length }})
+      <div
+        v-for="section in sections"
+        :key="section.key"
+        class="it__section"
+        :class="`it__section--${section.variant}`"
+      >
+        <h3 class="it__section-title" @click="toggleSection(section.key)">
+          <span
+            class="it__section-arrow"
+            :class="{ 'it__section-arrow--collapsed': !expandedSections[section.key] }"
+            >&#9660;</span
+          >
+          <span class="it__section-dot" :class="`it__section-dot--${section.variant}`"></span>
+          {{ section.title }} ({{ section.ids.length }})
         </h3>
-        <div v-if="onlyMainListInvitedIds.length === 0" class="it__empty">No unique entries</div>
-        <label v-for="id in onlyMainListInvitedIds" :key="id" class="it__entry">
-          <input
-            v-if="isMainListOwner"
-            type="checkbox"
-            class="it__checkbox"
-            :checked="myInvitedIds.has(id)"
-            @change="toggleInvitation(id)"
-          />
-          <PersonInfoDisplay :person-id="id" />
-        </label>
-      </div>
-
-      <div class="it__section it__section--theirs">
-        <h3 class="it__section-title">
-          <span class="it__section-dot it__section-dot--theirs"></span>
-          Only in {{ compareList.metadata.name }} ({{ onlyCompareListInvitedIds.length }})
-        </h3>
-        <div v-if="onlyCompareListInvitedIds.length === 0" class="it__empty">No unique entries</div>
-        <label v-for="id in onlyCompareListInvitedIds" :key="id" class="it__entry">
-          <input
-            v-if="isMainListOwner"
-            type="checkbox"
-            class="it__checkbox"
-            :checked="myInvitedIds.has(id)"
-            @change="toggleInvitation(id)"
-          />
-          <PersonInfoDisplay :person-id="id" />
-        </label>
-      </div>
-
-      <div class="it__section it__section--common">
-        <h3 class="it__section-title">
-          <span class="it__section-dot it__section-dot--common"></span>
-          Common ({{ commonIds.length }})
-        </h3>
-        <div v-if="commonIds.length === 0" class="it__empty">No common entries</div>
-        <label v-for="id in commonIds" :key="id" class="it__entry">
-          <input
-            v-if="isMainListOwner"
-            type="checkbox"
-            class="it__checkbox"
-            :checked="myInvitedIds.has(id)"
-            @change="toggleInvitation(id)"
-          />
-          <PersonInfoDisplay :person-id="id" />
-        </label>
-      </div>
-
-      <div class="it__section it__section--nobody">
-        <h3 class="it__section-title">
-          <span class="it__section-dot it__section-dot--nobody"></span>
-          Not invited by anybody ({{ notInvitedByAnybody.length }})
-        </h3>
-        <div v-if="notInvitedByAnybody.length === 0" class="it__empty">
-          Everyone is invited by at least one list
-        </div>
-        <label v-for="id in notInvitedByAnybody" :key="id" class="it__entry">
-          <input
-            v-if="isMainListOwner"
-            type="checkbox"
-            class="it__checkbox"
-            :checked="myInvitedIds.has(id)"
-            @change="toggleInvitation(id)"
-          />
-          <PersonInfoDisplay :person-id="id" />
-        </label>
+        <template v-if="expandedSections[section.key]">
+          <div v-if="section.ids.length === 0" class="it__empty">{{ section.emptyText }}</div>
+          <label v-for="id in section.ids" :key="id" class="it__entry">
+            <input
+              v-if="isMainListOwner"
+              type="checkbox"
+              class="it__checkbox"
+              :checked="myInvitedIds.has(id)"
+              @change="toggleInvitation(id)"
+            />
+            <PersonInfoDisplay :person-id="id" />
+          </label>
+        </template>
       </div>
     </template>
   </div>
@@ -439,6 +447,22 @@ onMounted(async () => {
   font-weight: 600;
   color: #1f2937;
   border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  user-select: none;
+}
+
+.it__section-title:hover {
+  background: #f9fafb;
+}
+
+.it__section-arrow {
+  font-size: 10px;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.it__section-arrow--collapsed {
+  transform: rotate(-90deg);
 }
 
 .it__section-dot {
