@@ -43,7 +43,7 @@ class TableModel(BaseModel):
     """The id of the table."""
 
     name: str
-    shape: Literal["rectangular", "ring"]
+    shape: Literal["rectangular", "circular"]
     seats: int
     position: dict[str, float]
     guests: list[str | None]

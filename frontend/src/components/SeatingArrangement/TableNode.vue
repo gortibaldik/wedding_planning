@@ -11,6 +11,7 @@ interface AssignGuestEvent {
 
 const props = defineProps<{
   table: Table
+  editable: boolean
 }>()
 const emit = defineEmits<{
   'assign-guest': [event: AssignGuestEvent]
@@ -109,6 +110,7 @@ const tableShapeStyle = computed<CSSProperties>(() => {
 })
 
 const onSeatDragOver = (e: DragEvent, index: number): void => {
+  if (!props.editable) return
   if (!props.table.guests[index]) {
     e.preventDefault()
     dragOverSeat.value = index
@@ -144,7 +146,12 @@ const handleUnassign = (guestId: string): void => {
   >
     <div class="table-header">
       <span class="table-name">{{ table.name }}</span>
-      <button class="table-remove" title="Remove table" @click="emit('remove-table', table.id)">
+      <button
+        v-if="editable"
+        class="table-remove"
+        title="Remove table"
+        @click="emit('remove-table', table.id)"
+      >
         &times;
       </button>
     </div>
@@ -167,12 +174,13 @@ const handleUnassign = (guestId: string): void => {
       <template v-if="table.guests[index]">
         <span
           class="seat__guest"
-          draggable="true"
-          @dragstart="onGuestDragStart($event, table.guests[index]!)"
+          :draggable="editable"
+          @dragstart="editable && onGuestDragStart($event, table.guests[index]!)"
         >
           {{ getPersonName(table.guests[index]!) }}
         </span>
         <button
+          v-if="editable"
           class="seat__remove"
           title="Remove from seat"
           @click="handleUnassign(table.guests[index]!)"

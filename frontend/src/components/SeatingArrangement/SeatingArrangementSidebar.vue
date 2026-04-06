@@ -2,7 +2,7 @@
 import { useSeatingData } from '@/composables/useSeatingData'
 import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 
-const { unseatedGuests, unassignGuest } = useSeatingData()
+const { unseatedGuests, unassignGuest, isSeatingOwner } = useSeatingData()
 
 const onGuestDragStart = (e: DragEvent, guestId: string): void => {
   e.dataTransfer!.setData('text/guest-id', guestId)
@@ -10,6 +10,7 @@ const onGuestDragStart = (e: DragEvent, guestId: string): void => {
 }
 
 const onSidebarDrop = (e: DragEvent): void => {
+  if (!isSeatingOwner.value) return
   const guestId = e.dataTransfer!.getData('text/guest-id')
   if (guestId) {
     unassignGuest(guestId)
@@ -17,6 +18,7 @@ const onSidebarDrop = (e: DragEvent): void => {
 }
 
 const onSidebarDragOver = (e: DragEvent): void => {
+  if (!isSeatingOwner.value) return
   e.preventDefault()
 }
 </script>
@@ -34,8 +36,8 @@ const onSidebarDragOver = (e: DragEvent): void => {
       <div
         v-for="guestId in unseatedGuests"
         :key="guestId"
-        draggable="true"
-        @dragstart="onGuestDragStart($event, guestId)"
+        :draggable="isSeatingOwner"
+        @dragstart="isSeatingOwner && onGuestDragStart($event, guestId)"
       >
         <PersonInfoDisplay :person-id="guestId" />
       </div>

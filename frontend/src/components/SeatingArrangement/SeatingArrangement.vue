@@ -15,7 +15,14 @@ const {
   unassignGuest,
   updateTablePosition,
   saveSeatingToBackend,
+  isSeatingOwner,
   seatingUnsync,
+  seatingsForList,
+  selectedSeatingId,
+  currentMetadata,
+  fetchSeatingsForList,
+  loadSeating,
+  createNewSeating,
   initSeatingData
 } = useSeatingData()
 
@@ -24,11 +31,61 @@ const { allLists, selectedListId, fetchList, initInvitationLists } = useInvitati
 await initInvitationLists()
 await initSeatingData()
 
+// Load seatings for the initially selected invitation list
+if (selectedListId.value) {
+  await fetchSeatingsForList(selectedListId.value)
+  if (seatingsForList.value.length > 0) {
+    await loadSeating(seatingsForList.value[0].id)
+  }
+}
+
 const onListChange = async (event: Event): Promise<void> => {
   const listId = (event.target as HTMLSelectElement).value
   if (listId) {
     selectedListId.value = listId
     await fetchList(listId)
+    await fetchSeatingsForList(listId)
+    if (seatingsForList.value.length > 0) {
+      await loadSeating(seatingsForList.value[0].id)
+    } else {
+      selectedSeatingId.value = null
+      currentMetadata.value = null
+      tables.value = []
+    }
+  }
+}
+
+const onSeatingChange = async (event: Event): Promise<void> => {
+  const seatingId = (event.target as HTMLSelectElement).value
+  if (seatingId === '__new__') {
+    handleNewSeating()
+  } else if (seatingId) {
+    await loadSeating(seatingId)
+  }
+}
+
+const newSeatingName = ref('')
+const showNewSeatingInput = ref(false)
+
+const handleNewSeating = (): void => {
+  showNewSeatingInput.value = true
+  newSeatingName.value = ''
+}
+
+const confirmNewSeating = (): void => {
+  if (!newSeatingName.value.trim() || !selectedListId.value) return
+  createNewSeating(selectedListId.value, newSeatingName.value.trim())
+  showNewSeatingInput.value = false
+  newSeatingName.value = ''
+}
+
+const cancelNewSeating = (): void => {
+  showNewSeatingInput.value = false
+  // Restore previous selection
+  if (seatingsForList.value.length > 0 && selectedSeatingId.value) {
+    // already selected, no action needed
+  } else {
+    selectedSeatingId.value = null
   }
 }
 
@@ -72,12 +129,46 @@ const handleUpdateTablePosition = (event: {
             </option>
           </select>
         </label>
+        <label class="list-selector seating-selector">
+          <span class="list-selector__label">Seating:</span>
+          <template v-if="showNewSeatingInput">
+            <input
+              v-model="newSeatingName"
+              class="list-selector__select"
+              type="text"
+              placeholder="Seating name..."
+              @keyup.enter="confirmNewSeating"
+              @keyup.escape="cancelNewSeating"
+            />
+            <button class="btn btn-small btn-primary" @click="confirmNewSeating">Create</button>
+            <button class="btn btn-small btn-cancel" @click="cancelNewSeating">Cancel</button>
+          </template>
+          <select
+            v-else
+            class="list-selector__select"
+            :value="selectedSeatingId"
+            @change="onSeatingChange"
+          >
+            <option v-if="!selectedSeatingId" value="" disabled>Select a seating...</option>
+            <option v-for="s in seatingsForList" :key="s.id" :value="s.id">
+              {{ s.name }} ({{ s.owner_name }})
+            </option>
+            <option value="__new__">+ New seating arrangement</option>
+          </select>
+        </label>
       </div>
       <div class="toolbar-right">
-        <button class="btn btn-primary" @click="handleOpenAddModal">+ Add Table</button>
+        <button
+          class="btn btn-primary"
+          :disabled="!currentMetadata || !isSeatingOwner"
+          @click="handleOpenAddModal"
+        >
+          + Add Table
+        </button>
         <button
           class="btn"
           :class="seatingUnsync ? 'btn-save--unsync' : 'btn-save'"
+          :disabled="!currentMetadata || !isSeatingOwner"
           @click="saveSeatingToBackend"
         >
           Save
@@ -87,6 +178,7 @@ const handleUpdateTablePosition = (event: {
     <div class="seating-arrangement__body">
       <SeatingCanvas
         :tables="tables"
+        :editable="isSeatingOwner"
         @assign-guest="handleAssignGuest"
         @unassign-guest="unassignGuest"
         @remove-table="removeTable"
@@ -123,6 +215,7 @@ const handleUpdateTablePosition = (event: {
 .toolbar-left {
   display: flex;
   align-items: center;
+  gap: 16px;
 }
 
 .toolbar-right {
@@ -159,6 +252,11 @@ const handleUpdateTablePosition = (event: {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
+.seating-selector {
+  border-left: 1px solid #e5e7eb;
+  padding-left: 16px;
+}
+
 .seating-arrangement__body {
   flex: 1;
   display: flex;
@@ -174,13 +272,32 @@ const handleUpdateTablePosition = (event: {
   transition: all 0.2s;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-small {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
 .btn-primary {
   background: #3b82f6;
   color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #2563eb;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.btn-cancel:hover {
+  background: #d1d5db;
 }
 
 .btn-save {
@@ -188,7 +305,7 @@ const handleUpdateTablePosition = (event: {
   color: #374151;
 }
 
-.btn-save:hover {
+.btn-save:hover:not(:disabled) {
   background: #d1d5db;
 }
 
@@ -197,7 +314,7 @@ const handleUpdateTablePosition = (event: {
   color: white;
 }
 
-.btn-save--unsync:hover {
+.btn-save--unsync:hover:not(:disabled) {
   background: #d97706;
 }
 </style>

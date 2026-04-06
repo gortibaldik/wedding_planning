@@ -24,6 +24,7 @@ interface DragState {
 
 const props = defineProps<{
   tables: Table[]
+  editable: boolean
 }>()
 const emit = defineEmits<{
   'assign-guest': [event: AssignGuestEvent]
@@ -35,6 +36,7 @@ const emit = defineEmits<{
 const dragState = ref<DragState | null>(null)
 
 const onTablePointerDown = (e: PointerEvent, tableId: string): void => {
+  if (!props.editable) return
   if (!(e.target as HTMLElement).closest('.table-header')) return
   e.preventDefault()
   const table = props.tables.find(t => t.id === tableId)
@@ -88,6 +90,7 @@ const onCanvasDragOver = (e: DragEvent): void => {
     >
       <TableNode
         :table="table"
+        :editable="editable"
         @assign-guest="emit('assign-guest', $event)"
         @unassign-guest="emit('unassign-guest', $event)"
         @remove-table="emit('remove-table', $event)"

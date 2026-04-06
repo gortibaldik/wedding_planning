@@ -52,7 +52,7 @@ defineExpose({ focusInput: () => nextTick(() => nameInput.value?.focus()) })
         <div class="form-group">
           <label>Shape:</label>
           <select v-model="shape" required>
-            <option value="ring">Circular</option>
+            <option value="circular">Circular</option>
             <option value="rectangular">Rectangular</option>
           </select>
         </div>
