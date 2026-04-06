@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .dependencies import close_redis, get_config, init_config, init_redis
-from .routers import authorization, family_structure, invitation_lists
+from .routers import authorization, family_structure, invitation_lists, seating
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +29,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(authorization.router)
 app.include_router(invitation_lists.router)
 app.include_router(family_structure.router)
+app.include_router(seating.router)
 
 
 # Serve Vue SPA - html=True enables SPA fallback (serves index.html for unknown routes)
