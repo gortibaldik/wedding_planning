@@ -2,6 +2,8 @@ import { ref, computed } from 'vue'
 import { useAuth } from './useAuth'
 import { MultiPersonData, useStoredData, PersonInfo, rebuildPeople } from './useStoredData'
 
+const { authFetch, storedUserInfo } = useAuth()
+
 export interface ListMetadata {
   id: string
   name: string
@@ -22,14 +24,17 @@ export interface InvitationList {
 const allLists = ref<ListMetadata[]>([])
 const selectedListId = ref<string | null>(null)
 const selectedList = ref<InvitationList | null>(null)
-const loading = ref(false)
+const loading = ref<boolean>(false)
 /** Snapshot of invited person IDs at last fetch/save, used for dirty detection. */
 const savedInvitedSnapshot = ref<string>('')
 let initialized = false
 
+const usersLists = computed(() =>
+  allLists.value.filter(l => l.owner_sub === storedUserInfo.value.sub)
+)
+
 export function useInvitationLists() {
-  const { authFetch, storedUserInfo } = useAuth()
-  const { people } = useStoredData()
+  const { people, nodes } = useStoredData()
 
   const currentInvitedSnapshot = () => {
     return Object.entries(people.value)
@@ -83,6 +88,20 @@ export function useInvitationLists() {
 
   const updatePersonName = (personId: string, newName: string) => {
     people.value[personId].name = newName
+  }
+
+  const getPersonName = (personId: string) => people.value[personId]?.name ?? personId
+
+  const getPersonNodeId = (personId: string) => people.value[personId]?.nodeId
+
+  /**
+   * Get name of the encompassing MultiPersonNode for the person stored in it.
+   */
+  const getMultiPersonNodeName = (personId: string) => {
+    const nodeId = getPersonNodeId(personId)
+    if (!nodeId) return ''
+    const node = nodes.value.find(n => n.id === nodeId)
+    return node.data instanceof MultiPersonData ? node.data.name : ''
   }
 
   const isAllMultiPersonInvited = (nodeData: MultiPersonData) => {
@@ -210,6 +229,7 @@ export function useInvitationLists() {
 
   return {
     allLists,
+    usersLists,
     selectedListId,
     selectedList,
     loading,
@@ -224,6 +244,9 @@ export function useInvitationLists() {
     isAllMultiPersonInvited,
     deletePerson,
     createPerson,
+    getPersonName,
+    getMultiPersonNodeName,
+    getPersonNodeId,
     updatePersonName,
     togglePersonInvite,
     isPersonInvited,

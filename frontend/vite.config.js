@@ -9,7 +9,8 @@ export default defineConfig({
     proxy: {
       '/auth': process.env.BACKEND_URL || 'http://localhost:8000',
       '/invitation-lists': process.env.BACKEND_URL || 'http://localhost:8000',
-      '/family-structure': process.env.BACKEND_URL || 'http://localhost:8000'
+      '/family-structure': process.env.BACKEND_URL || 'http://localhost:8000',
+      '/seating-arrangement': process.env.BACKEND_URL || 'http://localhost:8000'
     },
     watch: {
       usePolling: true,

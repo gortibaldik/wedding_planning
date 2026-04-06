@@ -66,7 +66,8 @@ export class RootData extends BaseData {
 
 export class MultiPersonData extends BaseData {
   constructor(
-    public name: string, // Group name like "Frederik and Veronika" or "John's kids"
+    /** Group name like "Frederik and Veronika" or "John's kids" */
+    public name: string,
     public people: PersonInNode[]
   ) {
     super('invalid-color', false, false)
