@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useSeatingData } from '@/composables/useSeatingData'
 import { useInvitationLists } from '@/composables/useInvitationLists'
+import { useTouchDragDrop } from '@/composables/useTouchDragDrop'
 import type { AddTablePayload } from './AddTableModal.vue'
 import SeatingCanvas from './SeatingCanvas.vue'
 import SeatingArrangementSidebar from './SeatingArrangementSidebar.vue'
@@ -27,6 +28,12 @@ const {
 } = useSeatingData()
 
 const { allLists, selectedListId, fetchList, initInvitationLists } = useInvitationLists()
+
+const { registerCallbacks } = useTouchDragDrop()
+registerCallbacks(
+  (guestId, tableId, seatIndex) => assignGuest(guestId, tableId, seatIndex),
+  guestId => unassignGuest(guestId)
+)
 
 await initInvitationLists()
 await initSeatingData()

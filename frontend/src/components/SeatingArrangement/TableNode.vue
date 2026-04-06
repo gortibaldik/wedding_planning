@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, computed, type CSSProperties } from 'vue'
 import type { Table } from '@/composables/useSeatingData'
+import { useTouchDragDrop } from '@/composables/useTouchDragDrop'
 import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 
 interface AssignGuestEvent {
@@ -20,6 +21,7 @@ const emit = defineEmits<{
   'remove-table': [tableId: string]
 }>()
 
+const { onTouchStart } = useTouchDragDrop()
 const dragOverSeat = ref<number | null>(null)
 
 interface Position {
@@ -215,6 +217,7 @@ const handleUnassign = (guestId: string): void => {
         'seat--drop-target': guestDragActive && !table.guests[index]
       }"
       :style="{ left: pos.x + 'px', top: pos.y + 'px' }"
+      :data-drop-seat="!table.guests[index] && editable ? `${table.id}:${index}` : undefined"
       @dragover="onSeatDragOver($event, index)"
       @dragleave="onSeatDragLeave"
       @drop="onSeatDrop($event, index)"
@@ -224,6 +227,7 @@ const handleUnassign = (guestId: string): void => {
           class="seat__guest"
           :draggable="editable"
           @dragstart="editable && onGuestDragStart($event, table.guests[index]!)"
+          @touchstart="editable && onTouchStart($event, table.guests[index]!)"
         >
           <PersonInfoDisplay :person-id="table.guests[index]!" />
         </div>

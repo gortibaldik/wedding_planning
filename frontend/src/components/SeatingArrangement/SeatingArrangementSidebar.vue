@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { useSeatingData } from '@/composables/useSeatingData'
+import { useTouchDragDrop } from '@/composables/useTouchDragDrop'
 import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 
 const { unseatedGuests, unassignGuest, isSeatingOwner } = useSeatingData()
+const { onTouchStart } = useTouchDragDrop()
 
 const collapsed = ref(false)
 
@@ -41,6 +43,7 @@ const onSidebarDragOver = (e: DragEvent): void => {
   <div
     class="seating-sidebar"
     :class="{ 'seating-sidebar--collapsed': collapsed }"
+    data-drop-sidebar
     @drop="onSidebarDrop"
     @dragover="onSidebarDragOver"
   >
@@ -65,6 +68,7 @@ const onSidebarDragOver = (e: DragEvent): void => {
           :key="guestId"
           :draggable="isSeatingOwner"
           @dragstart="isSeatingOwner && onGuestDragStart($event, guestId)"
+          @touchstart="isSeatingOwner && onTouchStart($event, guestId)"
         >
           <PersonInfoDisplay :person-id="guestId" />
         </div>

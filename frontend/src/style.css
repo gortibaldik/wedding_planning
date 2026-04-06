@@ -63,6 +63,13 @@ button:focus-visible {
   text-align: center;
 }
 
+/* Touch drag-and-drop highlight for mobile */
+.touch-drag-over {
+  border-color: #10b981 !important;
+  background: #d1fae5 !important;
+  transform: scale(1.05);
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
