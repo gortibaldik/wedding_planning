@@ -4,10 +4,10 @@ import { ref, watch } from 'vue'
 import GenealogyTree from './GenealogyTree/GenealogyTree.vue'
 import GenealogyTreeSidebar from './GenealogyTree/GenealogyTreeSidebar.vue'
 import InvitationComparisonTable from './InvitationComparisonTable.vue'
-import { useGenealogyData } from '../composables/useGenealogyData.ts'
-import { useSidebarState } from '../composables/useSidebarState'
-import { useAuth } from '../composables/useAuth.ts'
-import { useStoredData } from '../composables/useStoredData.ts'
+import { useGenealogyData } from '@/composables/useGenealogyData.ts'
+import { useSidebarState } from '@/composables/useSidebarState'
+import { useAuth } from '@/composables/useAuth.ts'
+import { useStoredData } from '@/composables/useStoredData.ts'
 
 const emit = defineEmits(['logout'])
 

@@ -2,28 +2,16 @@
 import { computed } from 'vue'
 import { useStoredData } from '@/composables/useStoredData'
 import { useSidebarState } from '@/composables/useSidebarState'
-import { useBaseGraph } from '@/composables/useBaseGraph'
+import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 
 const { people } = useStoredData()
 
 const { sidebarCollapsed, toggleSidebar } = useSidebarState()
-const { findNode, findRootNode } = useBaseGraph()
 
-const guests = computed(() => {
+const guestIds = computed(() => {
   return Object.entries(people.value)
     .filter(([, person]) => person.invited)
-    .map(([id, person]) => {
-      const root = findRootNode(person.nodeId)
-      const node = findNode(person.nodeId)
-      const multiPersonName = node?.type === 'multi-person' ? node.data.name : ''
-      return {
-        id,
-        ...person,
-        color: root?.data?.color ?? '#3b82f6',
-        rootName: root?.data?.name ?? '',
-        multiPersonName
-      }
-    })
+    .map(([id]) => id)
 })
 </script>
 
@@ -40,27 +28,12 @@ const guests = computed(() => {
       <div class="guest-sidebar__header">
         <h3 class="guest-sidebar__title">Invited Guests</h3>
         <div class="guest-sidebar__counter">
-          {{ guests.length }}
+          {{ guestIds.length }}
         </div>
       </div>
       <div class="guest-sidebar__list">
-        <div v-if="guests.length === 0" class="guest-sidebar__empty">No guests invited yet</div>
-        <div
-          v-for="guest in guests"
-          :key="guest.id"
-          class="guest-sidebar__item"
-          :style="{ borderLeft: `4px solid ${guest.color}` }"
-        >
-          <div class="guest-sidebar__item-name">
-            {{ guest.name }}
-            <span v-if="guest.multiPersonName" class="guest-sidebar__item-group"
-              >({{ guest.multiPersonName }})</span
-            >
-          </div>
-          <div v-if="guest.rootName" class="guest-sidebar__item-group">
-            {{ guest.rootName }}
-          </div>
-        </div>
+        <div v-if="guestIds.length === 0" class="guest-sidebar__empty">No guests invited yet</div>
+        <PersonInfoDisplay v-for="guestId in guestIds" :key="guestId" :person-id="guestId" />
       </div>
     </div>
   </div>
@@ -147,63 +120,10 @@ const guests = computed(() => {
   padding: 16px;
 }
 
-.guest-sidebar__item {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-left: 4px solid;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  transition: all 0.2s;
-}
-
-.guest-sidebar__item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateX(-4px);
-}
-
-.guest-sidebar__item-name {
-  font-size: 14px;
-  color: #1f2937;
-  font-weight: 500;
-  margin-bottom: 2px;
-}
-
-.guest-sidebar__item-group {
-  font-size: 12px;
-  color: #9ca3af;
-  font-weight: 400;
-  margin-left: 4px;
-  margin-bottom: 2px;
-}
-
-.guest-sidebar__item-table {
-  font-size: 11px;
-  color: #9ca3af;
-  font-weight: 400;
-  font-style: italic;
-}
-
-.guest-sidebar__item-table--warning {
-  color: #d97706;
-  font-weight: 500;
-}
-
 .guest-sidebar__empty {
   text-align: center;
   color: #9ca3af;
   font-size: 14px;
   padding: 40px 20px;
-}
-
-.guest-sidebar__badge {
-  display: inline-block;
-  padding: 2px 6px;
-  margin-left: 6px;
-  font-size: 9px;
-  background: rgba(59, 130, 246, 0.2);
-  color: #1e40af;
-  border-radius: 3px;
-  font-weight: 600;
 }
 </style>

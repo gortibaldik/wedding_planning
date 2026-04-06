@@ -1,25 +1,24 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useInvitationLists } from '@/composables/useInvitationLists'
+import { InvitationList, useInvitationLists } from '@/composables/useInvitationLists'
 import { useStoredData } from '@/composables/useStoredData'
 import { useAuth } from '@/composables/useAuth'
+import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 
-const { allLists, initInvitationLists } = useInvitationLists()
-const { people, nodes } = useStoredData()
-const { storedUserInfo, authFetch } = useAuth()
+const { allLists, usersLists, initInvitationLists, getPersonName } = useInvitationLists()
+const { people } = useStoredData()
+const { authFetch } = useAuth()
 
-const myListId = ref('')
-const compareListId = ref('')
-const myList = ref(null)
-const compareList = ref(null)
-const myInvitedIds = ref(new Set())
-const savedSnapshot = ref('')
+const mainListId = ref<string>('')
+const compareListId = ref<string>('')
+const mainList = ref<InvitationList | null>(null)
+const compareList = ref<InvitationList | null>(null)
+const myInvitedIds = ref<Set<string>>(new Set())
+const savedSnapshot = ref<string>('')
 const loading = ref(false)
 const saving = ref(false)
 
-const myLists = computed(() => allLists.value.filter(l => l.owner_sub === storedUserInfo.value.sub))
-
-const comparableLists = computed(() => allLists.value.filter(l => l.id !== myListId.value))
+const comparableLists = computed(() => allLists.value.filter(l => l.id !== mainListId.value))
 
 const dirty = computed(() => {
   return [...myInvitedIds.value].sort().join(',') !== savedSnapshot.value
@@ -31,19 +30,22 @@ const fetchFullList = async listId => {
   return await res.json()
 }
 
-const takeSnapshot = () => {
+/**
+ * Take a snapshot of all the ids that are invited in the main invitation list.
+ */
+const takeMainListSnapshot = () => {
   savedSnapshot.value = [...myInvitedIds.value].sort().join(',')
 }
 
-const handleSelectMyList = async listId => {
+const handleSelectMainList = async (listId: string) => {
   if (!listId) return
-  myListId.value = listId
+  mainListId.value = listId
   loading.value = true
   try {
     const list = await fetchFullList(listId)
-    myList.value = list
+    mainList.value = list
     myInvitedIds.value = new Set(list.entries.filter(e => e.invited).map(e => e.person_id))
-    takeSnapshot()
+    takeMainListSnapshot()
   } catch (e) {
     console.warn('Failed to fetch list:', e)
   } finally {
@@ -52,7 +54,8 @@ const handleSelectMyList = async listId => {
 }
 
 const handleSelectCompareList = async listId => {
-  if (!listId) return
+  // do not allow selecting the same list for compare
+  if (!listId || listId === mainListId.value) return
   compareListId.value = listId
   loading.value = true
   try {
@@ -64,49 +67,49 @@ const handleSelectCompareList = async listId => {
   }
 }
 
-const compareInvitedIds = computed(() => {
+/**
+ * Ids of all the invited people from the compare list.
+ */
+const compareInvitedIds = computed<Set<string>>(() => {
   if (!compareList.value) return new Set()
   return new Set(compareList.value.entries.filter(e => e.invited).map(e => e.person_id))
 })
 
-const personName = id => {
-  return people.value[id]?.name ?? id
-}
-
-const multiPersonName = id => {
-  const nodeId = people.value[id]?.nodeId
-  if (!nodeId) return ''
-  const node = nodes.value.find(n => n.id === nodeId)
-  return node?.type === 'multi-person' ? node.data.name : ''
-}
-
-const onlyMine = computed(() => {
+const onlyMainListInvitedIds = computed(() => {
   if (!compareList.value) return []
   return [...myInvitedIds.value]
     .filter(id => !compareInvitedIds.value.has(id))
-    .sort((a, b) => personName(a).localeCompare(personName(b)))
+    .sort((personId1, personId2) =>
+      getPersonName(personId1).localeCompare(getPersonName(personId2))
+    )
 })
 
-const onlyTheirs = computed(() => {
-  if (!myList.value) return []
+const onlyCompareListInvitedIds = computed(() => {
+  if (!mainList.value) return []
   return [...compareInvitedIds.value]
     .filter(id => !myInvitedIds.value.has(id))
-    .sort((a, b) => personName(a).localeCompare(personName(b)))
+    .sort((personId1, personId2) =>
+      getPersonName(personId1).localeCompare(getPersonName(personId2))
+    )
 })
 
 const commonIds = computed(() => {
   if (!compareList.value) return []
   return [...myInvitedIds.value]
-    .filter(id => compareInvitedIds.value.has(id))
-    .sort((a, b) => personName(a).localeCompare(personName(b)))
+    .filter(personId => compareInvitedIds.value.has(personId))
+    .sort((personId1, personId2) =>
+      getPersonName(personId1).localeCompare(getPersonName(personId2))
+    )
 })
 
 const notInvitedByAnybody = computed(() => {
-  if (!myList.value || !compareList.value) return []
+  if (!mainList.value || !compareList.value) return []
   const allPeopleIds = Object.keys(people.value)
   return allPeopleIds
     .filter(id => !myInvitedIds.value.has(id) && !compareInvitedIds.value.has(id))
-    .sort((a, b) => personName(a).localeCompare(personName(b)))
+    .sort((personId1, personId2) =>
+      getPersonName(personId1).localeCompare(getPersonName(personId2))
+    )
 })
 
 const toggleInvitation = personId => {
@@ -124,19 +127,19 @@ const handleRevert = () => {
 }
 
 const handleSave = async () => {
-  if (!myListId.value || !myList.value) return
+  if (!mainListId.value || !mainList.value) return
   saving.value = true
   try {
     const entries = [...myInvitedIds.value].map(id => ({ person_id: id, invited: true }))
-    const res = await authFetch(`/invitation-lists/set/${myListId.value}`, {
+    const res = await authFetch(`/invitation-lists/set/${mainListId.value}`, {
       method: 'POST',
-      body: JSON.stringify({ list_name: myList.value.metadata.name, entries })
+      body: JSON.stringify({ list_name: mainList.value.metadata.name, entries })
     })
     if (!res.ok) {
       const detail = await res.json().catch(() => ({}))
       throw new Error(detail.detail || `HTTP ${res.status}`)
     }
-    takeSnapshot()
+    takeMainListSnapshot()
   } catch (e) {
     alert('Failed to save: ' + e.message)
   } finally {
@@ -146,8 +149,8 @@ const handleSave = async () => {
 
 onMounted(async () => {
   await initInvitationLists()
-  if (myLists.value.length > 0) {
-    await handleSelectMyList(myLists.value[0].id)
+  if (usersLists.value.length > 0) {
+    await handleSelectMainList(usersLists.value[0].id)
   }
 })
 </script>
@@ -159,12 +162,12 @@ onMounted(async () => {
         <label class="it__label">My List</label>
         <select
           class="it__select"
-          :value="myListId"
-          @change="handleSelectMyList($event.target.value)"
+          :value="mainListId"
+          @change="handleSelectMainList($event.target.value)"
         >
-          <option value="" disabled>Select your list...</option>
-          <option v-for="list in myLists" :key="list.id" :value="list.id">
-            {{ list.name }}
+          <option value="" disabled>Select main list for comparison...</option>
+          <option v-for="list in allLists" :key="list.id" :value="list.id">
+            {{ list.name }} ({{ list.owner_name }})
           </option>
         </select>
       </div>
@@ -190,7 +193,7 @@ onMounted(async () => {
           :disabled="!dirty || saving"
           @click="handleSave"
         >
-          {{ saving ? 'Saving...' : `Save Changes to ${myList?.metadata.name ?? 'List'}` }}
+          {{ saving ? 'Saving...' : `Save Changes to ${mainList?.metadata.name ?? 'List'}` }}
         </button>
         <button
           class="it__revert-btn"
@@ -205,56 +208,42 @@ onMounted(async () => {
 
     <div v-if="loading" class="it__loading">Loading...</div>
 
-    <div v-if="myLists.length === 0 && !loading" class="it__empty-state">
-      You don't have any invitation lists yet. Create one from the Family Tree view.
-    </div>
-
-    <div v-if="myList && !compareListId && !loading" class="it__empty-state">
+    <div v-if="mainList && !compareListId && !loading" class="it__empty-state">
       Select a list to compare with.
     </div>
 
-    <template v-if="myList && compareList && !loading">
+    <template v-if="mainList && compareList && !loading">
       <div class="it__section it__section--mine">
         <h3 class="it__section-title">
           <span class="it__section-dot it__section-dot--mine"></span>
-          Only in {{ myList.metadata.name }} ({{ onlyMine.length }})
+          Only in {{ mainList.metadata.name }} ({{ onlyMainListInvitedIds.length }})
         </h3>
-        <div v-if="onlyMine.length === 0" class="it__empty">No unique entries</div>
-        <label v-for="id in onlyMine" :key="id" class="it__entry">
+        <div v-if="onlyMainListInvitedIds.length === 0" class="it__empty">No unique entries</div>
+        <label v-for="id in onlyMainListInvitedIds" :key="id" class="it__entry">
           <input
             type="checkbox"
             class="it__checkbox"
             :checked="myInvitedIds.has(id)"
             @change="toggleInvitation(id)"
           />
-          <span class="it__person-name">
-            {{ personName(id) }}
-            <span v-if="multiPersonName(id)" class="it__person-group"
-              >({{ multiPersonName(id) }})</span
-            >
-          </span>
+          <PersonInfoDisplay :person-id="id" />
         </label>
       </div>
 
       <div class="it__section it__section--theirs">
         <h3 class="it__section-title">
           <span class="it__section-dot it__section-dot--theirs"></span>
-          Only in {{ compareList.metadata.name }} ({{ onlyTheirs.length }})
+          Only in {{ compareList.metadata.name }} ({{ onlyCompareListInvitedIds.length }})
         </h3>
-        <div v-if="onlyTheirs.length === 0" class="it__empty">No unique entries</div>
-        <label v-for="id in onlyTheirs" :key="id" class="it__entry">
+        <div v-if="onlyCompareListInvitedIds.length === 0" class="it__empty">No unique entries</div>
+        <label v-for="id in onlyCompareListInvitedIds" :key="id" class="it__entry">
           <input
             type="checkbox"
             class="it__checkbox"
             :checked="myInvitedIds.has(id)"
             @change="toggleInvitation(id)"
           />
-          <span class="it__person-name">
-            {{ personName(id) }}
-            <span v-if="multiPersonName(id)" class="it__person-group"
-              >({{ multiPersonName(id) }})</span
-            >
-          </span>
+          <PersonInfoDisplay :person-id="id" />
         </label>
       </div>
 
@@ -271,12 +260,7 @@ onMounted(async () => {
             :checked="myInvitedIds.has(id)"
             @change="toggleInvitation(id)"
           />
-          <span class="it__person-name">
-            {{ personName(id) }}
-            <span v-if="multiPersonName(id)" class="it__person-group"
-              >({{ multiPersonName(id) }})</span
-            >
-          </span>
+          <PersonInfoDisplay :person-id="id" />
         </label>
       </div>
 
@@ -295,12 +279,7 @@ onMounted(async () => {
             :checked="myInvitedIds.has(id)"
             @change="toggleInvitation(id)"
           />
-          <span class="it__person-name">
-            {{ personName(id) }}
-            <span v-if="multiPersonName(id)" class="it__person-group"
-              >({{ multiPersonName(id) }})</span
-            >
-          </span>
+          <PersonInfoDisplay :person-id="id" />
         </label>
       </div>
     </template>
@@ -507,17 +486,6 @@ onMounted(async () => {
   cursor: pointer;
   accent-color: #3b82f6;
   flex-shrink: 0;
-}
-
-.it__person-name {
-  font-size: 14px;
-  color: #374151;
-}
-
-.it__person-group {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-left: 4px;
 }
 
 @media (max-width: 768px) {
