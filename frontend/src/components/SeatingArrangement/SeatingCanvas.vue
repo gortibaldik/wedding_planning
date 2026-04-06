@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import TableNode from './TableNode.vue'
 import type { Table } from '@/composables/useSeatingData'
 
@@ -42,6 +42,8 @@ const onTablePointerDown = (e: PointerEvent, tableId: string): void => {
   const table = props.tables.find(t => t.id === tableId)
   if (!table) return
 
+  frozenOffset.value = { ...computedOffset.value }
+
   dragState.value = {
     tableId,
     startX: e.clientX,
@@ -56,8 +58,8 @@ const onTablePointerDown = (e: PointerEvent, tableId: string): void => {
 
 const onPointerMove = (e: PointerEvent): void => {
   if (!dragState.value) return
-  const dx = e.clientX - dragState.value.startX
-  const dy = e.clientY - dragState.value.startY
+  const dx = (e.clientX - dragState.value.startX) / zoom.value
+  const dy = (e.clientY - dragState.value.startY) / zoom.value
   emit('update-table-position', {
     tableId: dragState.value.tableId,
     position: {
@@ -69,9 +71,24 @@ const onPointerMove = (e: PointerEvent): void => {
 
 const onPointerUp = (): void => {
   dragState.value = null
+  frozenOffset.value = null
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
 }
+
+// Zoom state
+const MIN_ZOOM = 0.25
+const MAX_ZOOM = 2
+const ZOOM_STEP = 0.1
+const zoom = ref(1)
+
+const onWheel = (e: WheelEvent): void => {
+  e.preventDefault()
+  const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP
+  zoom.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom.value + delta))
+}
+
+const zoomPercent = computed(() => Math.round(zoom.value * 100))
 
 const guestDragActive = ref(false)
 
@@ -97,6 +114,40 @@ const onCanvasDrop = (): void => {
 const onCanvasDragOver = (e: DragEvent): void => {
   e.preventDefault()
 }
+
+// Dynamic canvas sizing: fit bounding rectangle of all tables + padding
+const CANVAS_PADDING = 20
+
+const bounds = computed(() => {
+  if (props.tables.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0 }
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity
+  for (const t of props.tables) {
+    if (t.position.x < minX) minX = t.position.x
+    if (t.position.y < minY) minY = t.position.y
+    if (t.position.x > maxX) maxX = t.position.x
+    if (t.position.y > maxY) maxY = t.position.y
+  }
+  return { minX, minY, maxX, maxY }
+})
+
+// Offset applied to each table so the bounding box starts at CANVAS_PADDING
+// Frozen during drag to prevent all tables shifting as bounds change
+const frozenOffset = ref<{ x: number; y: number } | null>(null)
+
+const computedOffset = computed(() => ({
+  x: -bounds.value.minX + CANVAS_PADDING,
+  y: -bounds.value.minY + CANVAS_PADDING
+}))
+
+const renderOffset = computed(() => frozenOffset.value ?? computedOffset.value)
+
+const contentStyle = computed(() => ({
+  transform: `scale(${zoom.value})`,
+  transformOrigin: '0 0'
+}))
 </script>
 
 <template>
@@ -106,24 +157,31 @@ const onCanvasDragOver = (e: DragEvent): void => {
     @dragenter="onCanvasDragEnter"
     @dragleave="onCanvasDragLeave"
     @drop="onCanvasDrop"
+    @wheel.prevent="onWheel"
   >
-    <div v-if="tables.length === 0" class="canvas-empty">Click "Add Table" to get started</div>
-    <div
-      v-for="table in tables"
-      :key="table.id"
-      class="canvas-table"
-      :style="{ left: table.position.x + 'px', top: table.position.y + 'px' }"
-      @pointerdown="onTablePointerDown($event, table.id)"
-    >
-      <TableNode
-        :table="table"
-        :editable="editable"
-        :guest-drag-active="guestDragActive"
-        @assign-guest="emit('assign-guest', $event)"
-        @unassign-guest="emit('unassign-guest', $event)"
-        @remove-table="emit('remove-table', $event)"
-      />
+    <div class="canvas-content" :style="contentStyle">
+      <div v-if="tables.length === 0" class="canvas-empty">Click "Add Table" to get started</div>
+      <div
+        v-for="table in tables"
+        :key="table.id"
+        class="canvas-table"
+        :style="{
+          left: table.position.x + renderOffset.x + 'px',
+          top: table.position.y + renderOffset.y + 'px'
+        }"
+        @pointerdown="onTablePointerDown($event, table.id)"
+      >
+        <TableNode
+          :table="table"
+          :editable="editable"
+          :guest-drag-active="guestDragActive"
+          @assign-guest="emit('assign-guest', $event)"
+          @unassign-guest="emit('unassign-guest', $event)"
+          @remove-table="emit('remove-table', $event)"
+        />
+      </div>
     </div>
+    <div class="zoom-indicator">{{ zoomPercent }}%</div>
   </div>
 </template>
 
@@ -137,6 +195,14 @@ const onCanvasDragOver = (e: DragEvent): void => {
   min-height: 100%;
 }
 
+.canvas-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .canvas-empty {
   position: absolute;
   top: 50%;
@@ -148,5 +214,20 @@ const onCanvasDragOver = (e: DragEvent): void => {
 
 .canvas-table {
   position: absolute;
+}
+
+.zoom-indicator {
+  position: sticky;
+  bottom: 8px;
+  left: 8px;
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: #6b7280;
+  pointer-events: none;
+  z-index: 10;
 }
 </style>
