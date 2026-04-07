@@ -102,6 +102,36 @@ export function useSeatingData() {
     }
   }
 
+  const updateTable = (tableId: string, updates: { name?: string; seats?: number }) => {
+    const table = tables.value.find(t => t.id === tableId)
+    if (!table) return
+    if (updates.name !== undefined) {
+      table.name = updates.name
+    }
+    if (updates.seats !== undefined && updates.seats !== table.seats) {
+      const seatedCount = table.guests.filter(g => g).length
+      if (updates.seats < seatedCount) return
+      if (updates.seats > table.guests.length) {
+        table.guests = [
+          ...table.guests,
+          ...new Array(updates.seats - table.guests.length).fill(null)
+        ]
+      } else {
+        // Shrinking: preserve seat positions where possible; relocate any
+        // seated guests that fall outside the new range into empty slots.
+        const newGuests: (string | null)[] = table.guests.slice(0, updates.seats)
+        for (let i = updates.seats; i < table.guests.length; i++) {
+          const g = table.guests[i]
+          if (!g) continue
+          const emptyIdx = newGuests.indexOf(null)
+          if (emptyIdx !== -1) newGuests[emptyIdx] = g
+        }
+        table.guests = newGuests
+      }
+      table.seats = updates.seats
+    }
+  }
+
   const updateTablePosition = (tableId: string, position: { x: number; y: number }) => {
     const table = tables.value.find(t => t.id === tableId)
     if (table) {
@@ -213,6 +243,7 @@ export function useSeatingData() {
     removeTable,
     assignGuest,
     unassignGuest,
+    updateTable,
     updateTablePosition,
     fetchSeatingsForList,
     loadSeating,

@@ -14,6 +14,11 @@ interface AssignGuestEvent {
   seatIndex: number
 }
 
+interface UpdateTableEvent {
+  tableId: string
+  updates: { name: string; seats: number }
+}
+
 interface DragState {
   tableId: string
   startX: number
@@ -30,6 +35,7 @@ const emit = defineEmits<{
   'assign-guest': [event: AssignGuestEvent]
   'unassign-guest': [guestId: string]
   'remove-table': [tableId: string]
+  'update-table': [event: UpdateTableEvent]
   'update-table-position': [event: TablePositionUpdate]
 }>()
 
@@ -213,6 +219,7 @@ const contentStyle = computed(() => ({
           @assign-guest="emit('assign-guest', $event)"
           @unassign-guest="emit('unassign-guest', $event)"
           @remove-table="emit('remove-table', $event)"
+          @update-table="emit('update-table', $event)"
         />
       </div>
     </div>

@@ -12,6 +12,7 @@ const {
   tables,
   addTable,
   removeTable,
+  updateTable,
   assignGuest,
   unassignGuest,
   updateTablePosition,
@@ -117,6 +118,13 @@ const handleAssignGuest = (event: {
   assignGuest(event.guestId, event.tableId, event.seatIndex)
 }
 
+const handleUpdateTable = (event: {
+  tableId: string
+  updates: { name: string; seats: number }
+}): void => {
+  updateTable(event.tableId, event.updates)
+}
+
 const handleUpdateTablePosition = (event: {
   tableId: string
   position: { x: number; y: number }
@@ -210,6 +218,7 @@ const handleUpdateTablePosition = (event: {
         @assign-guest="handleAssignGuest"
         @unassign-guest="unassignGuest"
         @remove-table="removeTable"
+        @update-table="handleUpdateTable"
         @update-table-position="handleUpdateTablePosition"
       />
       <SeatingArrangementSidebar />

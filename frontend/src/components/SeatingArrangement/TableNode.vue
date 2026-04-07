@@ -3,11 +3,17 @@ import { ref, computed, type CSSProperties } from 'vue'
 import type { Table } from '@/composables/useSeatingData'
 import { useTouchDragDrop } from '@/composables/useTouchDragDrop'
 import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
+import EditTableModal, { type EditTablePayload } from './EditTableModal.vue'
 
 interface AssignGuestEvent {
   guestId: string
   tableId: string
   seatIndex: number
+}
+
+interface UpdateTableEvent {
+  tableId: string
+  updates: EditTablePayload
 }
 
 const props = defineProps<{
@@ -19,7 +25,14 @@ const emit = defineEmits<{
   'assign-guest': [event: AssignGuestEvent]
   'unassign-guest': [guestId: string]
   'remove-table': [tableId: string]
+  'update-table': [event: UpdateTableEvent]
 }>()
+
+const showEditModal = ref(false)
+
+const onEditSave = (payload: EditTablePayload): void => {
+  emit('update-table', { tableId: props.table.id, updates: payload })
+}
 
 const numberOfSeatedGuests = computed(() => {
   return props.table.guests.filter(g => g).length
@@ -201,6 +214,9 @@ const handleUnassign = (guestId: string): void => {
 
     <div class="table-header" :style="tableHeaderStyle">
       <span class="table-name">{{ table.name }} ({{ numberOfSeatedGuests }})</span>
+      <button v-if="editable" class="table-edit" title="Edit table" @click="showEditModal = true">
+        &#9998;
+      </button>
       <button
         v-if="editable"
         class="table-remove"
@@ -210,6 +226,13 @@ const handleUnassign = (guestId: string): void => {
         &times;
       </button>
     </div>
+
+    <EditTableModal
+      :show="showEditModal"
+      :table="table"
+      @close="showEditModal = false"
+      @save="onEditSave"
+    />
 
     <div
       v-for="(pos, index) in seatPositions"
@@ -275,22 +298,33 @@ const handleUnassign = (guestId: string): void => {
   color: #1e3a5f;
 }
 
-.table-remove {
+.table-remove,
+.table-edit {
   background: white;
   border: 1px solid #d1d5db;
   border-radius: 4px;
   color: #6b7280;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   line-height: 1;
   padding: 2px 6px;
   transition: all 0.15s;
 }
 
+.table-remove {
+  font-size: 16px;
+}
+
 .table-remove:hover {
   color: #ef4444;
   border-color: #fca5a5;
   background: #fef2f2;
+}
+
+.table-edit:hover {
+  color: #2563eb;
+  border-color: #93c5fd;
+  background: #eff6ff;
 }
 
 .table-shape {
