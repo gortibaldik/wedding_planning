@@ -311,6 +311,7 @@ const handleUnassign = (guestId: string): void => {
 
 .table-header--movable {
   cursor: grab;
+  touch-action: none;
 }
 
 .table-header--movable:active {
