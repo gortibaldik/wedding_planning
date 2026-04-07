@@ -88,7 +88,7 @@ const onPointerUp = (): void => {
 // Zoom state
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 2
-const ZOOM_STEP = 0.1
+const ZOOM_STEP = 0.03
 const zoom = ref(1)
 
 const onWheel = (e: WheelEvent): void => {
