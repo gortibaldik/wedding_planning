@@ -1,9 +1,30 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import mainBg from '@/assets/login-bg.png'
 import kackyImg from '@/assets/kacicky.png'
 
 const adminOpen = ref(false)
+const adminContent = ref(null)
+
+const toggleAdmin = () => {
+  adminOpen.value = !adminOpen.value
+  if (adminOpen.value) {
+    const el = adminContent.value
+    if (!el) return
+    let running = true
+    const tick = () => {
+      if (!running) return
+      window.scrollTo({ top: document.body.scrollHeight })
+      requestAnimationFrame(tick)
+    }
+    const stop = () => {
+      running = false
+      el.removeEventListener('transitionend', stop)
+    }
+    el.addEventListener('transitionend', stop)
+    requestAnimationFrame(tick)
+  }
+}
 
 const login = () => {
   if (import.meta.env.VITE_ENABLE_LOCAL_AUTH === 'true') {
@@ -58,11 +79,11 @@ const login = () => {
       </div>
     </div>
     <div class="admin-section">
-      <div class="admin-header" @click="adminOpen = !adminOpen">
+      <div class="admin-header" @click="toggleAdmin">
         <span class="admin-title">Admin sekce</span>
         <button class="admin-toggle">{{ adminOpen ? '▼' : '▲' }}</button>
       </div>
-      <div v-if="adminOpen" class="admin-content">
+      <div ref="adminContent" class="admin-content" :class="{ 'admin-content-open': adminOpen }">
         <button class="login-btn admin-login-btn" @click="login">Prihlásiť sa</button>
       </div>
     </div>
@@ -274,9 +295,19 @@ $color-white-overlay: rgba(255, 255, 255, 0.5);
   .admin-content {
     display: flex;
     justify-content: center;
-    padding: 1.5rem;
+    padding: 0 1.5rem;
+    max-height: 0;
+    overflow: hidden;
     background-color: $color-white-overlay;
     border-radius: 0;
+    transition:
+      max-height 0.35s ease,
+      padding 0.35s ease;
+
+    &.admin-content-open {
+      max-height: 200px;
+      padding: 1.5rem;
+    }
 
     .admin-login-btn {
       padding: 12px 32px;
