@@ -20,12 +20,14 @@ const props = defineProps<{
   table: Table
   editable: boolean
   guestDragActive: boolean
+  moveMode: boolean
 }>()
 const emit = defineEmits<{
   'assign-guest': [event: AssignGuestEvent]
   'unassign-guest': [guestId: string]
   'remove-table': [tableId: string]
   'update-table': [event: UpdateTableEvent]
+  'toggle-move': []
 }>()
 
 const showEditModal = ref(false)
@@ -49,7 +51,7 @@ interface Position {
 const SEAT_WIDTH = 130
 const SEAT_HEIGHT = 80
 const SEAT_GAP = 16
-const PADDING = 20
+const PADDING = -60
 
 const seatPositions = computed<Position[]>(() => {
   const { shape, seats } = props.table
@@ -208,12 +210,26 @@ const handleUnassign = (guestId: string): void => {
 <template>
   <div
     class="table-node"
+    :class="`table-node--${table.shape}`"
     :style="{ width: containerSize.width + 'px', height: containerSize.height + 'px' }"
   >
     <div class="table-shape" :style="tableShapeStyle" />
 
-    <div class="table-header" :style="tableHeaderStyle">
+    <div
+      class="table-header"
+      :class="{ 'table-header--movable': moveMode }"
+      :style="tableHeaderStyle"
+    >
       <span class="table-name">{{ table.name }} ({{ numberOfSeatedGuests }})</span>
+      <button
+        v-if="editable"
+        class="table-move"
+        :class="{ 'table-move--active': moveMode }"
+        title="Move table"
+        @click="emit('toggle-move')"
+      >
+        &#10021;
+      </button>
       <button v-if="editable" class="table-edit" title="Edit table" @click="showEditModal = true">
         &#9998;
       </button>
@@ -276,6 +292,12 @@ const handleUnassign = (guestId: string): void => {
 .table-node {
   position: relative;
   user-select: none;
+  background: rgba(156, 163, 175, 0.05);
+  border-radius: 12px;
+}
+
+.table-node--circular {
+  border-radius: 50%;
 }
 
 .table-header {
@@ -283,13 +305,40 @@ const handleUnassign = (guestId: string): void => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  cursor: grab;
   z-index: 1;
   white-space: nowrap;
 }
 
-.table-header:active {
+.table-header--movable {
+  cursor: grab;
+}
+
+.table-header--movable:active {
   cursor: grabbing;
+}
+
+.table-move {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  transition: all 0.15s;
+}
+
+.table-move:hover {
+  color: #2563eb;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.table-move--active {
+  color: white;
+  background: #3b82f6;
+  border-color: #2563eb;
 }
 
 .table-name {

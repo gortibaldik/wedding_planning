@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import TableNode from './TableNode.vue'
 import type { Table } from '@/composables/useSeatingData'
 
@@ -40,15 +40,19 @@ const emit = defineEmits<{
 }>()
 
 const dragState = ref<DragState | null>(null)
+const moveModeTableId = ref<string | null>(null)
+
+const onToggleMove = (tableId: string): void => {
+  moveModeTableId.value = moveModeTableId.value === tableId ? null : tableId
+}
 
 const onTablePointerDown = (e: PointerEvent, tableId: string): void => {
   if (!props.editable) return
+  if (moveModeTableId.value !== tableId) return
   if (!(e.target as HTMLElement).closest('.table-header')) return
   e.preventDefault()
   const table = props.tables.find(t => t.id === tableId)
   if (!table) return
-
-  frozenOffset.value = { ...computedOffset.value }
 
   dragState.value = {
     tableId,
@@ -77,7 +81,6 @@ const onPointerMove = (e: PointerEvent): void => {
 
 const onPointerUp = (): void => {
   dragState.value = null
-  frozenOffset.value = null
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
 }
@@ -128,6 +131,46 @@ const onTouchEnd = (e: TouchEvent): void => {
   }
 }
 
+// Drag-to-pan on desktop: when the user presses on empty canvas area,
+// hold and drag to scroll the canvas (mirrors touch pan-x/pan-y).
+interface PanState {
+  startX: number
+  startY: number
+  scrollLeft: number
+  scrollTop: number
+}
+const panState = ref<PanState | null>(null)
+const canvasRef = ref<HTMLElement | null>(null)
+
+const onCanvasPointerDown = (e: PointerEvent): void => {
+  if (e.pointerType !== 'mouse') return
+  if (e.button !== 0) return
+  // Don't start panning when pressing on a table (table drag handles itself)
+  if ((e.target as HTMLElement).closest('.canvas-table')) return
+  const canvas = canvasRef.value
+  if (!canvas) return
+  panState.value = {
+    startX: e.clientX,
+    startY: e.clientY,
+    scrollLeft: canvas.scrollLeft,
+    scrollTop: canvas.scrollTop
+  }
+  window.addEventListener('pointermove', onCanvasPanMove)
+  window.addEventListener('pointerup', onCanvasPanUp)
+}
+
+const onCanvasPanMove = (e: PointerEvent): void => {
+  if (!panState.value || !canvasRef.value) return
+  canvasRef.value.scrollLeft = panState.value.scrollLeft - (e.clientX - panState.value.startX)
+  canvasRef.value.scrollTop = panState.value.scrollTop - (e.clientY - panState.value.startY)
+}
+
+const onCanvasPanUp = (): void => {
+  panState.value = null
+  window.removeEventListener('pointermove', onCanvasPanMove)
+  window.removeEventListener('pointerup', onCanvasPanUp)
+}
+
 const guestDragActive = ref(false)
 
 const onCanvasDragEnter = (e: DragEvent): void => {
@@ -154,7 +197,7 @@ const onCanvasDragOver = (e: DragEvent): void => {
 }
 
 // Dynamic canvas sizing: fit bounding rectangle of all tables + padding
-const CANVAS_PADDING = 20
+const CANVAS_PADDING = 100
 
 const bounds = computed(() => {
   if (props.tables.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0 }
@@ -171,26 +214,54 @@ const bounds = computed(() => {
   return { minX, minY, maxX, maxY }
 })
 
+// Sticky bounds: frozen while a table is in move mode, so the canvas
+// can expand (via the dragged transform spilling out) but never shrinks
+// mid-move. Recomputed from live bounds the moment move mode ends.
+const stickyBounds = ref({ ...bounds.value })
+
+watch(
+  [bounds, moveModeTableId],
+  ([b, moveId]) => {
+    if (moveId === null) {
+      stickyBounds.value = { ...b }
+    } else {
+      const s = stickyBounds.value
+      stickyBounds.value = {
+        minX: Math.min(s.minX, b.minX),
+        minY: Math.min(s.minY, b.minY),
+        maxX: Math.max(s.maxX, b.maxX),
+        maxY: Math.max(s.maxY, b.maxY)
+      }
+    }
+  },
+  { immediate: true }
+)
+
 // Offset applied to each table so the bounding box starts at CANVAS_PADDING
-// Frozen during drag to prevent all tables shifting as bounds change
-const frozenOffset = ref<{ x: number; y: number } | null>(null)
-
-const computedOffset = computed(() => ({
-  x: -bounds.value.minX + CANVAS_PADDING,
-  y: -bounds.value.minY + CANVAS_PADDING
+const renderOffset = computed(() => ({
+  x: -stickyBounds.value.minX + CANVAS_PADDING,
+  y: -stickyBounds.value.minY + CANVAS_PADDING
 }))
 
-const renderOffset = computed(() => frozenOffset.value ?? computedOffset.value)
-
-const contentStyle = computed(() => ({
-  transform: `scale(${zoom.value})`,
-  transformOrigin: '0 0'
-}))
+const contentStyle = computed(() => {
+  const width = stickyBounds.value.maxX - stickyBounds.value.minX + CANVAS_PADDING * 2
+  const height = stickyBounds.value.maxY - stickyBounds.value.minY + CANVAS_PADDING * 2
+  console.info('Applied width, height', width, height)
+  return {
+    transform: `scale(${zoom.value})`,
+    transformOrigin: '0 0',
+    width: `${width}px`,
+    height: `${height}px`
+  }
+})
 </script>
 
 <template>
   <div
+    ref="canvasRef"
     class="seating-canvas"
+    :class="{ 'seating-canvas--panning': panState }"
+    @pointerdown="onCanvasPointerDown"
     @dragover="onCanvasDragOver"
     @dragenter="onCanvasDragEnter"
     @dragleave="onCanvasDragLeave"
@@ -216,10 +287,12 @@ const contentStyle = computed(() => ({
           :table="table"
           :editable="editable"
           :guest-drag-active="guestDragActive"
+          :move-mode="moveModeTableId === table.id"
           @assign-guest="emit('assign-guest', $event)"
           @unassign-guest="emit('unassign-guest', $event)"
           @remove-table="emit('remove-table', $event)"
           @update-table="emit('update-table', $event)"
+          @toggle-move="onToggleMove(table.id)"
         />
       </div>
     </div>
@@ -230,12 +303,20 @@ const contentStyle = computed(() => ({
 <style scoped>
 .seating-canvas {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   position: relative;
   overflow: auto;
+  scrollbar-gutter: stable both-edges;
   background: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
   background-size: 20px 20px;
   min-height: 100%;
   touch-action: pan-x pan-y;
+  cursor: grab;
+}
+
+.seating-canvas--panning {
+  cursor: grabbing;
 }
 
 .canvas-content {
