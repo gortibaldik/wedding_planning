@@ -21,6 +21,10 @@ const emit = defineEmits<{
   'remove-table': [tableId: string]
 }>()
 
+const numberOfSeatedGuests = computed(() => {
+  return props.table.guests.filter(g => g).length
+})
+
 const { onTouchStart } = useTouchDragDrop()
 const dragOverSeat = ref<number | null>(null)
 
@@ -196,7 +200,7 @@ const handleUnassign = (guestId: string): void => {
     <div class="table-shape" :style="tableShapeStyle" />
 
     <div class="table-header" :style="tableHeaderStyle">
-      <span class="table-name">{{ table.name }}</span>
+      <span class="table-name">{{ table.name }} ({{ numberOfSeatedGuests }})</span>
       <button
         v-if="editable"
         class="table-remove"
