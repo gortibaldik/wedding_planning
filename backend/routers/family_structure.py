@@ -78,12 +78,15 @@ async def get_family_structure_status(
     return status or "read"
 
 
+CHANGE_STATUS_ROLE = "change-genealogy-tree-rw-status"
+
+
 @router.post("/change-status")
 async def change_family_structure_status(
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
     user: Annotated[dict, Depends(get_current_user)],
 ) -> str:
-    if "change-genealogy-tree-rw-status" not in user.get("roles", []):
+    if CHANGE_STATUS_ROLE not in user.get("roles", []):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     current = await redis.get(FAMILY_STRUCTURE_RW_STATUS_KEY)

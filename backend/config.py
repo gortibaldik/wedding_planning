@@ -1,4 +1,4 @@
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 from pydantic_settings import BaseSettings
 
 
@@ -14,3 +14,5 @@ class Config(BaseSettings):
     enable_local_auth: bool = False
     token_expiration_hours: int = 6
     rediscloud_url: str = ""
+
+    super_users: list[str] = Field(default_factory=lambda: ["ferotre@gmail.com"])

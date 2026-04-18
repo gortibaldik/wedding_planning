@@ -15,7 +15,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)],
 )
 
-UNIVERSAL_SETTER_ROLE = "universal-invitation-list-setter"
+UNIVERSAL_INVITATION_LIST_SETTER_ROLE = "universal-invitation-list-setter"
 
 # Redis keys
 ALL_LIST_IDS_KEY = (
@@ -88,6 +88,11 @@ class SetListRequest(BaseModel):
     entries: list[InvitationEntry]
 
 
+def _is_universal_list_setter(user: dict):
+    """Flag signifying that this user is allowed to make changes to any list."""
+    return UNIVERSAL_INVITATION_LIST_SETTER_ROLE in user.get("roles", [])
+
+
 @router.post("/set/{list_id}")
 async def set_list(
     list_id: str,
@@ -100,8 +105,7 @@ async def set_list(
         # Update existing list — check ownership
         metadata = ListMetadata.model_validate_json(decompress(meta_raw))
         is_owner = metadata.owner_sub == user.get("sub")
-        is_universal = UNIVERSAL_SETTER_ROLE in user.get("roles", [])
-        if not is_owner and not is_universal:
+        if not is_owner and not _is_universal_list_setter(user):
             raise HTTPException(status_code=403, detail="Not allowed to edit this list")
         metadata.name = request_body.list_name
     else:
@@ -126,7 +130,7 @@ async def set_final(
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
     user: Annotated[dict, Depends(get_current_user)],
 ):
-    if UNIVERSAL_SETTER_ROLE not in user.get("roles", []):
+    if not _is_universal_list_setter(user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     exists = await redis.hexists(ALL_LIST_IDS_KEY, list_id)
@@ -141,7 +145,7 @@ async def unset_final(
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
     user: Annotated[dict, Depends(get_current_user)],
 ):
-    if UNIVERSAL_SETTER_ROLE not in user.get("roles", []):
+    if not _is_universal_list_setter(user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     await redis.delete(FINAL_LIST_ID_KEY)

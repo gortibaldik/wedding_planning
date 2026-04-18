@@ -11,6 +11,9 @@ from jose import jwt
 from backend.config import Config
 from backend.dependencies import get_config
 
+from .family_structure import CHANGE_STATUS_ROLE
+from .invitation_lists import UNIVERSAL_INVITATION_LIST_SETTER_ROLE
+
 router = APIRouter(prefix="/auth")
 logger = logging.getLogger(__name__)
 
@@ -19,8 +22,8 @@ def _create_token_and_redirect(
     email: str, name: str, config: Config
 ) -> RedirectResponse:
     roles = []
-    if email == "ferotre@gmail.com":
-        roles.append("change-genealogy-tree-rw-status")
+    if email in config.super_users:
+        roles.extend([CHANGE_STATUS_ROLE, UNIVERSAL_INVITATION_LIST_SETTER_ROLE])
 
     jwt_token = jwt.encode(
         {
@@ -71,6 +74,10 @@ async def google_auth(request: Request, config: Annotated[Config, Depends(get_co
 async def google_auth_callback(
     request: Request, code: str, config: Annotated[Config, Depends(get_config)]
 ):
+    """Endpoint that is called after the google authenticates the client and creates app specific token.
+
+    The app specific token contains roles assigned by the app.
+    """
     redirect_uri = (
         config.redirect_url_during_auth_base.rstrip("/") + "/auth/google/callback"
     )
