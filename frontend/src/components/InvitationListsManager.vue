@@ -235,7 +235,8 @@ onMounted(async () => {
       <div class="it__section">
         <h3 class="it__section-title">
           {{ selectedList.metadata.name }}
-          ({{ myInvitedIds.size }} invited)
+          <span class="it__owner-name">({{ selectedList.metadata.owner_name }})</span>
+          - {{ myInvitedIds.size }} invited
         </h3>
       </div>
       <div v-if="groupedByRoot.length === 0" class="it__empty">No one invited yet.</div>
@@ -460,6 +461,11 @@ onMounted(async () => {
   font-weight: 600;
   color: #1f2937;
   border-bottom: 1px solid #f3f4f6;
+}
+
+.it__owner-name {
+  color: #9ca3af;
+  font-weight: 400;
 }
 
 .it__section-title--clickable {
