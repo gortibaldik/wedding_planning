@@ -1,4 +1,5 @@
 import logging
+from enum import Enum
 from typing import Annotated
 
 import redis.asyncio as aioredis
@@ -22,10 +23,30 @@ ALL_LIST_IDS_KEY = (
     "invitation_lists:all_ids"  # Redis hash: list_id -> compressed ListMetadata
 )
 FINAL_LIST_ID_KEY = "invitation_lists:final_id"  # Redis string: list_id
+FINAL_LIST_ENTRIES_KEY = "invitation_lists:final:entries"
 
 
 def _list_entries_key(list_id: str) -> str:
     return f"invitation_lists:entries:{list_id}"
+
+
+class RSVPEnum(str, Enum):
+    NOT_ANSWERED = "NOT_ANSWERED"
+    WILL_COME = "WILL_COME"
+    WONT_COME = "WONT_COME"
+
+
+class FinalInvitationListEntry(BaseModel):
+    person_id: str
+
+    invitation_given: bool = False
+    """Whether the person already received the invitation."""
+
+    rsvpd: RSVPEnum = RSVPEnum.NOT_ANSWERED
+    """Whether the person already answered the RSVP."""
+
+    notes: str = ""
+    """Any notes about the person."""
 
 
 class InvitationEntry(BaseModel):
@@ -43,6 +64,12 @@ class ListMetadata(BaseModel):
 class InvitationList(BaseModel):
     metadata: ListMetadata
     entries: list[InvitationEntry]
+
+
+class FinalInvitationList(BaseModel):
+    metadata: ListMetadata
+    entries: list[InvitationEntry]
+    final_entries: list[FinalInvitationListEntry]
 
 
 class EntriesData(BaseModel):
@@ -150,6 +177,10 @@ async def delete_list(
     return {"status": "ok"}
 
 
+class SetFinalEntriesRequest(BaseModel):
+    final_entries: list[FinalInvitationListEntry]
+
+
 @router.post("/set-final/{list_id}")
 async def set_final(
     list_id: str,
@@ -164,6 +195,14 @@ async def set_final(
         raise HTTPException(status_code=404, detail="List not found")
 
     await redis.set(FINAL_LIST_ID_KEY, list_id)
+
+    # again a beautiful race condition, I decided to live with it
+    final_entries_exist = await redis.exists(FINAL_LIST_ENTRIES_KEY)
+    if not final_entries_exist:
+        await redis.set(
+            FINAL_LIST_ENTRIES_KEY,
+            compress(SetFinalEntriesRequest(final_entries=[]).model_dump_json()),
+        )
 
 
 @router.post("/unset-final")
@@ -180,8 +219,31 @@ async def unset_final(
 @router.get("/get-final")
 async def get_final(
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
-) -> InvitationList | None:
+) -> FinalInvitationList | None:
     final_id = await redis.get(FINAL_LIST_ID_KEY)
     if final_id is None:
         raise HTTPException(status_code=404, detail="List not found")
-    return await _get_list_by_id(redis, final_id)
+    invitation_list = await _get_list_by_id(redis, final_id)
+    final_entries_raw = decompress(await redis.get(FINAL_LIST_ENTRIES_KEY))
+    final_entries = SetFinalEntriesRequest.model_validate_json(final_entries_raw)
+    logger.warning(
+        f"FINAL_ENTRIES from redis: {final_entries.model_dump_json(indent=2)}"
+    )
+    return FinalInvitationList(
+        metadata=invitation_list.metadata,
+        entries=invitation_list.entries,
+        final_entries=final_entries.final_entries,
+    )
+
+
+@router.post("/set-final-entries")
+async def set_final_entries(
+    request: SetFinalEntriesRequest,
+    redis: Annotated[aioredis.Redis, Depends(get_redis)],
+    user: Annotated[dict, Depends(get_current_user)],
+):
+    if not _is_universal_list_setter(user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    logger.warning(f"FINAL_ENTRIES that arrived: {request.model_dump_json(indent=2)}")
+    await redis.set(FINAL_LIST_ENTRIES_KEY, compress(request.model_dump_json()))
