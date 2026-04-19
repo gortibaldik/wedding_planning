@@ -124,6 +124,32 @@ async def set_list(
     )
 
 
+@router.delete("/set/{list_id}")
+async def delete_list(
+    list_id: str,
+    redis: Annotated[aioredis.Redis, Depends(get_redis)],
+    user: Annotated[dict, Depends(get_current_user)],
+):
+    meta_raw = await redis.hget(ALL_LIST_IDS_KEY, list_id)
+    if meta_raw is not None:
+        # Update existing list — check ownership
+        metadata = ListMetadata.model_validate_json(decompress(meta_raw))
+        is_owner = metadata.owner_sub == user.get("sub")
+        if not is_owner and not _is_universal_list_setter(user):
+            raise HTTPException(
+                status_code=403, detail="Not allowed to delete this list"
+            )
+    else:
+        raise HTTPException(
+            status_code=404, detail=f"The list with id '{list_id}' does not exist."
+        )
+
+    # lol, this is very unsafe for any race conditions, but I decided to live with it
+    await redis.delete(_list_entries_key(list_id))
+    await redis.hdel(ALL_LIST_IDS_KEY, list_id)
+    return {"status": "ok"}
+
+
 @router.post("/set-final/{list_id}")
 async def set_final(
     list_id: str,

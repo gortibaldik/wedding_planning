@@ -173,6 +173,33 @@ const handleSave = async () => {
   }
 }
 
+const deleting = ref(false)
+
+const handleDelete = async () => {
+  if (!selectedListId.value || !selectedList.value) return
+  if (!confirm(`Delete "${selectedList.value.metadata.name}"? This cannot be undone.`)) return
+  deleting.value = true
+  try {
+    const res = await authFetch(`/invitation-lists/set/${selectedListId.value}`, {
+      method: 'DELETE'
+    })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    selectedListId.value = ''
+    selectedList.value = null
+    myInvitedIds.value = new Set()
+    savedSnapshot.value = ''
+    await initInvitationLists(true)
+    updateHash(selectedListId.value)
+  } catch (e) {
+    alert('Failed to delete: ' + (e instanceof Error ? e.message : String(e)))
+  } finally {
+    deleting.value = false
+  }
+}
+
 onMounted(async () => {
   await initInvitationLists()
   const hashListId = getListIdFromHash()
@@ -221,6 +248,9 @@ onMounted(async () => {
           @click="handleRevert"
         >
           Revert Changes
+        </button>
+        <button class="it__delete-btn" :disabled="deleting" @click="handleDelete">
+          {{ deleting ? 'Deleting...' : 'Delete List' }}
         </button>
       </div>
     </div>
@@ -412,6 +442,28 @@ onMounted(async () => {
 
 .it__revert-btn--disabled {
   color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.it__delete-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: white;
+  background: #ef4444;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.it__delete-btn:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.it__delete-btn:disabled {
+  background: #fca5a5;
   cursor: not-allowed;
 }
 

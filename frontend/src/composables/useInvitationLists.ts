@@ -195,9 +195,12 @@ export function useInvitationLists() {
     takeSnapshot()
   }
 
-  const initInvitationLists = async () => {
-    if (initialized) return
+  const initInvitationLists = async (force: boolean = false) => {
+    if (!force && initialized) return
     initialized = true
+    if (force) {
+      selectedListId.value = null
+    }
     await ensureDefaultList()
     if (selectedListId.value) {
       await fetchList(selectedListId.value)

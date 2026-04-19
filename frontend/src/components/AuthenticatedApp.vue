@@ -108,7 +108,7 @@ const { sidebarCollapsed } = useSidebarState()
       </div>
     </header>
     <div class="main-content">
-      <div v-show="activeTab === 'family-tree'" class="tab-content">
+      <div v-if="activeTab === 'family-tree'" class="tab-content">
         <GenealogyTree />
         <GenealogyTreeSidebar />
       </div>
