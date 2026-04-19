@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { InvitationList, useInvitationLists } from '@/composables/useInvitationLists'
-import { useStoredData } from '@/composables/useStoredData'
+import { RootData, useStoredData } from '@/composables/useStoredData'
 import { useAuth } from '@/composables/useAuth'
+import { useBaseGraph } from '@/composables/useBaseGraph'
 import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 
-const { allLists, usersLists, initInvitationLists, getPersonName } = useInvitationLists()
+const {
+  allLists,
+  usersLists,
+  initInvitationLists,
+  getPersonName,
+  getMultiPersonNodeName,
+  getPersonNodeId
+} = useInvitationLists()
 const { people } = useStoredData()
 const { authFetch, storedUserInfo } = useAuth()
+const { findRootNode } = useBaseGraph()
 
 const selectedListId = ref<string>('')
 const selectedList = ref<InvitationList | null>(null)
@@ -25,8 +34,45 @@ const isOwner = computed(() => {
   return selectedList.value.metadata.owner_sub === storedUserInfo.value?.sub
 })
 
-const sortedInvitedIds = computed(() => {
-  return [...myInvitedIds.value].sort((a, b) => getPersonName(a).localeCompare(getPersonName(b)))
+interface RootInfo {
+  name: string
+  color: string
+}
+
+const getRootInfo = (personId: string): RootInfo => {
+  const nodeId = getPersonNodeId(personId)
+  if (!nodeId) return { name: '', color: '#9ca3af' }
+  const root = findRootNode(nodeId)
+  if (!root || !(root.data instanceof RootData)) return { name: '', color: '#9ca3af' }
+  return { name: root.data.name, color: root.data.color }
+}
+
+interface RootGroup {
+  name: string
+  color: string
+  ids: string[]
+}
+
+const groupedByRoot = computed<RootGroup[]>(() => {
+  const groups = new Map<string, RootGroup>()
+  for (const id of myInvitedIds.value) {
+    const { name, color } = getRootInfo(id)
+    const key = name || '__unknown__'
+    if (!groups.has(key)) {
+      groups.set(key, { name: name || 'Unknown', color, ids: [] })
+    }
+    groups.get(key)!.ids.push(id)
+  }
+  for (const group of groups.values()) {
+    group.ids.sort((a, b) => {
+      const nodeCmp = (getMultiPersonNodeName(a) ?? '').localeCompare(
+        getMultiPersonNodeName(b) ?? ''
+      )
+      if (nodeCmp !== 0) return nodeCmp
+      return getPersonName(a).localeCompare(getPersonName(b))
+    })
+  }
+  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name))
 })
 
 const fetchFullList = async (listId: string): Promise<InvitationList> => {
@@ -158,16 +204,23 @@ onMounted(async () => {
       Select an invitation list to view.
     </div>
 
-    <div v-if="selectedList && !loading" class="it__section">
-      <h3 class="it__section-title">
-        {{ selectedList.metadata.name }}
-        ({{ myInvitedIds.size }} invited)
-      </h3>
-      <div v-if="sortedInvitedIds.length === 0" class="it__empty">No one invited yet.</div>
-      <div v-for="id in sortedInvitedIds" :key="id" class="it__entry">
-        <PersonInfoDisplay :person-id="id" />
+    <template v-if="selectedList && !loading">
+      <div class="it__section">
+        <h3 class="it__section-title">
+          {{ selectedList.metadata.name }}
+          ({{ myInvitedIds.size }} invited)
+        </h3>
       </div>
-    </div>
+      <div v-if="groupedByRoot.length === 0" class="it__empty">No one invited yet.</div>
+      <div v-for="group in groupedByRoot" :key="group.name" class="it__section">
+        <h4 class="it__root-title" :style="{ borderLeftColor: group.color }">
+          {{ group.name }} ({{ group.ids.length }})
+        </h4>
+        <div v-for="id in group.ids" :key="id" class="it__entry">
+          <PersonInfoDisplay :person-id="id" :display-root-name="false" />
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -317,6 +370,17 @@ onMounted(async () => {
   border-bottom: 1px solid #f3f4f6;
 }
 
+.it__root-title {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  border-left: 4px solid;
+  border-bottom: 1px solid #e5e7eb;
+}
+
 .it__empty {
   padding: 16px;
   color: #9ca3af;
@@ -328,7 +392,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 16px;
+  /* padding: 0px 16px; */
   cursor: pointer;
   transition: background 0.1s;
   user-select: none;
@@ -363,6 +427,12 @@ onMounted(async () => {
 
 .it__invited-dot--no {
   background: #e5e7eb;
+}
+
+.it__entry :deep(.person__item) {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 @media (max-width: 768px) {

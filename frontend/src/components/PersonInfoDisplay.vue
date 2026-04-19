@@ -5,7 +5,9 @@ import { ChartNode, RootData } from '@/composables/useStoredData'
 import { computed } from 'vue'
 
 const props = defineProps({
-  personId: { type: String, required: true }
+  personId: { type: String, required: true },
+  displayMultiPersonName: { type: Boolean, default: true },
+  displayRootName: { type: Boolean, default: true }
 })
 
 const { getPersonName, getMultiPersonNodeName, getPersonNodeId } = useInvitationLists()
@@ -40,8 +42,12 @@ const personRootName = computed(() => {
 <template>
   <div class="person__item" :style="{ borderLeft: `4px solid ${personColor}` }">
     <span class="it__person-name">{{ personName }}</span>
-    <span v-if="multiPersonName" class="it__person-group">({{ multiPersonName }})</span>
-    <span v-if="personRootName" class="guest-sidebar__item-group">{{ personRootName }}</span>
+    <span v-if="displayMultiPersonName && multiPersonName" class="it__person-group"
+      >({{ multiPersonName }})</span
+    >
+    <span v-if="displayRootName && personRootName" class="guest-sidebar__item-group">{{
+      personRootName
+    }}</span>
   </div>
 </template>
 <style scoped>
@@ -66,7 +72,6 @@ const personRootName = computed(() => {
   border-left: 4px solid;
   border-radius: 8px;
   padding: 12px 16px;
-  margin-bottom: 8px;
   transition: all 0.2s;
 }
 
