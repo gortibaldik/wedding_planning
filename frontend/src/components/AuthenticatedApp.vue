@@ -24,7 +24,24 @@ const handleLogout = () => {
   emit('logout')
 }
 
-const activeTab = ref('family-tree')
+const validTabs = ['family-tree', 'invited-table', 'invitation-lists-manager', 'seating']
+
+const getTabFromHash = () => {
+  const hash = window.location.hash.slice(1) // remove '#'
+  const tab = hash.split('/')[0]
+  return validTabs.includes(tab) ? tab : 'family-tree'
+}
+
+const activeTab = ref(getTabFromHash())
+
+const setActiveTab = tab => {
+  activeTab.value = tab
+  window.location.hash = tab
+}
+
+window.addEventListener('hashchange', () => {
+  activeTab.value = getTabFromHash()
+})
 
 const { sidebarCollapsed } = useSidebarState()
 </script>
@@ -42,28 +59,28 @@ const { sidebarCollapsed } = useSidebarState()
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'family-tree' }"
-            @click="activeTab = 'family-tree'"
+            @click="setActiveTab('family-tree')"
           >
             Family Tree
           </button>
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'invited-table' }"
-            @click="activeTab = 'invited-table'"
+            @click="setActiveTab('invited-table')"
           >
             Invitations Comparison
           </button>
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'invitation-lists-manager' }"
-            @click="activeTab = 'invitation-lists-manager'"
+            @click="setActiveTab('invitation-lists-manager')"
           >
             Invitation Lists Manager
           </button>
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'seating' }"
-            @click="activeTab = 'seating'"
+            @click="setActiveTab('seating')"
           >
             Seating Arrangement
           </button>

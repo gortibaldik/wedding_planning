@@ -39,9 +39,19 @@ const takeSnapshot = () => {
   savedSnapshot.value = [...myInvitedIds.value].sort().join(',')
 }
 
+const updateHash = (listId: string) => {
+  window.location.hash = `invitation-lists-manager/${listId}`
+}
+
+const getListIdFromHash = (): string => {
+  const parts = window.location.hash.slice(1).split('/')
+  return parts[0] === 'invitation-lists-manager' && parts[1] ? parts[1] : ''
+}
+
 const handleSelectList = async (listId: string) => {
   if (!listId) return
   selectedListId.value = listId
+  updateHash(listId)
   loading.value = true
   try {
     const list = await fetchFullList(listId)
@@ -92,8 +102,15 @@ const handleSave = async () => {
 
 onMounted(async () => {
   await initInvitationLists()
-  if (usersLists.value.length > 0) {
-    await handleSelectList(usersLists.value[0].id)
+  const hashListId = getListIdFromHash()
+  const listToSelect =
+    hashListId && allLists.value.some(l => l.id === hashListId)
+      ? hashListId
+      : usersLists.value.length > 0
+        ? usersLists.value[0].id
+        : ''
+  if (listToSelect) {
+    await handleSelectList(listToSelect)
   }
 })
 </script>
