@@ -34,6 +34,30 @@ const isOwner = computed(() => {
   return selectedList.value.metadata.owner_sub === storedUserInfo.value?.sub
 })
 
+const isUniversalSetter = computed(() => {
+  return storedUserInfo.value?.roles?.includes('universal-invitation-list-setter') ?? false
+})
+
+const finalListId = ref<string | null>(null)
+
+const isSelectedFinal = computed(() => {
+  return !!selectedListId.value && selectedListId.value === finalListId.value
+})
+
+const fetchFinalListId = async () => {
+  try {
+    const res = await authFetch('/invitation-lists/get-final')
+    if (res.ok) {
+      const data = await res.json()
+      finalListId.value = data?.metadata?.id ?? null
+    } else if (res.status === 404) {
+      finalListId.value = null
+    }
+  } catch (e) {
+    console.warn('Failed to fetch final list:', e)
+  }
+}
+
 interface RootInfo {
   name: string
   color: string
@@ -173,6 +197,43 @@ const handleSave = async () => {
   }
 }
 
+const settingFinal = ref(false)
+
+const handleSetFinal = async () => {
+  if (!selectedListId.value) return
+  settingFinal.value = true
+  try {
+    const res = await authFetch(`/invitation-lists/set-final/${selectedListId.value}`, {
+      method: 'POST'
+    })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    finalListId.value = selectedListId.value
+  } catch (e) {
+    alert('Failed to set final: ' + (e instanceof Error ? e.message : String(e)))
+  } finally {
+    settingFinal.value = false
+  }
+}
+
+const handleUnsetFinal = async () => {
+  settingFinal.value = true
+  try {
+    const res = await authFetch('/invitation-lists/unset-final', { method: 'POST' })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    finalListId.value = null
+  } catch (e) {
+    alert('Failed to unset final: ' + (e instanceof Error ? e.message : String(e)))
+  } finally {
+    settingFinal.value = false
+  }
+}
+
 const deleting = ref(false)
 
 const handleDelete = async () => {
@@ -202,6 +263,7 @@ const handleDelete = async () => {
 
 onMounted(async () => {
   await initInvitationLists()
+  await fetchFinalListId()
   const hashListId = getListIdFromHash()
   const listToSelect =
     hashListId && allLists.value.some(l => l.id === hashListId)
@@ -253,6 +315,25 @@ onMounted(async () => {
           {{ deleting ? 'Deleting...' : 'Delete List' }}
         </button>
       </div>
+
+      <div v-if="isUniversalSetter && selectedListId" class="it__btn-group">
+        <button
+          v-if="!isSelectedFinal"
+          class="it__final-btn"
+          :disabled="settingFinal"
+          @click="handleSetFinal"
+        >
+          {{ settingFinal ? 'Setting...' : 'Set as Final' }}
+        </button>
+        <button
+          v-else
+          class="it__final-btn it__final-btn--unset"
+          :disabled="settingFinal"
+          @click="handleUnsetFinal"
+        >
+          {{ settingFinal ? 'Unsetting...' : 'Unset Final' }}
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="it__loading">Loading...</div>
@@ -266,6 +347,7 @@ onMounted(async () => {
         <h3 class="it__section-title">
           {{ selectedList.metadata.name }}
           <span class="it__owner-name">({{ selectedList.metadata.owner_name }})</span>
+          <span v-if="isSelectedFinal" class="it__final-badge">FINAL</span>
           - {{ myInvitedIds.size }} invited
         </h3>
       </div>
@@ -465,6 +547,46 @@ onMounted(async () => {
 .it__delete-btn:disabled {
   background: #fca5a5;
   cursor: not-allowed;
+}
+
+.it__final-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: white;
+  background: #8b5cf6;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.it__final-btn:hover:not(:disabled) {
+  background: #7c3aed;
+}
+
+.it__final-btn:disabled {
+  background: #c4b5fd;
+  cursor: not-allowed;
+}
+
+.it__final-btn--unset {
+  background: #6b7280;
+}
+
+.it__final-btn--unset:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.it__final-badge {
+  background: #8b5cf6;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
 }
 
 .it__loading {
