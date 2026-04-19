@@ -53,9 +53,9 @@ interface RootGroup {
   ids: string[]
 }
 
-const groupedByRoot = computed<RootGroup[]>(() => {
+const buildRootGroups = (ids: Iterable<string>): RootGroup[] => {
   const groups = new Map<string, RootGroup>()
-  for (const id of myInvitedIds.value) {
+  for (const id of ids) {
     const { name, color } = getRootInfo(id)
     const key = name || '__unknown__'
     if (!groups.has(key)) {
@@ -73,7 +73,17 @@ const groupedByRoot = computed<RootGroup[]>(() => {
     })
   }
   return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+const groupedByRoot = computed<RootGroup[]>(() => buildRootGroups(myInvitedIds.value))
+
+const uninvitedGroupedByRoot = computed<RootGroup[]>(() => {
+  const allPeopleIds = Object.keys(people.value)
+  const uninvitedIds = allPeopleIds.filter(id => !myInvitedIds.value.has(id))
+  return buildRootGroups(uninvitedIds)
 })
+
+const uninvitedExpanded = ref(false)
 
 const fetchFullList = async (listId: string): Promise<InvitationList> => {
   const res = await authFetch(`/invitation-lists/get/${listId}`)
@@ -216,9 +226,49 @@ onMounted(async () => {
         <h4 class="it__root-title" :style="{ borderLeftColor: group.color }">
           {{ group.name }} ({{ group.ids.length }})
         </h4>
-        <div v-for="id in group.ids" :key="id" class="it__entry">
+        <label v-for="id in group.ids" :key="id" class="it__entry">
           <PersonInfoDisplay :person-id="id" :display-root-name="false" />
-        </div>
+          <input
+            v-if="isOwner"
+            type="checkbox"
+            class="it__checkbox"
+            :checked="true"
+            @change="toggleInvitation(id)"
+          />
+        </label>
+      </div>
+
+      <div v-if="isOwner" class="it__section it__section--uninvited">
+        <h3
+          class="it__section-title it__section-title--clickable"
+          @click="uninvitedExpanded = !uninvitedExpanded"
+        >
+          <span
+            class="it__section-arrow"
+            :class="{ 'it__section-arrow--collapsed': !uninvitedExpanded }"
+            >&#9660;</span
+          >
+          Not invited ({{ Object.keys(people).length - myInvitedIds.size }})
+        </h3>
+        <template v-if="uninvitedExpanded">
+          <div v-if="uninvitedGroupedByRoot.length === 0" class="it__empty">
+            Everyone is invited.
+          </div>
+          <template v-for="group in uninvitedGroupedByRoot" :key="group.name">
+            <h4 class="it__root-title" :style="{ borderLeftColor: group.color }">
+              {{ group.name }} ({{ group.ids.length }})
+            </h4>
+            <label v-for="id in group.ids" :key="id" class="it__entry">
+              <PersonInfoDisplay :person-id="id" :display-root-name="false" />
+              <input
+                type="checkbox"
+                class="it__checkbox"
+                :checked="false"
+                @change="toggleInvitation(id)"
+              />
+            </label>
+          </template>
+        </template>
       </div>
     </template>
   </div>
@@ -358,6 +408,19 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+.it__section--uninvited {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.it__section--uninvited .it__root-title {
+  background: #fee2e2;
+}
+
+.it__section--uninvited .it__entry:hover {
+  background: #fee2e2;
+}
+
 .it__section-title {
   display: flex;
   align-items: center;
@@ -368,6 +431,25 @@ onMounted(async () => {
   font-weight: 600;
   color: #1f2937;
   border-bottom: 1px solid #f3f4f6;
+}
+
+.it__section-title--clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.it__section-title--clickable:hover {
+  background: #f9fafb;
+}
+
+.it__section-arrow {
+  font-size: 10px;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.it__section-arrow--collapsed {
+  transform: rotate(-90deg);
 }
 
 .it__root-title {
@@ -412,6 +494,8 @@ onMounted(async () => {
   cursor: pointer;
   accent-color: #3b82f6;
   flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 10px;
 }
 
 .it__invited-dot {
@@ -433,6 +517,11 @@ onMounted(async () => {
   border: none;
   border-radius: 0;
   box-shadow: none;
+  background: transparent;
+}
+
+.it__section--uninvited .it__entry :deep(.person__item) {
+  background: transparent;
 }
 
 @media (max-width: 768px) {
