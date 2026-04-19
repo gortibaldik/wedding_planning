@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { InvitationList, useInvitationLists } from '@/composables/useInvitationLists'
 import { RootData, useStoredData } from '@/composables/useStoredData'
 import { useAuth } from '@/composables/useAuth'
@@ -121,6 +121,22 @@ const handleSelectList = async (listId: string) => {
   }
 }
 
+const highlightedId = ref<string | null>(null)
+let highlightTimer: ReturnType<typeof setTimeout> | undefined
+
+const scrollToAndHighlight = async (personId: string) => {
+  await nextTick()
+  const el = document.querySelector(`[data-person-id="${personId}"]`)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    highlightedId.value = personId
+    clearTimeout(highlightTimer)
+    highlightTimer = setTimeout(() => {
+      highlightedId.value = null
+    }, 6000)
+  }
+}
+
 const toggleInvitation = (personId: string) => {
   const newSet = new Set(myInvitedIds.value)
   if (newSet.has(personId)) {
@@ -129,6 +145,7 @@ const toggleInvitation = (personId: string) => {
     newSet.add(personId)
   }
   myInvitedIds.value = newSet
+  scrollToAndHighlight(personId)
 }
 
 const handleRevert = () => {
@@ -226,7 +243,13 @@ onMounted(async () => {
         <h4 class="it__root-title" :style="{ borderLeftColor: group.color }">
           {{ group.name }} ({{ group.ids.length }})
         </h4>
-        <label v-for="id in group.ids" :key="id" class="it__entry">
+        <label
+          v-for="id in group.ids"
+          :key="id"
+          class="it__entry"
+          :class="{ 'it__entry--highlighted': highlightedId === id }"
+          :data-person-id="id"
+        >
           <PersonInfoDisplay :person-id="id" :display-root-name="false" />
           <input
             v-if="isOwner"
@@ -258,7 +281,13 @@ onMounted(async () => {
             <h4 class="it__root-title" :style="{ borderLeftColor: group.color }">
               {{ group.name }} ({{ group.ids.length }})
             </h4>
-            <label v-for="id in group.ids" :key="id" class="it__entry">
+            <label
+              v-for="id in group.ids"
+              :key="id"
+              class="it__entry"
+              :class="{ 'it__entry--highlighted': highlightedId === id }"
+              :data-person-id="id"
+            >
               <PersonInfoDisplay :person-id="id" :display-root-name="false" />
               <input
                 type="checkbox"
@@ -482,6 +511,20 @@ onMounted(async () => {
 
 .it__entry:hover {
   background: #f9fafb;
+}
+
+.it__entry--highlighted {
+  animation: highlight-fade 2s ease-out;
+}
+
+@keyframes highlight-fade {
+  0%,
+  30% {
+    background: #fef08a;
+  }
+  100% {
+    background: transparent;
+  }
 }
 
 .it__entry + .it__entry {
