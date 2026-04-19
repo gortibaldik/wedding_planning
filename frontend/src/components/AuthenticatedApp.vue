@@ -4,6 +4,7 @@ import { ref, watch } from 'vue'
 import GenealogyTree from './GenealogyTree/GenealogyTree.vue'
 import GenealogyTreeSidebar from './GenealogyTree/GenealogyTreeSidebar.vue'
 import InvitationComparisonTable from './InvitationComparisonTable.vue'
+import InvitationListsManager from './InvitationListsManager.vue'
 import SeatingArrangement from './SeatingArrangement/SeatingArrangement.vue'
 import { useGenealogyData } from '@/composables/useGenealogyData.ts'
 import { useSidebarState } from '@/composables/useSidebarState'
@@ -54,6 +55,13 @@ const { sidebarCollapsed } = useSidebarState()
           </button>
           <button
             class="tab-btn"
+            :class="{ active: activeTab === 'invitation-lists-manager' }"
+            @click="activeTab = 'invitation-lists-manager'"
+          >
+            Invitation Lists Manager
+          </button>
+          <button
+            class="tab-btn"
             :class="{ active: activeTab === 'seating' }"
             @click="activeTab = 'seating'"
           >
@@ -87,7 +95,8 @@ const { sidebarCollapsed } = useSidebarState()
         <GenealogyTree />
         <GenealogyTreeSidebar />
       </div>
-      <InvitationComparisonTable v-show="activeTab === 'invited-table'" />
+      <InvitationComparisonTable v-if="activeTab === 'invited-table'" />
+      <InvitationListsManager v-if="activeTab === 'invitation-lists-manager'" />
       <Suspense>
         <SeatingArrangement v-if="activeTab === 'seating'" />
       </Suspense>
