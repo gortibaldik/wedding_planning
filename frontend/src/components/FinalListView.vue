@@ -12,7 +12,7 @@ import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 
 const { initInvitationLists, getPersonName, getMultiPersonNodeName, getPersonNodeId } =
   useInvitationLists()
-const { authFetch, storedUserInfo } = useAuth()
+const { authFetch, isUniversalInvitationListSetter } = useAuth()
 const { findRootNode } = useBaseGraph()
 
 const finalList = ref<FinalInvitationListData | null>(null)
@@ -22,10 +22,6 @@ const notFound = ref(false)
 
 const finalEntries = ref<Record<string, FinalEntry>>({})
 const savedSnapshot = ref<string>('')
-
-const isUniversalSetter = computed(() => {
-  return storedUserInfo.value?.roles?.includes('universal-invitation-list-setter') ?? false
-})
 
 const invitedIds = computed<string[]>(() => {
   if (!finalList.value) return []
@@ -163,7 +159,7 @@ onMounted(async () => {
     <div v-if="notFound && !loading" class="it__empty-state">No final list has been set.</div>
 
     <template v-if="finalList && !loading">
-      <div v-if="isUniversalSetter" class="it__controls">
+      <div v-if="isUniversalInvitationListSetter" class="it__controls">
         <button
           class="it__save-btn"
           :class="{ 'it__save-btn--disabled': !dirty || saving }"
@@ -211,7 +207,7 @@ onMounted(async () => {
               v-model="finalEntries[id].invitation_given"
               type="checkbox"
               class="it__checkbox"
-              :disabled="!isUniversalSetter"
+              :disabled="!isUniversalInvitationListSetter"
             />
           </div>
           <div class="it__col-center" data-label="RSVP">
@@ -220,7 +216,7 @@ onMounted(async () => {
               v-model="finalEntries[id].rsvpd"
               class="it__rsvp-select"
               :class="`it__rsvp-select--${finalEntries[id].rsvpd.toLowerCase()}`"
-              :disabled="!isUniversalSetter"
+              :disabled="!isUniversalInvitationListSetter"
             >
               <option value="NOT_ANSWERED">—</option>
               <option value="WILL_COME">Coming</option>
@@ -233,7 +229,7 @@ onMounted(async () => {
               v-model="finalEntries[id].notes"
               type="text"
               class="it__notes-input"
-              :disabled="!isUniversalSetter"
+              :disabled="!isUniversalInvitationListSetter"
               placeholder="Notes..."
             />
           </div>

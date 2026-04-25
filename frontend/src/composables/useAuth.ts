@@ -39,6 +39,10 @@ const isLoggedIn = computed(() => {
   return storedUserInfo.value !== null
 })
 
+const isUniversalInvitationListSetter = computed(() => {
+  return storedUserInfo.value?.roles?.includes('universal-invitation-list-setter') ?? false
+})
+
 export function useAuth() {
   function buildHeaders(): Record<string, string> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -84,5 +88,13 @@ export function useAuth() {
     storedToken.value = null
   }
 
-  return { checkAuth, logout, isLoggedIn, storedUserInfo, buildHeaders, authFetch }
+  return {
+    checkAuth,
+    logout,
+    isLoggedIn,
+    storedUserInfo,
+    buildHeaders,
+    authFetch,
+    isUniversalInvitationListSetter
+  }
 }
