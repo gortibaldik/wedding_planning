@@ -101,7 +101,29 @@ const buildRootGroups = (ids: Iterable<string>): RootGroup[] => {
   return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
-const groupedByRoot = computed<RootGroup[]>(() => buildRootGroups(invitedIds.value))
+type InvitationFilter = 'all' | 'sent' | 'not_sent'
+type RsvpFilter = 'all' | 'not_answered' | 'answered'
+
+const filterInvitation = ref<InvitationFilter>('all')
+const filterRsvp = ref<RsvpFilter>('all')
+const filtersOpen = ref(false)
+const filtersActive = computed(() => filterInvitation.value !== 'all' || filterRsvp.value !== 'all')
+
+const filteredIds = computed<string[]>(() => {
+  return invitedIds.value.filter(id => {
+    const entry = finalEntries.value[id]
+    if (!entry) return true
+    if (filterInvitation.value === 'sent' && !entry.invitation_given) return false
+    if (filterInvitation.value === 'not_sent' && entry.invitation_given) return false
+    if (filterRsvp.value === 'not_answered' && entry.rsvpd !== 'NOT_ANSWERED') return false
+    if (filterRsvp.value === 'answered' && entry.rsvpd === 'NOT_ANSWERED') return false
+    return true
+  })
+})
+
+const groupedByRoot = computed<RootGroup[]>(() =>
+  buildRootGroups(filteredIds.value).filter(g => g.ids.length > 0)
+)
 
 const fetchFinalList = async () => {
   loading.value = true
@@ -179,12 +201,79 @@ onMounted(async () => {
       </div>
 
       <div class="it__section">
-        <h3 class="it__section-title">
+        <h3 class="it__section-title" @click="filtersOpen = !filtersOpen">
           {{ finalList.metadata.name }}
           <span class="it__owner-name">({{ finalList.metadata.owner_name }})</span>
           <span class="it__final-badge">FINAL</span>
-          - {{ invitedIds.length }} invited
+          - {{ filteredIds.length
+          }}<template v-if="filteredIds.length !== invitedIds.length"
+            >/{{ invitedIds.length }}</template
+          >
+          invited
+          <span class="it__filter-toggle" :class="{ 'it__filter-toggle--active': filtersActive }">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+            <span v-if="filtersActive" class="it__filter-dot" />
+          </span>
+          <svg
+            class="it__chevron"
+            :class="{ 'it__chevron--open': filtersOpen }"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
         </h3>
+        <div v-if="filtersOpen" class="it__filters">
+          <div class="it__filter-group">
+            <span class="it__filter-label">Invitation</span>
+            <button
+              v-for="opt in [
+                ['all', 'All'],
+                ['sent', 'Sent'],
+                ['not_sent', 'Not sent']
+              ] as const"
+              :key="opt[0]"
+              class="it__filter-btn"
+              :class="{ 'it__filter-btn--active': filterInvitation === opt[0] }"
+              @click.stop="filterInvitation = opt[0]"
+            >
+              {{ opt[1] }}
+            </button>
+          </div>
+          <div class="it__filter-group">
+            <span class="it__filter-label">RSVP</span>
+            <button
+              v-for="opt in [
+                ['all', 'All'],
+                ['not_answered', 'Pending'],
+                ['answered', 'Answered']
+              ] as const"
+              :key="opt[0]"
+              class="it__filter-btn"
+              :class="{ 'it__filter-btn--active': filterRsvp === opt[0] }"
+              @click.stop="filterRsvp = opt[0]"
+            >
+              {{ opt[1] }}
+            </button>
+          </div>
+        </div>
       </div>
       <div v-if="groupedByRoot.length === 0" class="it__empty">No one invited yet.</div>
       <div v-for="group in groupedByRoot" :key="group.name" class="it__section">
@@ -340,6 +429,97 @@ onMounted(async () => {
   font-weight: 600;
   color: #1f2937;
   border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  user-select: none;
+}
+
+.it__section-title:hover {
+  background: #f9fafb;
+}
+
+.it__filter-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.it__filter-toggle--active {
+  color: #3b82f6;
+}
+
+.it__filter-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+}
+
+.it__chevron {
+  color: #9ca3af;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.it__chevron--open {
+  transform: rotate(180deg);
+}
+
+.it__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fafafa;
+}
+
+.it__filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.it__filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 2px;
+}
+
+.it__filter-btn {
+  padding: 4px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: white;
+  color: #374151;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.it__filter-btn:hover {
+  background: #f3f4f6;
+}
+
+.it__filter-btn--active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.it__filter-btn--active:hover {
+  background: #2563eb;
 }
 
 .it__owner-name {
