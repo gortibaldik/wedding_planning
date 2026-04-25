@@ -1,23 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { InvitationList, useInvitationLists } from '@/composables/useInvitationLists'
+import {
+  useInvitationLists,
+  FinalEntry,
+  FinalInvitationListData
+} from '@/composables/useInvitationLists'
 import { RootData } from '@/composables/useStoredData'
 import { useAuth } from '@/composables/useAuth'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
-
-type RSVPStatus = 'NOT_ANSWERED' | 'WILL_COME' | 'WONT_COME'
-
-interface FinalEntry {
-  person_id: string
-  invitation_given: boolean
-  rsvpd: RSVPStatus
-  notes: string
-}
-
-interface FinalInvitationListData extends InvitationList {
-  final_entries: FinalEntry[]
-}
 
 const { initInvitationLists, getPersonName, getMultiPersonNodeName, getPersonNodeId } =
   useInvitationLists()

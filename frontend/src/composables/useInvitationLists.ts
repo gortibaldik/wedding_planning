@@ -21,6 +21,19 @@ export interface InvitationList {
   entries: InvitationEntry[]
 }
 
+type RSVPStatus = 'NOT_ANSWERED' | 'WILL_COME' | 'WONT_COME'
+
+export interface FinalEntry {
+  person_id: string
+  invitation_given: boolean
+  rsvpd: RSVPStatus
+  notes: string
+}
+
+export interface FinalInvitationListData extends InvitationList {
+  final_entries: FinalEntry[]
+}
+
 const allLists = ref<ListMetadata[]>([])
 const selectedListId = ref<string | null>(null)
 const selectedList = ref<InvitationList | null>(null)
