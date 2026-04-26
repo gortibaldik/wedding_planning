@@ -4,3 +4,4 @@ dist-ssr
 *.local
 package-lock.json
 .git
+public/landing.css

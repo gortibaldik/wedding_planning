@@ -1,96 +1,3 @@
-<script setup>
-import { ref, nextTick } from 'vue'
-import mainBg from '@/assets/login-bg.png'
-import kackyImg from '@/assets/kacicky.png'
-
-const adminOpen = ref(false)
-const adminContent = ref(null)
-
-const toggleAdmin = () => {
-  adminOpen.value = !adminOpen.value
-  if (adminOpen.value) {
-    const el = adminContent.value
-    if (!el) return
-    let running = true
-    const tick = () => {
-      if (!running) return
-      window.scrollTo({ top: document.body.scrollHeight })
-      requestAnimationFrame(tick)
-    }
-    const stop = () => {
-      running = false
-      el.removeEventListener('transitionend', stop)
-    }
-    el.addEventListener('transitionend', stop)
-    requestAnimationFrame(tick)
-  }
-}
-
-const login = () => {
-  if (import.meta.env.VITE_ENABLE_LOCAL_AUTH === 'true') {
-    const username = prompt('Meno')
-    if (username) {
-      window.location.href = `/auth/local?username=${encodeURIComponent(username)}`
-    }
-  } else {
-    window.location.href = '/auth/google'
-  }
-}
-</script>
-
-<template>
-  <div class="main-screen" :style="{ backgroundImage: `url(${mainBg})` }">
-    <h1 class="wedding-title">
-      <span>Eugenie</span>
-      <span class="wedding-title-amp">a</span>
-      <span>Frantisek</span>
-    </h1>
-    <h2 class="wedding-date">
-      <span>se vezmou</span>
-      <span>10. ŘÍJNA 2026</span>
-    </h2>
-    <img :src="kackyImg" alt="" class="kacky-img" />
-    <div class="sections">
-      <div class="section-divider"><span>🪶</span></div>
-      <div class="section">
-        <h3 class="section-title">ZÁKLADNÍ INFORMACE</h3>
-        <div class="section-body">
-          <div class="info-grid">
-            <span class="info-label">Obřad</span>
-            <span class="info-value">od 14:15 v Botanické záhradě v Košicích</span>
-            <span class="info-label">Hostina</span>
-            <span class="info-value">od 16:00 v Sále Bačíkova v Košicích</span>
-          </div>
-        </div>
-      </div>
-      <div class="section-divider"><span>🪶</span></div>
-      <div class="section">
-        <h3 class="section-title">DOTAZNÍKY</h3>
-        <div class="section-body">
-          <p class="section-text">Dotazníky se připravují</p>
-        </div>
-      </div>
-      <div class="section-divider"><span>🪶</span></div>
-      <div class="section">
-        <h3 class="section-title">FAQ</h3>
-        <div class="section-body">
-          <p class="section-text">Připravujeme</p>
-        </div>
-      </div>
-    </div>
-    <div class="admin-section">
-      <div class="admin-header" @click="toggleAdmin">
-        <span class="admin-title">Admin sekce</span>
-        <button class="admin-toggle">{{ adminOpen ? '▼' : '▲' }}</button>
-      </div>
-      <div ref="adminContent" class="admin-content" :class="{ 'admin-content-open': adminOpen }">
-        <button class="login-btn admin-login-btn" @click="login">Prihlásiť sa</button>
-      </div>
-    </div>
-  </div>
-</template>
-
-<style lang="scss" scoped>
 $color-pink: #ac2746;
 $color-green-dark: #495c23;
 $color-green: #839e37;
@@ -99,14 +6,14 @@ $color-white-overlay: rgba(255, 255, 255, 0.5);
 
 @font-face {
   font-family: 'Sisterhood';
-  src: url('@/assets/fonts/Sisterhood.ttf') format('truetype');
+  src: url('/fonts/Sisterhood.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Carelia-Upright';
-  src: url('@/assets/fonts/Carelia-Upright.ttf') format('truetype');
+  src: url('/fonts/Carelia-Upright.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
@@ -120,6 +27,7 @@ $color-white-overlay: rgba(255, 255, 255, 0.5);
   justify-content: flex-start;
   padding-top: 3rem;
   padding-bottom: 0;
+  background-image: url('/login-bg.png');
   background-size: cover;
   background-position: center;
   background-repeat: repeat;
@@ -134,7 +42,7 @@ $color-white-overlay: rgba(255, 255, 255, 0.5);
   gap: 2rem;
   font-size: 6rem;
   color: $color-pink;
-  font-weight: 600;
+  font-weight: normal;
   text-align: center;
   width: 100%;
   margin-top: 2rem;
@@ -339,4 +247,3 @@ $color-white-overlay: rgba(255, 255, 255, 0.5);
     }
   }
 }
-</style>

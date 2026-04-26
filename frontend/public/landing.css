@@ -1,0 +1,222 @@
+@font-face {
+  font-family: "Sisterhood";
+  src: url("/fonts/Sisterhood.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Carelia-Upright";
+  src: url("/fonts/Carelia-Upright.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+.main-screen {
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 3rem;
+  padding-bottom: 0;
+  background-image: url("/login-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: repeat;
+}
+
+.wedding-title {
+  font-family: "Sisterhood", serif;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  font-size: 6rem;
+  color: #ac2746;
+  font-weight: normal;
+  text-align: center;
+  width: 100%;
+  margin-top: 2rem;
+}
+.wedding-title-amp {
+  font-size: 3rem;
+}
+@media (max-width: 640px) {
+  .wedding-title {
+    gap: 1.5rem;
+    font-size: 3rem;
+    margin-top: 0.5rem;
+  }
+  .wedding-title-amp {
+    font-size: 2rem;
+  }
+}
+
+.wedding-date {
+  font-family: "Carelia-Upright", serif;
+  font-size: 1.5rem;
+  color: #ac2746;
+  font-weight: 400;
+  text-align: center;
+  margin-top: 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+@media (max-width: 640px) {
+  .wedding-date {
+    font-size: 1.1rem;
+    margin-top: 1rem;
+  }
+}
+
+.kacky-img {
+  max-width: 60rem;
+  width: 100%;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 50rem;
+  padding: 0 2rem;
+}
+@media (max-width: 640px) {
+  .sections {
+    padding: 0 1rem;
+  }
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+  margin: 0;
+}
+.section-divider::before, .section-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: #495c23;
+  opacity: 0.4;
+}
+.section-divider span {
+  font-size: 1.2rem;
+}
+
+.section {
+  width: 100%;
+  padding: 0 2rem 1.5rem;
+}
+.section .section-title {
+  font-family: "Carelia-Upright", serif;
+  font-size: 1.4rem;
+  color: #495c23;
+  font-weight: 400;
+  text-align: center;
+  margin-bottom: 1rem;
+  padding: 0.2rem 2rem 0.5rem;
+}
+.section .section-body {
+  display: flex;
+  justify-content: center;
+}
+.section .section-body .section-text {
+  color: #495c23;
+  font-size: 1rem;
+  text-align: center;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .section .section-title {
+    font-size: 1.1rem;
+  }
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 1.5rem;
+  row-gap: 0.4rem;
+}
+.info-grid .info-label {
+  color: #495c23;
+  font-size: 1rem;
+  text-align: right;
+  font-weight: 600;
+}
+.info-grid .info-value {
+  color: #495c23;
+  font-size: 1rem;
+  text-align: left;
+}
+
+.admin-section {
+  margin-top: auto;
+  width: 100%;
+}
+.admin-section .admin-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+.admin-section .admin-header .admin-title {
+  font-family: "Carelia-Upright", serif;
+  font-size: 1rem;
+  color: #495c23;
+}
+.admin-section .admin-header .admin-toggle {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  color: #495c23;
+  cursor: pointer;
+}
+.admin-section .admin-content {
+  display: flex;
+  justify-content: center;
+  padding: 0 1.5rem;
+  max-height: 0;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 0;
+  transition: max-height 0.35s ease, padding 0.35s ease;
+}
+.admin-section .admin-content.admin-content-open {
+  max-height: 200px;
+  padding: 1.5rem;
+}
+.admin-section .admin-content .admin-login-btn {
+  padding: 12px 32px;
+  background: #839e37;
+  color: #cfdaae;
+  border: 1px solid #495c23;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.admin-section .admin-content .admin-login-btn:hover {
+  opacity: 0.85;
+  background: #cfdaae;
+  color: #495c23;
+  transform: translateY(-2px);
+}
+.admin-section .admin-content .admin-login-btn:active {
+  transform: translateY(0);
+}
+@media (max-width: 640px) {
+  .admin-section .admin-header {
+    justify-content: center;
+  }
+}

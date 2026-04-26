@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eugenie a Frantisek</title>
+  <link rel="stylesheet" href="/landing.css" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+  </style>
+</head>
+<script>
+    var adminOpen = false;
+
+    function toggleAdmin() {
+      adminOpen = !adminOpen;
+      var content = document.getElementById('admin-content');
+      var toggle = document.getElementById('admin-toggle');
+      if (adminOpen) {
+        content.classList.add('admin-content-open');
+        toggle.textContent = '▼';
+        var running = true;
+        var tick = function() {
+          if (!running) return;
+          window.scrollTo({ top: document.body.scrollHeight });
+          requestAnimationFrame(tick);
+        };
+        var stop = function() {
+          running = false;
+          content.removeEventListener('transitionend', stop);
+        };
+        content.addEventListener('transitionend', stop);
+        requestAnimationFrame(tick);
+      } else {
+        content.classList.remove('admin-content-open');
+        toggle.textContent = '▲';
+      }
+    }
+
+    function login() {
+      {% if enable_local_auth %}
+      var username = prompt('Meno');
+      if (username) {
+        window.location.href = '/auth/local?username=' + encodeURIComponent(username);
+      }
+      {% else %}
+      window.location.href = '/auth/google';
+      {% endif %}
+    }
+  </script>
+<body>
+  <div class="main-screen">
+    <h1 class="wedding-title">
+      <span>Eugenie</span>
+      <span class="wedding-title-amp">a</span>
+      <span>Frantisek</span>
+    </h1>
+    <h2 class="wedding-date">
+      <span>se vezmou</span>
+      <span>10. ŘÍJNA 2026</span>
+    </h2>
+    <img src="/kacicky.png" alt="" class="kacky-img" />
+    <div class="sections">
+      <div class="section-divider"><span>🪶</span></div>
+      <div class="section">
+        <h3 class="section-title">ZÁKLADNÍ INFORMACE</h3>
+        <div class="section-body">
+          <div class="info-grid">
+            <span class="info-label">Obřad</span>
+            <span class="info-value">od 14:15 v Botanické záhradě v Košicích</span>
+            <span class="info-label">Hostina</span>
+            <span class="info-value">od 16:00 v Sále Bačíkova v Košicích</span>
+          </div>
+        </div>
+      </div>
+      <div class="section-divider"><span>🪶</span></div>
+      <div class="section">
+        <h3 class="section-title">DOTAZNÍKY</h3>
+        <div class="section-body">
+          <p class="section-text">Dotazníky se připravují</p>
+        </div>
+      </div>
+      <div class="section-divider"><span>🪶</span></div>
+      <div class="section">
+        <h3 class="section-title">FAQ</h3>
+        <div class="section-body">
+          <p class="section-text">Připravujeme</p>
+        </div>
+      </div>
+    </div>
+    <div class="admin-section">
+      <div class="admin-header" onclick="toggleAdmin()">
+        <span class="admin-title">Admin sekce</span>
+        <button id="admin-toggle" class="admin-toggle">▲</button>
+      </div>
+      <div id="admin-content" class="admin-content">
+        <button class="admin-login-btn" onclick="login()">Přihlásit se</button>
+      </div>
+    </div>
+  </div>
+
+
+</body>
+</html>

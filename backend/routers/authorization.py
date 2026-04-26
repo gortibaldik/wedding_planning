@@ -36,7 +36,7 @@ def _create_token_and_redirect(
         algorithm=config.algorithm,
     )
     return RedirectResponse(
-        url=f"{config.redirect_url_after_auth_base}/?token={jwt_token}"
+        url=f"{config.redirect_url_after_auth_base}/app?token={jwt_token}"
     )
 
 

@@ -15,5 +15,6 @@ RUN pip install --no-cache-dir .
 COPY backend/ ./backend/
 COPY --chmod=755 ./start.sh ./start.sh
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+COPY --from=frontend-builder /app/frontend/public ./frontend/public
 EXPOSE 8000
 CMD ["./start.sh"]

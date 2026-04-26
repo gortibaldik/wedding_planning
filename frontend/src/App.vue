@@ -1,20 +1,29 @@
 <script setup>
-console.info('RUNING SETUP FOR APP')
-import { ref, onMounted } from 'vue'
+import { watch, onMounted } from 'vue'
 import { useAuth } from './composables/useAuth.ts'
-import LandingPage from './components/LandingPage.vue'
 import AuthenticatedApp from './components/AuthenticatedApp.vue'
+
+const skipAuth = import.meta.env.VITE_SKIP_AUTH === 'true'
 
 const { checkAuth, isLoggedIn } = useAuth()
 
+const redirectIfUnauthenticated = val => {
+  console.info('IS LOGGED IN?', val)
+  if (!val && !skipAuth) {
+    window.location.href = '/'
+  }
+}
+
 onMounted(() => {
   checkAuth()
+  redirectIfUnauthenticated(isLoggedIn.value)
 })
+
+watch(isLoggedIn, redirectIfUnauthenticated)
 </script>
 
 <template>
-  <LandingPage v-if="!isLoggedIn" />
-  <Suspense v-else>
+  <Suspense v-if="isLoggedIn || skipAuth">
     <AuthenticatedApp />
   </Suspense>
 </template>

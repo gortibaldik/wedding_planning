@@ -20,6 +20,7 @@ export interface UserInfo {
 }
 
 const getUserInfo = (token: string): UserInfo | null => {
+  console.info('TRYING TO PARSE TOKEN', token)
   if (!token) return null
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
@@ -29,6 +30,7 @@ const getUserInfo = (token: string): UserInfo | null => {
       roles: payload.roles || []
     }
   } catch {
+    console.error('ERROR PARSING TOKEN', token)
     return null
   }
 }
@@ -36,6 +38,7 @@ const getUserInfo = (token: string): UserInfo | null => {
 const storedToken = ref<null | string>(null)
 const storedUserInfo = computed(() => getUserInfo(storedToken.value))
 const isLoggedIn = computed(() => {
+  console.info('storedUserInfo.value', storedUserInfo.value)
   return storedUserInfo.value !== null
 })
 
@@ -73,7 +76,7 @@ export function useAuth() {
 
     if (urlToken) {
       localStorage.setItem(TOKEN_KEY, urlToken)
-      window.history.replaceState({}, '', '/')
+      window.history.replaceState({}, '', '/app')
       storedToken.value = urlToken
       console.info('Loaded stored token from url!', storedToken.value)
       return
