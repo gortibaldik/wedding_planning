@@ -104,6 +104,10 @@ html[lang=ru] .admin-title {
   }
 }
 
+.groom-name {
+  white-space: nowrap;
+}
+
 .kacky-img {
   max-width: 60rem;
   width: 100%;
