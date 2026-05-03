@@ -26,6 +26,24 @@
   background-repeat: repeat;
 }
 
+html[lang=ru] .wedding-title {
+  font-family: "Great Vibes", cursive;
+}
+html[lang=ru] .wedding-title .caron-wrap::after {
+  top: 0.1em;
+  left: 90%;
+}
+html[lang=ru] .wedding-date,
+html[lang=ru] .section-title,
+html[lang=ru] .section-text,
+html[lang=ru] .info-label,
+html[lang=ru] .info-value,
+html[lang=ru] .admin-title {
+  font-family: "Amatic SC", serif;
+  font-weight: 700;
+  font-size: 2em;
+}
+
 .caron-wrap {
   position: relative;
   display: inline-block;

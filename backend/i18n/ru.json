@@ -1,0 +1,34 @@
+{
+  "page_title": "Евгения и František",
+  "lang": "ru",
+  "bride": "Евгения",
+  "connector": "и",
+  "groom": "František",
+  "wedding_date_label": "вступают в брак",
+  "wedding_date": "10 ОКТЯБРЯ 2026",
+  "sections": [
+    {
+      "title": "ОСНОВНАЯ ИНФОРМАЦИЯ",
+      "type": "info-grid",
+      "rows": [
+        { "label": "Церемония", "value": "в 14:15 в Ботаническом саду в Кошице" },
+        { "label": "Банкет", "value": "в 16:00 в зале Бачикова в Кошице" }
+      ]
+    },
+    {
+      "title": "АНКЕТЫ",
+      "type": "text",
+      "text": "Анкеты готовятся"
+    },
+    {
+      "title": "ВОПРОСЫ И ОТВЕТЫ",
+      "type": "text",
+      "text": "В разработке"
+    }
+  ],
+  "admin": {
+    "title": "Админ раздел",
+    "login_button": "Войти",
+    "login_prompt": "Имя"
+  }
+}

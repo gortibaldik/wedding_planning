@@ -33,6 +33,28 @@ $color-white-overlay: rgba(255, 255, 255, 0.5);
   background-repeat: repeat;
 }
 
+html[lang="ru"] {
+  .wedding-title {
+    font-family: 'Great Vibes', cursive;
+
+    .caron-wrap::after {
+      top: 0.1em;
+      left: 90%;
+    }
+  }
+
+  .wedding-date,
+  .section-title,
+  .section-text,
+  .info-label,
+  .info-value,
+  .admin-title {
+    font-family: 'Amatic SC', serif;
+    font-weight: 700;
+    font-size: 2em;
+  }
+}
+
 .caron-wrap {
   position: relative;
   display: inline-block;

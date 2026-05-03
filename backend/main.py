@@ -11,15 +11,26 @@ from fastapi.templating import Jinja2Templates
 
 from .config import Config
 from .dependencies import close_redis, get_config, init_config, init_redis
+from .geo import country_code
 from .routers import authorization, family_structure, invitation_lists, seating
 
 I18N_DIR = Path(__file__).parent / "i18n"
 
+COUNTRY_TO_LANG = {"SK": "sk", "CZ": "cs", "RU": "ru"}
+DEFAULT_LANG = "cs"
+
 
 def load_i18n(lang: str) -> dict:
     path = I18N_DIR / f"{lang}.json"
+    if not path.exists():
+        path = I18N_DIR / f"{DEFAULT_LANG}.json"
     with path.open(encoding="utf-8") as f:
         return json.load(f)
+
+
+def pick_lang(request: Request) -> str:
+    cc = country_code(request) or ""
+    return COUNTRY_TO_LANG.get(cc, DEFAULT_LANG)
 
 
 logging.basicConfig(
@@ -52,9 +63,9 @@ app.include_router(seating.router)
 async def landing_page(
     request: Request, config: Annotated[Config, Depends(get_config)]
 ):
-    logger.info("Arrived request and returning landing.html!")
-    text = load_i18n("cs")
-    logger.warning(f"Loaded template: {text}")
+    lang = pick_lang(request)
+    logger.info("Arrived request, serving landing.html (lang=%s)", lang)
+    text = load_i18n(lang)
     return templates.TemplateResponse(
         request,
         "landing.html",
