@@ -1,3 +1,4 @@
+import json
 import logging
 import sys
 from contextlib import asynccontextmanager
@@ -11,6 +12,15 @@ from fastapi.templating import Jinja2Templates
 from .config import Config
 from .dependencies import close_redis, get_config, init_config, init_redis
 from .routers import authorization, family_structure, invitation_lists, seating
+
+I18N_DIR = Path(__file__).parent / "i18n"
+
+
+def load_i18n(lang: str) -> dict:
+    path = I18N_DIR / f"{lang}.json"
+    with path.open(encoding="utf-8") as f:
+        return json.load(f)
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,8 +53,12 @@ async def landing_page(
     request: Request, config: Annotated[Config, Depends(get_config)]
 ):
     logger.info("Arrived request and returning landing.html!")
+    text = load_i18n("cs")
+    logger.warning(f"Loaded template: {text}")
     return templates.TemplateResponse(
-        request, "landing.html", {"enable_local_auth": config.enable_local_auth}
+        request,
+        "landing.html",
+        {"enable_local_auth": config.enable_local_auth, **text},
     )
 
 

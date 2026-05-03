@@ -1,0 +1,34 @@
+{
+  "page_title": "Eugenie a Frantisek",
+  "lang": "sk",
+  "bride": "Eugenie",
+  "connector": "a",
+  "groom": "Frantisek",
+  "wedding_date_label": "se vezmou",
+  "wedding_date": "10. ŘÍJNA 2026",
+  "sections": [
+    {
+      "title": "ZÁKLADNÍ INFORMACE",
+      "type": "info-grid",
+      "rows": [
+        { "label": "Obřad", "value": "od 14:15 v Botanické záhradě v Košicích" },
+        { "label": "Hostina", "value": "od 16:00 v Sále Bačíkova v Košicích" }
+      ]
+    },
+    {
+      "title": "DOTAZNÍKY",
+      "type": "text",
+      "text": "Dotazníky se připravují"
+    },
+    {
+      "title": "FAQ",
+      "type": "text",
+      "text": "Připravujeme"
+    }
+  ],
+  "admin": {
+    "title": "Admin sekce",
+    "login_button": "Přihlásit se",
+    "login_prompt": "Meno"
+  }
+}

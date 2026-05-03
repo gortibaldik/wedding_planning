@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sk">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Eugenie a Frantisek</title>
+  <title>{{ page_title }}</title>
   <link rel="stylesheet" href="/landing.css" />
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -42,7 +42,7 @@
 
     function login() {
       {% if enable_local_auth %}
-      var username = prompt('Meno');
+      var username = prompt('{{ admin.login_prompt }}');
       if (username) {
         window.location.href = '/auth/local?username=' + encodeURIComponent(username);
       }
@@ -54,50 +54,42 @@
 <body>
   <div class="main-screen">
     <h1 class="wedding-title">
-      <span>Eugenie</span>
-      <span class="wedding-title-amp">a</span>
-      <span>Frantisek</span>
+      <span>{{ bride }}</span>
+      <span class="wedding-title-amp">{{ connector }}</span>
+      <span>{{ groom }}</span>
     </h1>
     <h2 class="wedding-date">
-      <span>se vezmou</span>
-      <span>10. ŘÍJNA 2026</span>
+      <span>{{ wedding_date_label }}</span>
+      <span>{{ wedding_date }}</span>
     </h2>
     <img src="/kacicky.png" alt="" class="kacky-img" />
     <div class="sections">
+      {% for section in sections %}
       <div class="section-divider"><span>🪶</span></div>
       <div class="section">
-        <h3 class="section-title">ZÁKLADNÍ INFORMACE</h3>
+        <h3 class="section-title">{{ section.title }}</h3>
         <div class="section-body">
+          {% if section.type == "info-grid" %}
           <div class="info-grid">
-            <span class="info-label">Obřad</span>
-            <span class="info-value">od 14:15 v Botanické záhradě v Košicích</span>
-            <span class="info-label">Hostina</span>
-            <span class="info-value">od 16:00 v Sále Bačíkova v Košicích</span>
+            {% for item in section.rows %}
+            <span class="info-label">{{ item.label }}</span>
+            <span class="info-value">{{ item.value }}</span>
+            {% endfor %}
           </div>
+          {% elif section.type == "text" %}
+          <p class="section-text">{{ section.text }}</p>
+          {% endif %}
         </div>
       </div>
-      <div class="section-divider"><span>🪶</span></div>
-      <div class="section">
-        <h3 class="section-title">DOTAZNÍKY</h3>
-        <div class="section-body">
-          <p class="section-text">Dotazníky se připravují</p>
-        </div>
-      </div>
-      <div class="section-divider"><span>🪶</span></div>
-      <div class="section">
-        <h3 class="section-title">FAQ</h3>
-        <div class="section-body">
-          <p class="section-text">Připravujeme</p>
-        </div>
-      </div>
+      {% endfor %}
     </div>
     <div class="admin-section">
       <div class="admin-header" onclick="toggleAdmin()">
-        <span class="admin-title">Admin sekce</span>
+        <span class="admin-title">{{ admin.title }}</span>
         <button id="admin-toggle" class="admin-toggle">▲</button>
       </div>
       <div id="admin-content" class="admin-content">
-        <button class="admin-login-btn" onclick="login()">Přihlásit se</button>
+        <button class="admin-login-btn" onclick="login()">{{ admin.login_button }}</button>
       </div>
     </div>
   </div>
