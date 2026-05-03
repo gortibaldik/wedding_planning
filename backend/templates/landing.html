@@ -40,6 +40,12 @@
       }
     }
 
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.groom-name').forEach(function(el) {
+        el.innerHTML = el.textContent.replace(/š/g, '<span class="caron-wrap">s</span>');
+      });
+    });
+
     function login() {
       {% if enable_local_auth %}
       var username = prompt('{{ admin.login_prompt }}');
@@ -56,7 +62,7 @@
     <h1 class="wedding-title">
       <span>{{ bride }}</span>
       <span class="wedding-title-amp">{{ connector }}</span>
-      <span>{{ groom }}</span>
+      <span class="groom-name">{{ groom }}</span>
     </h1>
     <h2 class="wedding-date">
       <span>{{ wedding_date_label }}</span>

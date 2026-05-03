@@ -33,6 +33,21 @@ $color-white-overlay: rgba(255, 255, 255, 0.5);
   background-repeat: repeat;
 }
 
+.caron-wrap {
+  position: relative;
+  display: inline-block;
+
+  &::after {
+    content: 'ˇ';
+    position: absolute;
+    left: 50%;
+    top: 0.72em;
+    transform: translateX(-50%);
+    pointer-events: none;
+    line-height: 1;
+  }
+}
+
 .wedding-title {
   font-family: 'Sisterhood', serif;
   display: flex;

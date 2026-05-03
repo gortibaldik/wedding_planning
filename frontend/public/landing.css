@@ -1,3 +1,4 @@
+@charset "UTF-8";
 @font-face {
   font-family: "Sisterhood";
   src: url("/fonts/Sisterhood.ttf") format("truetype");
@@ -23,6 +24,20 @@
   background-size: cover;
   background-position: center;
   background-repeat: repeat;
+}
+
+.caron-wrap {
+  position: relative;
+  display: inline-block;
+}
+.caron-wrap::after {
+  content: "ˇ";
+  position: absolute;
+  left: 50%;
+  top: 0.72em;
+  transform: translateX(-50%);
+  pointer-events: none;
+  line-height: 1;
 }
 
 .wedding-title {
