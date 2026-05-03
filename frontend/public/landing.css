@@ -109,6 +109,111 @@ html[lang=ru] .admin-title {
   width: 100%;
 }
 
+.kacky-video {
+  aspect-ratio: 16/9;
+  height: auto;
+  border: none;
+}
+
+.entry-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url("/login-bg.png");
+  background-size: cover;
+  background-position: center;
+}
+.entry-gate::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.stop-music-btn {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  font-family: "Carelia-Upright", serif;
+  font-size: 1rem;
+  color: #cfdaae;
+  background: #839e37;
+  border: 1px solid #495c23;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.stop-music-btn:hover {
+  background: #cfdaae;
+  color: #495c23;
+}
+
+.entry-gate-btn {
+  position: relative;
+  font-family: "Carelia-Upright", serif;
+  font-size: 1.5rem;
+  color: #cfdaae;
+  background: #839e37;
+  border: 1px solid #495c23;
+  border-radius: 8px;
+  padding: 1rem 2.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.entry-gate-btn:hover {
+  background: #cfdaae;
+  color: #495c23;
+  transform: translateY(-2px);
+}
+.entry-gate-btn:active {
+  transform: translateY(0);
+}
+
+.kacky-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 60rem;
+  display: flex;
+  justify-content: center;
+}
+
+.unmute-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-bottom: 6rem;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-family: "Carelia-Upright", serif;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.2s;
+}
+.unmute-overlay:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+.unmute-overlay .unmute-icon {
+  font-size: 2rem;
+}
+@media (max-width: 640px) {
+  .unmute-overlay {
+    font-size: 1.1rem;
+  }
+  .unmute-overlay .unmute-icon {
+    font-size: 1.5rem;
+  }
+}
+
 .sections {
   display: flex;
   flex-direction: column;

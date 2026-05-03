@@ -121,6 +121,117 @@ html[lang="ru"] {
   width: 100%;
 }
 
+.kacky-video {
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border: none;
+}
+
+.entry-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url('/login-bg.png');
+  background-size: cover;
+  background-position: center;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.stop-music-btn {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  font-family: 'Carelia-Upright', serif;
+  font-size: 1rem;
+  color: $color-green-light;
+  background: $color-green;
+  border: 1px solid $color-green-dark;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-green-light;
+    color: $color-green-dark;
+  }
+}
+
+.entry-gate-btn {
+  position: relative;
+  font-family: 'Carelia-Upright', serif;
+  font-size: 1.5rem;
+  color: $color-green-light;
+  background: $color-green;
+  border: 1px solid $color-green-dark;
+  border-radius: 8px;
+  padding: 1rem 2.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-green-light;
+    color: $color-green-dark;
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.kacky-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 60rem;
+  display: flex;
+  justify-content: center;
+}
+
+.unmute-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-bottom: 6rem;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-family: 'Carelia-Upright', serif;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .unmute-icon {
+    font-size: 2rem;
+  }
+
+  @media (max-width: 640px) {
+    font-size: 1.1rem;
+
+    .unmute-icon {
+      font-size: 1.5rem;
+    }
+  }
+}
+
 .sections {
   display: flex;
   flex-direction: column;

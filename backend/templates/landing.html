@@ -47,6 +47,59 @@
       document.querySelectorAll('.groom-name').forEach(function(el) {
         el.innerHTML = el.textContent.replace(/š/g, '<span class="caron-wrap">s</span>');
       });
+
+      var gateBtn = document.getElementById('entry-gate-btn');
+      if (gateBtn) {
+        gateBtn.addEventListener('click', function() {
+          var gate = document.getElementById('entry-gate');
+          if (gate) gate.remove();
+
+          var wrapper = document.getElementById('kacky-wrapper');
+          if (wrapper) {
+            var iframe = document.createElement('iframe');
+            iframe.className = 'kacky-img kacky-video';
+            iframe.title = 'Kačičky';
+            iframe.allow = 'autoplay; encrypted-media';
+            iframe.allowFullscreen = true;
+            iframe.frameBorder = '0';
+            iframe.src = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&playsinline=1&rel=0&controls=0&start=85';
+            wrapper.appendChild(iframe);
+          }
+
+          var audio = new Audio('/never_gonna_give_you_up.mp3');
+          audio.currentTime = 0;
+          audio.play().catch(function(err) {
+            console.warn('Audio play failed:', err);
+          });
+
+          var stopped = false;
+          var stop = function() {
+            if (stopped) return;
+            stopped = true;
+            audio.pause();
+            audio.currentTime = 0;
+            if (wrapper) {
+              wrapper.innerHTML = '';
+              var img = document.createElement('img');
+              img.src = '/kacicky.png';
+              img.alt = '';
+              img.className = 'kacky-img';
+              wrapper.appendChild(img);
+            }
+            stopBtn.remove();
+            clearTimeout(autoStop);
+          };
+
+          var stopBtn = document.createElement('button');
+          stopBtn.type = 'button';
+          stopBtn.className = 'stop-music-btn';
+          stopBtn.textContent = '🔇 Vypnout zvuk';
+          stopBtn.addEventListener('click', stop);
+          document.body.appendChild(stopBtn);
+
+          var autoStop = setTimeout(stop, 7000);
+        });
+      }
     });
 
     function login() {
@@ -61,6 +114,13 @@
     }
   </script>
 <body>
+  {% if enable_rickroll %}
+  <div id="entry-gate" class="entry-gate">
+    <button id="entry-gate-btn" class="entry-gate-btn" type="button">
+      Přejít na Pozvánku
+    </button>
+  </div>
+  {% endif %}
   <div class="main-screen">
     <h1 class="wedding-title">
       <span>{{ bride }}</span>
@@ -71,7 +131,11 @@
       <span>{{ wedding_date_label }}</span>
       <span>{{ wedding_date }}</span>
     </h2>
+    {% if enable_rickroll %}
+    <div id="kacky-wrapper" class="kacky-wrapper"></div>
+    {% else %}
     <img src="/kacicky.png" alt="" class="kacky-img" />
+    {% endif %}
     <div class="sections">
       {% for section in sections %}
       <div class="section-divider"><span>🪶</span></div>
