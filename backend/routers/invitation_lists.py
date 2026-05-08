@@ -226,9 +226,6 @@ async def get_final(
     invitation_list = await _get_list_by_id(redis, final_id)
     final_entries_raw = decompress(await redis.get(FINAL_LIST_ENTRIES_KEY))
     final_entries = SetFinalEntriesRequest.model_validate_json(final_entries_raw)
-    logger.warning(
-        f"FINAL_ENTRIES from redis: {final_entries.model_dump_json(indent=2)}"
-    )
     return FinalInvitationList(
         metadata=invitation_list.metadata,
         entries=invitation_list.entries,
