@@ -31,7 +31,7 @@ async def landing_page(
     i18n: Annotated[dict[str, dict], Depends(get_i18n)],
 ):
     lang = pick_lang(request)
-    logger.info("Arrived request, serving landing.html (lang=%s)", lang)
+    logger.info("landing page request", extra={"page": "landing", "lang": lang})
     text = i18n.get(lang) or i18n[DEFAULT_LANG]
     return templates.TemplateResponse(
         request,

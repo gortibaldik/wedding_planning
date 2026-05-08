@@ -3,6 +3,7 @@ import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from pythonjsonlogger.json import JsonFormatter
 
 from .dependencies import (
     close_redis,
@@ -14,11 +15,9 @@ from .dependencies import (
 )
 from .routers import authorization, family_structure, index, invitation_lists, seating
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    stream=sys.stdout,
-)
+_handler = logging.StreamHandler(sys.stdout)
+_handler.setFormatter(JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
 logger = logging.getLogger(__name__)
 
 

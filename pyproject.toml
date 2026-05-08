@@ -17,6 +17,7 @@ dependencies = [
     "geoip2>=4.8.0",
     "google-auth>=2.0.0",
     "google-api-python-client>=2.0.0",
+    "python-json-logger>=2.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]
