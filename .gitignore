@@ -28,3 +28,5 @@ frontend/dist-ssr
 *.sln
 *.sw?
 never_gonna_give_you_up.mp3
+.credentials-google-drive
+__pycache__

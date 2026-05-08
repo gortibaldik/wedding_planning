@@ -1,4 +1,3 @@
-import json
 import logging
 from pathlib import Path
 from typing import Annotated
@@ -8,11 +7,9 @@ from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 
 from backend.config import Config
-from backend.dependencies import get_config
+from backend.dependencies import get_config, get_i18n
 
 from .geo_utils import country_code
-
-I18N_DIR = Path(__file__).parent / "i18n"
 
 COUNTRY_TO_LANG = {"SK": "sk", "CZ": "cs", "RU": "ru"}
 DEFAULT_LANG = "cs"
@@ -22,14 +19,6 @@ router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 
-def load_i18n(lang: str) -> dict:
-    path = I18N_DIR / f"{lang}.json"
-    if not path.exists():
-        path = I18N_DIR / f"{DEFAULT_LANG}.json"
-    with path.open(encoding="utf-8") as f:
-        return json.load(f)
-
-
 def pick_lang(request: Request) -> str:
     cc = country_code(request) or ""
     return COUNTRY_TO_LANG.get(cc, DEFAULT_LANG)
@@ -37,11 +26,13 @@ def pick_lang(request: Request) -> str:
 
 @router.get("/")
 async def landing_page(
-    request: Request, config: Annotated[Config, Depends(get_config)]
+    request: Request,
+    config: Annotated[Config, Depends(get_config)],
+    i18n: Annotated[dict[str, dict], Depends(get_i18n)],
 ):
     lang = pick_lang(request)
     logger.info("Arrived request, serving landing.html (lang=%s)", lang)
-    text = load_i18n(lang)
+    text = i18n.get(lang) or i18n[DEFAULT_LANG]
     return templates.TemplateResponse(
         request,
         "landing.html",
