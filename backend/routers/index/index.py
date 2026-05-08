@@ -40,7 +40,7 @@ async def landing_page(
     )
 
 
-root_path = Path(__file__).parent.parent.parent
+root_path = Path(__file__).parent.parent.parent.parent
 frontend_public = root_path / "frontend" / "public"
 frontend_dist = root_path / "frontend" / "dist"
 
