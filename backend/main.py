@@ -1,37 +1,11 @@
-import json
 import logging
 import sys
 from contextlib import asynccontextmanager
-from pathlib import Path
-from typing import Annotated
 
-from fastapi import Depends, FastAPI, Request
-from fastapi.responses import FileResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI
 
-from .config import Config
 from .dependencies import close_redis, get_config, init_config, init_redis
-from .geo import country_code
-from .routers import authorization, family_structure, invitation_lists, seating
-
-I18N_DIR = Path(__file__).parent / "i18n"
-
-COUNTRY_TO_LANG = {"SK": "sk", "CZ": "cs", "RU": "ru"}
-DEFAULT_LANG = "cs"
-
-
-def load_i18n(lang: str) -> dict:
-    path = I18N_DIR / f"{lang}.json"
-    if not path.exists():
-        path = I18N_DIR / f"{DEFAULT_LANG}.json"
-    with path.open(encoding="utf-8") as f:
-        return json.load(f)
-
-
-def pick_lang(request: Request) -> str:
-    cc = country_code(request) or ""
-    return COUNTRY_TO_LANG.get(cc, DEFAULT_LANG)
-
+from .routers import authorization, family_structure, index, invitation_lists, seating
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,36 +25,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
-
 app.include_router(authorization.router)
 app.include_router(invitation_lists.router)
 app.include_router(family_structure.router)
 app.include_router(seating.router)
-
-
-@app.get("/")
-async def landing_page(
-    request: Request, config: Annotated[Config, Depends(get_config)]
-):
-    lang = pick_lang(request)
-    logger.info("Arrived request, serving landing.html (lang=%s)", lang)
-    text = load_i18n(lang)
-    return templates.TemplateResponse(
-        request,
-        "landing.html",
-        {"enable_local_auth": config.enable_local_auth, **text},
-    )
-
-
-frontend_public = Path(__file__).parent.parent / "frontend" / "public"
-frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
-
-
-@app.get("/{path:path}")
-async def serve_frontend(path: str):
-    for base in [frontend_public, frontend_dist]:
-        file = base / path
-        if file.is_file():
-            return FileResponse(file)
-    return FileResponse(frontend_dist / "index.html")
+app.include_router(index.router)
