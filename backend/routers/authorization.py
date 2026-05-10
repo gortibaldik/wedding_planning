@@ -13,6 +13,7 @@ from backend.dependencies import get_config
 
 from .family_structure import CHANGE_STATUS_ROLE
 from .invitation_lists import UNIVERSAL_INVITATION_LIST_SETTER_ROLE
+from .managed_files import MANAGED_FILES_EDITOR_ROLE
 
 router = APIRouter(prefix="/auth")
 logger = logging.getLogger(__name__)
@@ -23,7 +24,13 @@ def _create_token_and_redirect(
 ) -> RedirectResponse:
     roles = []
     if email in config.super_users:
-        roles.extend([CHANGE_STATUS_ROLE, UNIVERSAL_INVITATION_LIST_SETTER_ROLE])
+        roles.extend(
+            [
+                CHANGE_STATUS_ROLE,
+                UNIVERSAL_INVITATION_LIST_SETTER_ROLE,
+                MANAGED_FILES_EDITOR_ROLE,
+            ]
+        )
 
     jwt_token = jwt.encode(
         {

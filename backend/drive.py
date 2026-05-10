@@ -7,9 +7,9 @@ import threading
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
-SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/drive"]
 logger = logging.getLogger(__name__)
 
 
@@ -51,3 +51,32 @@ async def read_json_file(
         return json.loads(buf.getvalue())
 
     return await asyncio.to_thread(_download)
+
+
+async def write_json_file(
+    credentials_json_b64: str, folder_id: str, filename: str, data: dict
+) -> None:
+    def _upload() -> None:
+        service = build_drive_service(credentials_json_b64)
+        logger.info("Started uploading %s to %s on gdrive", filename, folder_id)
+        query = f"'{folder_id}' in parents and name = '{filename}' and trashed = false"
+        results = service.files().list(q=query, fields="files(id)").execute()
+        files = results.get("files", [])
+        body = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+        media = MediaIoBaseUpload(
+            io.BytesIO(body), mimetype="application/json", resumable=False
+        )
+        if files:
+            service.files().update(fileId=files[0]["id"], media_body=media).execute()
+        else:
+            service.files().create(
+                body={
+                    "name": filename,
+                    "parents": [folder_id],
+                    "mimeType": "application/json",
+                },
+                media_body=media,
+            ).execute()
+        logger.info("Finished uploading %s to %s on gdrive", filename, folder_id)
+
+    await asyncio.to_thread(_upload)

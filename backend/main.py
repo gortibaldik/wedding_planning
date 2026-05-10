@@ -13,7 +13,14 @@ from .dependencies import (
     init_i18n,
     init_redis,
 )
-from .routers import authorization, family_structure, index, invitation_lists, seating
+from .routers import (
+    authorization,
+    family_structure,
+    index,
+    invitation_lists,
+    managed_files,
+    seating,
+)
 
 _handler = logging.StreamHandler(sys.stdout)
 _handler.setFormatter(JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
@@ -42,4 +49,5 @@ app.include_router(authorization.router)
 app.include_router(invitation_lists.router)
 app.include_router(family_structure.router)
 app.include_router(seating.router)
+app.include_router(managed_files.router)
 app.include_router(index.router)

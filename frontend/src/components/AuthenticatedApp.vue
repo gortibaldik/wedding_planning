@@ -7,12 +7,16 @@ import InvitationComparisonTable from './InvitationComparisonTable.vue'
 import InvitationListsManager from './InvitationListsManager.vue'
 import FinalListView from './FinalListView.vue'
 import SeatingArrangement from './SeatingArrangement/SeatingArrangement.vue'
+import ManagedFilesEditor from './ManagedFilesEditor.vue'
 import { useAuth } from '@/composables/useAuth.ts'
 import { useStoredData } from '@/composables/useStoredData.ts'
 
 const emit = defineEmits(['logout'])
 
-const { logout } = useAuth()
+const { logout, storedUserInfo } = useAuth()
+const canEditManagedFiles = computed(
+  () => storedUserInfo.value?.roles?.includes('managed-files-editor') ?? false
+)
 const { initStoredData } = useStoredData()
 const skipAuth = import.meta.env.VITE_SKIP_AUTH === 'true'
 
@@ -23,25 +27,31 @@ const handleLogout = () => {
   emit('logout')
 }
 
-const tabs = [
-  { id: 'family-tree', label: 'Family Tree' },
-  { id: 'invited-table', label: 'Invitations Comparison' },
-  { id: 'invitation-lists-manager', label: 'Invitation Lists Manager' },
-  { id: 'final-list', label: 'Final List' },
-  { id: 'seating', label: 'Seating Arrangement' }
-]
-const validTabs = tabs.map(t => t.id)
+const tabs = computed(() => {
+  const base = [
+    { id: 'family-tree', label: 'Family Tree' },
+    { id: 'invited-table', label: 'Invitations Comparison' },
+    { id: 'invitation-lists-manager', label: 'Invitation Lists Manager' },
+    { id: 'final-list', label: 'Final List' },
+    { id: 'seating', label: 'Seating Arrangement' }
+  ]
+  if (canEditManagedFiles.value) {
+    base.push({ id: 'managed-files', label: 'Managed Files' })
+  }
+  return base
+})
+const validTabs = computed(() => tabs.value.map(t => t.id))
 
 const getTabFromHash = () => {
   const hash = window.location.hash.slice(1)
   const tab = hash.split('/')[0]
-  return validTabs.includes(tab) ? tab : 'family-tree'
+  return validTabs.value.includes(tab) ? tab : 'family-tree'
 }
 
 const activeTab = ref(getTabFromHash())
 const menuOpen = ref(false)
 
-const activeLabel = computed(() => tabs.find(t => t.id === activeTab.value)?.label ?? '')
+const activeLabel = computed(() => tabs.value.find(t => t.id === activeTab.value)?.label ?? '')
 
 const setActiveTab = tab => {
   activeTab.value = tab
@@ -107,6 +117,9 @@ window.addEventListener('hashchange', () => {
       <Suspense>
         <SeatingArrangement v-if="activeTab === 'seating'" />
       </Suspense>
+      <ManagedFilesEditor
+        v-if="activeTab === 'managed-files' && canEditManagedFiles"
+      />
     </div>
   </div>
 </template>
