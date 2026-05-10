@@ -5,6 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
+from markdown_it import MarkdownIt
+from markupsafe import Markup
 
 from backend.config import Config
 from backend.dependencies import get_config, get_i18n
@@ -17,6 +19,9 @@ DEFAULT_LANG = "cs"
 logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+
+_md = MarkdownIt("commonmark", {"breaks": True, "html": False, "linkify": True})
+templates.env.filters["markdown"] = lambda s: Markup(_md.render(s or ""))
 
 
 def pick_lang(request: Request) -> str:

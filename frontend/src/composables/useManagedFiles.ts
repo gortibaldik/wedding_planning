@@ -51,6 +51,7 @@ export interface I18nFile {
   connector: string
   wedding_date_label: string
   wedding_date: string
+  enable_rickroll: boolean
   sections: I18nSection[]
   admin: I18nAdmin
 }
@@ -70,9 +71,7 @@ const loading = ref(false)
 const saving = ref(false)
 const errorMsg = ref<string>('')
 
-const currentDoc = computed<I18nFile | undefined>(
-  () => filesByLang.value[selectedLang.value]
-)
+const currentDoc = computed<I18nFile | undefined>(() => filesByLang.value[selectedLang.value])
 
 const isDirty = computed(() => {
   if (!selectedLang.value) return false
@@ -140,6 +139,17 @@ export function useManagedFiles() {
     }
   }
 
+  const moveInArray = (arrayPath: (string | number)[], from: number, to: number) => {
+    let arr: I18nValue[] = filesByLang.value[selectedLang.value] as unknown as I18nValue[]
+    for (const segment of arrayPath) {
+      arr = (arr as unknown as I18nObject)[segment as string] as I18nValue[]
+    }
+    if (!Array.isArray(arr)) return
+    if (to < 0 || to >= arr.length || from === to) return
+    const [item] = arr.splice(from, 1)
+    arr.splice(to, 0, item)
+  }
+
   const updateAtPath = (path: (string | number)[], newValue: I18nValue) => {
     if (path.length === 0) {
       filesByLang.value[selectedLang.value] = newValue as unknown as I18nFile
@@ -164,6 +174,7 @@ export function useManagedFiles() {
     loadAll,
     revert,
     save,
-    updateAtPath
+    updateAtPath,
+    moveInArray
   }
 }

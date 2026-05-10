@@ -7,10 +7,15 @@ defineProps<{
 
 const emit = defineEmits<{
   (e: 'update', path: (string | number)[], val: I18nValue): void
+  (e: 'move', arrayPath: (string | number)[], from: number, to: number): void
 }>()
 
 const onText = (path: (string | number)[], ev: Event) => {
   emit('update', path, (ev.target as HTMLInputElement | HTMLTextAreaElement).value)
+}
+
+const move = (arrayPath: (string | number)[], from: number, to: number) => {
+  emit('move', arrayPath, from, to)
 }
 </script>
 
@@ -53,6 +58,19 @@ const onText = (path: (string | number)[], ev: Event) => {
     </section>
 
     <section class="mfne__group">
+      <h3 class="mfne__legend">Features</h3>
+      <label class="mfne__field mfne__field--inline">
+        <input
+          type="checkbox"
+          class="mfne__checkbox"
+          :checked="value.enable_rickroll"
+          @change="emit('update', ['enable_rickroll'], ($event.target as HTMLInputElement).checked)"
+        />
+        <span class="mfne__label">Enable rickroll</span>
+      </label>
+    </section>
+
+    <section class="mfne__group">
       <h3 class="mfne__legend">Wedding date</h3>
       <label class="mfne__field">
         <span class="mfne__label">Label</span>
@@ -78,6 +96,26 @@ const onText = (path: (string | number)[], ev: Event) => {
         <h4 class="mfne__sublegend">
           Section {{ i + 1 }}
           <span class="mfne__type-tag">{{ section.type }}</span>
+          <span class="mfne__reorder">
+            <button
+              type="button"
+              class="mfne__move-btn"
+              :disabled="i === 0"
+              title="Move up"
+              @click="move(['sections'], i, i - 1)"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              class="mfne__move-btn"
+              :disabled="i === value.sections.length - 1"
+              title="Move down"
+              @click="move(['sections'], i, i + 1)"
+            >
+              ↓
+            </button>
+          </span>
         </h4>
         <label class="mfne__field">
           <span class="mfne__label">Title</span>
@@ -103,6 +141,29 @@ const onText = (path: (string | number)[], ev: Event) => {
         <template v-else-if="section.type === 'info-grid'">
           <div class="mfne__rows">
             <div v-for="(row, j) in section.rows" :key="j" class="mfne__row">
+              <div class="mfne__row-header">
+                <span class="mfne__row-title">Row {{ j + 1 }}</span>
+                <span class="mfne__reorder">
+                  <button
+                    type="button"
+                    class="mfne__move-btn"
+                    :disabled="j === 0"
+                    title="Move up"
+                    @click="move(['sections', i, 'rows'], j, j - 1)"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    class="mfne__move-btn"
+                    :disabled="j === section.rows.length - 1"
+                    title="Move down"
+                    @click="move(['sections', i, 'rows'], j, j + 1)"
+                  >
+                    ↓
+                  </button>
+                </span>
+              </div>
               <label class="mfne__field">
                 <span class="mfne__label">Label</span>
                 <input
@@ -242,6 +303,67 @@ const onText = (path: (string | number)[], ev: Event) => {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.mfne__field--inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  grid-template-columns: none;
+}
+
+.mfne__field--inline .mfne__label {
+  padding-top: 0;
+}
+
+.mfne__checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.mfne__reorder {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.mfne__move-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  color: #4b5563;
+  transition: background 0.15s;
+}
+
+.mfne__move-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.mfne__move-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.mfne__row-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mfne__row-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .mfne__rows {

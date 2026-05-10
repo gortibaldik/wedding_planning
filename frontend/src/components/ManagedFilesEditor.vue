@@ -15,7 +15,8 @@ const {
   loadAll,
   revert,
   save,
-  updateAtPath
+  updateAtPath,
+  moveInArray
 } = useManagedFiles()
 
 onMounted(loadAll)
@@ -60,7 +61,7 @@ onMounted(loadAll)
     <div v-if="loading" class="mf__loading">Loading...</div>
 
     <div v-if="!loading && selectedLang && currentDoc" class="mf__editor">
-      <ManagedFilesNodeEditor :value="currentDoc" @update="updateAtPath" />
+      <ManagedFilesNodeEditor :value="currentDoc" @update="updateAtPath" @move="moveInArray" />
     </div>
   </div>
 </template>

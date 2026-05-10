@@ -150,7 +150,7 @@
             {% endfor %}
           </div>
           {% elif section.type == "text" %}
-          <p class="section-text">{{ section.text }}</p>
+          <div class="section-text">{{ section.text | markdown }}</div>
           {% endif %}
         </div>
       </div>
