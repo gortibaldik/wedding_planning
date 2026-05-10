@@ -16,3 +16,6 @@ class Config(BaseSettings):
     rediscloud_url: str = ""
 
     super_users: list[str] = Field(default_factory=lambda: ["ferotre@gmail.com"])
+
+    google_application_credentials_json: str = ""
+    google_drive_i18n_folder_id: str = ""

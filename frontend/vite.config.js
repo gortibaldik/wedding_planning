@@ -40,7 +40,8 @@ export default defineConfig({
       '/auth': process.env.BACKEND_URL || 'http://localhost:8000',
       '/invitation-lists': process.env.BACKEND_URL || 'http://localhost:8000',
       '/family-structure': process.env.BACKEND_URL || 'http://localhost:8000',
-      '/seating-arrangement': process.env.BACKEND_URL || 'http://localhost:8000'
+      '/seating-arrangement': process.env.BACKEND_URL || 'http://localhost:8000',
+      '/managed-files': process.env.BACKEND_URL || 'http://localhost:8000'
     },
     watch: {
       usePolling: true,

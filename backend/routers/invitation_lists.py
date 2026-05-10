@@ -226,9 +226,6 @@ async def get_final(
     invitation_list = await _get_list_by_id(redis, final_id)
     final_entries_raw = decompress(await redis.get(FINAL_LIST_ENTRIES_KEY))
     final_entries = SetFinalEntriesRequest.model_validate_json(final_entries_raw)
-    logger.warning(
-        f"FINAL_ENTRIES from redis: {final_entries.model_dump_json(indent=2)}"
-    )
     return FinalInvitationList(
         metadata=invitation_list.metadata,
         entries=invitation_list.entries,
@@ -245,5 +242,4 @@ async def set_final_entries(
     if not _is_universal_list_setter(user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    logger.warning(f"FINAL_ENTRIES that arrived: {request.model_dump_json(indent=2)}")
     await redis.set(FINAL_LIST_ENTRIES_KEY, compress(request.model_dump_json()))

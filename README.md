@@ -85,3 +85,22 @@ heroku git:remote -a wedding-planning
 
 - the `node_modules` in frontend are put into a separate volume
 - when new npm dependencies are installed as a breaking change, on local one must run `docker compose down -v` to remove the volume with `node_modules`
+
+## External Services
+
+### Google Drive (Blob Storage)
+
+Static assets such as i18n translation files are served from a Google Drive folder rather than baked into the container image. Access uses a service account with read-only Drive scope.
+
+Required env vars:
+
+| Variable | Description |
+| --- | --- |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Base64-encoded service account JSON. Generate with `python tools/encode_credentials.py`. |
+| `GOOGLE_DRIVE_I18N_FOLDER_ID` | ID of the Drive folder containing i18n JSON files (from the folder URL). |
+
+The service account must be granted **Editor** access to the folder via Drive sharing.
+
+### Better Stack (OpenTelemetry)
+
+Logs are exported to [Better Stack Telemetry](https://telemetry.betterstack.com) via Logtail.
