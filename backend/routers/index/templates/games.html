@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Games</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC&family=Great+Vibes&display=swap" />
+  <link rel="stylesheet" href="/landing.css" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      padding: 24px 16px 64px;
+    }
+    .games-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+    .games-back {
+      display: inline-block;
+      text-decoration: none;
+      color: inherit;
+      font-size: 0.95rem;
+      opacity: 0.7;
+    }
+    .games-back:hover { opacity: 1; }
+    .games-title {
+      font-family: 'Great Vibes', cursive;
+      font-size: 3rem;
+      text-align: center;
+    }
+    .game-card {
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .game-card-title {
+      font-size: 1.25rem;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .game-mount {
+      width: 100%;
+      min-height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fafafa;
+      border-radius: 8px;
+      color: #888;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="games-wrap">
+    <a class="games-back" href="/">← zpět</a>
+    <h1 class="games-title">Games</h1>
+
+    <!-- Game 1: Sailing -->
+    <section class="game-card" id="game-1-card">
+      <h2 class="game-card-title">Jachting</h2>
+      <div class="game-mount" id="game-1-mount" style="flex-direction:column; padding:0; background:transparent; min-height:unset;"></div>
+    </section>
+    <style>
+      .sail-wrap { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+      .sail-stage { position: relative; width: 100%; }
+      .sail-canvas { width: 100%; background: #bfe0ef; border-radius: 8px; display: block; touch-action: none; }
+      .sail-overlay {
+        position: absolute; inset: 0; border-radius: 8px;
+        background: rgba(20, 45, 65, 0.78); color: #fff;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; gap: 14px; padding: 24px;
+      }
+      .sail-overlay.hidden { display: none; }
+      .sail-overlay h3 { font-family: 'Great Vibes', cursive; font-size: 2.2rem; margin: 0; }
+      .sail-overlay .keys { display: flex; flex-direction: column; gap: 10px; font-size: 0.95rem; }
+      .sail-overlay .keyrow { display: flex; align-items: center; justify-content: center; gap: 10px; }
+      .sail-overlay kbd {
+        display: inline-block; min-width: 26px; padding: 3px 7px; border-radius: 5px;
+        background: #fff; color: #234; font-weight: 700; font-family: inherit;
+        box-shadow: 0 2px 0 rgba(0,0,0,0.25); font-size: 0.9rem;
+      }
+      .sail-overlay .hint { opacity: 0.85; font-size: 0.85rem; max-width: 360px; line-height: 1.4; }
+      .sail-overlay button {
+        padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer;
+        background: #e2c044; color: #234; font-weight: 700; font-size: 0.95rem;
+      }
+      .sail-overlay button:hover { background: #ecd06a; }
+      .sail-hud { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 0.9rem; flex-wrap: wrap; }
+      .sail-hud .stats { display: flex; gap: 16px; flex-wrap: wrap; color: #444; }
+      .sail-hud .stats b { color: #1a1a1a; font-variant-numeric: tabular-nums; }
+      .sail-hud .msg { color: #2a6e2a; font-weight: 700; min-height: 1.2em; }
+      .sail-hud button { padding: 6px 12px; border-radius: 6px; border: 1px solid #888; background: #fff; cursor: pointer; }
+      .sail-hud button:hover { background: #f3f3f3; }
+    </style>
+    <script>
+      (function initSailing() {
+        var mount = document.getElementById('game-1-mount');
+        if (!mount) return;
+
+        var wrap = document.createElement('div');
+        wrap.className = 'sail-wrap';
+        wrap.innerHTML = ''
+          + '<div class="sail-stage">'
+          + '  <canvas class="sail-canvas" width="640" height="400"></canvas>'
+          + '  <div class="sail-overlay">'
+          + '    <h3>Jachting</h3>'
+          + '    <div class="keys">'
+          + '      <div class="keyrow"><kbd>←</kbd><kbd>→</kbd><span>kormidlo &mdash; zatáčej loď</span></div>'
+          + '      <div class="keyrow"><kbd>↑</kbd><kbd>↓</kbd><span>plachta &mdash; přitáhni / povol</span></div>'
+          + '    </div>'
+          + '    <div class="hint">Vyplouváš z přístavu vlevo. Natoč plachtu k větru tak, aby tě hnal, a doplul až k cílovým praporkům vpravo.</div>'
+          + '    <button type="button" class="start-btn">Vyplout (mezerník)</button>'
+          + '  </div>'
+          + '</div>'
+          + '<div class="sail-hud">'
+          + '  <div class="stats">'
+          + '    <span>Vítr: <b class="wind-val">–</b></span>'
+          + '    <span>Rychlost: <b class="speed-val">0.0</b> kn</span>'
+          + '    <span>Plachta: <b class="trim-val">45</b>°</span>'
+          + '    <span>Do cíle: <b class="dist-val">0</b> m</span>'
+          + '  </div>'
+          + '  <span class="msg"></span>'
+          + '  <button type="button" class="new-game">Nová hra</button>'
+          + '</div>';
+        mount.appendChild(wrap);
+
+        var canvas = wrap.querySelector('canvas');
+        var ctx = canvas.getContext('2d');
+        var overlay = wrap.querySelector('.sail-overlay');
+        var startBtn = wrap.querySelector('.start-btn');
+        var newGameBtn = wrap.querySelector('.new-game');
+        var windVal = wrap.querySelector('.wind-val');
+        var speedVal = wrap.querySelector('.speed-val');
+        var trimVal = wrap.querySelector('.trim-val');
+        var distVal = wrap.querySelector('.dist-val');
+        var msgEl = wrap.querySelector('.msg');
+
+        function deg2rad(d) { return d * Math.PI / 180; }
+
+        // World: x 0..100 runs left (port) -> right (finish). y 0..100 is lateral, +y = up the screen.
+        var W = 100, H = 100;
+        var PORT_X = 9, FINISH_X = 94, WIND_SPEED = 1.0;
+
+        // Wind described by where it BLOWS TOWARD, in math degrees (0 = +x right, 90 = +y up).
+        // Chosen so the rightward course is sailable (no dead headwind from the east).
+        var WIND_DIRS = [
+          { from: 'západu',      to: 0 },
+          { from: 'severozápadu', to: -45 },
+          { from: 'jihozápadu',   to: 45 },
+          { from: 'severu',       to: -90 },
+          { from: 'jihu',         to: 90 },
+        ];
+
+        var state, started, lastT;
+        var keys = {};
+
+        function reset() {
+          var wind = WIND_DIRS[Math.floor(Math.random() * WIND_DIRS.length)];
+          state = { x: PORT_X, y: 50, heading: 0, speed: 0, trim: 45, wind: wind, won: false };
+          started = false;
+          overlay.classList.remove('hidden');
+          windVal.textContent = 'od ' + wind.from;
+          msgEl.textContent = '';
+          keys = {};
+        }
+
+        function startGame() {
+          if (started) return;
+          started = true;
+          overlay.classList.add('hidden');
+          lastT = performance.now();
+        }
+
+        reset();
+        newGameBtn.addEventListener('click', reset);
+        startBtn.addEventListener('click', startGame);
+
+        window.addEventListener('keydown', function(e) {
+          var k = e.key;
+          if (k === ' ' || k === 'Enter') { startGame(); e.preventDefault(); return; }
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].indexOf(k) !== -1) {
+            keys[k] = true; e.preventDefault();
+          }
+        });
+        window.addEventListener('keyup', function(e) { keys[e.key] = false; });
+
+        // ---- world -> screen mapping (flat top-down) ----
+        var padX = 16, padTop = 16, padBot = 16;
+        function sx(wx) { return padX + (wx / W) * (canvas.width - 2 * padX); }
+        function sy(wy) { return padTop + ((H - wy) / H) * (canvas.height - padTop - padBot); }
+
+        // ---- drawing ----
+        var waveT = 0;
+
+        function drawWater() {
+          ctx.fillStyle = '#3a7da8';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // moving wind streaks (in wind-blowing direction) for readability
+          var a = deg2rad(state.wind.to);
+          var ux = Math.cos(a), uy = -Math.sin(a);
+          ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+          ctx.lineWidth = 2;
+          for (var i = 0; i < 26; i++) {
+            var bx = ((i * 73 + waveT * 40) % (canvas.width + 60)) - 30;
+            var by = (i * 53) % canvas.height;
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.lineTo(bx + ux * 16, by + uy * 16);
+            ctx.stroke();
+          }
+        }
+
+        function drawPort() {
+          // grass + dock on the left edge
+          var x0 = 0, x1 = sx(PORT_X);
+          ctx.fillStyle = '#6a8f4f';
+          ctx.fillRect(x0, 0, x1 - 6, canvas.height);
+          // dock planks jutting out
+          ctx.fillStyle = '#8a5a33';
+          var dy = sy(50);
+          ctx.fillRect(x1 - 6, dy - 26, 26, 52);
+          ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+          ctx.lineWidth = 1;
+          for (var p = 0; p < 4; p++) {
+            ctx.beginPath();
+            ctx.moveTo(x1 - 6, dy - 26 + p * 17);
+            ctx.lineTo(x1 + 20, dy - 26 + p * 17);
+            ctx.stroke();
+          }
+          // little lighthouse
+          ctx.fillStyle = '#f4f4f4';
+          ctx.fillRect(14, sy(72) - 4, 14, 34);
+          ctx.fillStyle = '#d23b3b';
+          ctx.fillRect(14, sy(72) - 4, 14, 9);
+          ctx.beginPath();
+          ctx.moveTo(12, sy(72) - 4); ctx.lineTo(30, sy(72) - 4); ctx.lineTo(21, sy(72) - 14);
+          ctx.closePath(); ctx.fillStyle = '#d23b3b'; ctx.fill();
+        }
+
+        function drawFinish() {
+          var fx = sx(FINISH_X);
+          // checkered finish flags top & bottom
+          ctx.strokeStyle = '#e2c044';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([8, 6]);
+          ctx.beginPath(); ctx.moveTo(fx, sy(100)); ctx.lineTo(fx, sy(0)); ctx.stroke();
+          ctx.setLineDash([]);
+          [sy(96), sy(4)].forEach(function(py, idx) {
+            var poleTop = idx === 0 ? py : py - 26;
+            ctx.strokeStyle = '#555'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(fx, py); ctx.lineTo(fx, py + (idx === 0 ? 26 : -26)); ctx.stroke();
+            // flag
+            for (var r = 0; r < 2; r++) for (var c = 0; c < 3; c++) {
+              ctx.fillStyle = (r + c) % 2 ? '#fff' : '#222';
+              ctx.fillRect(fx + c * 7, poleTop + r * 7, 7, 7);
+            }
+          });
+        }
+
+        function angUnitS(aDeg) { var a = deg2rad(aDeg); return { x: Math.cos(a), y: -Math.sin(a) }; }
+
+        function drawBoat() {
+          var P = { x: sx(state.x), y: sy(state.y) };
+          var h = state.heading;
+          var fwd = angUnitS(h);              // screen-space forward
+          var perp = { x: -fwd.y, y: fwd.x }; // screen-space port/starboard
+          var L = 30, Wd = 9;
+
+          // hull
+          var bow   = { x: P.x + fwd.x * L * 0.6,  y: P.y + fwd.y * L * 0.6 };
+          var sl    = { x: P.x - fwd.x * L * 0.45 + perp.x * Wd, y: P.y - fwd.y * L * 0.45 + perp.y * Wd };
+          var sr    = { x: P.x - fwd.x * L * 0.45 - perp.x * Wd, y: P.y - fwd.y * L * 0.45 - perp.y * Wd };
+          var midl  = { x: P.x + fwd.x * L * 0.2 + perp.x * Wd * 0.95, y: P.y + fwd.y * L * 0.2 + perp.y * Wd * 0.95 };
+          var midr  = { x: P.x + fwd.x * L * 0.2 - perp.x * Wd * 0.95, y: P.y + fwd.y * L * 0.2 - perp.y * Wd * 0.95 };
+          ctx.beginPath();
+          ctx.moveTo(bow.x, bow.y);
+          ctx.lineTo(midl.x, midl.y); ctx.lineTo(sl.x, sl.y);
+          ctx.lineTo(sr.x, sr.y); ctx.lineTo(midr.x, midr.y);
+          ctx.closePath();
+          ctx.fillStyle = '#5b3a1e'; ctx.fill();
+          ctx.strokeStyle = '#3a2512'; ctx.lineWidth = 1.5; ctx.stroke();
+
+          // mast (a bit forward of centre)
+          var mast = { x: P.x + fwd.x * L * 0.12, y: P.y + fwd.y * L * 0.12 };
+
+          // sail: boom swings to the leeward side; trim 0 = sheeted in (aft), 90 = full out (abeam)
+          var trim = state.trim;
+          var windTo = angUnitS(state.wind.to);
+          // which side is leeward (screen): cross of fwd & windTo
+          var leeSign = (fwd.x * windTo.y - fwd.y * windTo.x) >= 0 ? 1 : -1;
+          var boomDeg = h + 180 + leeSign * trim;
+          var boom = angUnitS(boomDeg);
+          var sailLen = L * 0.95;
+          var clew = { x: mast.x + boom.x * sailLen, y: mast.y + boom.y * sailLen };
+          // billow control point, bulging downwind
+          var bn = { x: -boom.y, y: boom.x };
+          if (bn.x * windTo.x + bn.y * windTo.y < 0) { bn.x = -bn.x; bn.y = -bn.y; }
+          var midB = { x: (mast.x + clew.x) / 2 + bn.x * 9, y: (mast.y + clew.y) / 2 + bn.y * 9 };
+
+          ctx.beginPath();
+          ctx.moveTo(mast.x, mast.y);
+          ctx.quadraticCurveTo(midB.x, midB.y, clew.x, clew.y);
+          ctx.quadraticCurveTo(midB.x, midB.y, mast.x, mast.y);
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(255,255,255,0.95)';
+          ctx.fill();
+          ctx.strokeStyle = '#cfd6db'; ctx.lineWidth = 1.5; ctx.stroke();
+          // mast dot
+          ctx.beginPath(); ctx.arc(mast.x, mast.y, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#2a2a2a'; ctx.fill();
+        }
+
+        function drawWindBadge() {
+          var cx = canvas.width - 46, cy = 46, r = 26;
+          ctx.save();
+          ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI * 2); ctx.stroke();
+          var u = angUnitS(state.wind.to);
+          ctx.strokeStyle = '#c33'; ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(cx - u.x * r, cy - u.y * r);
+          ctx.lineTo(cx + u.x * r, cy + u.y * r);
+          ctx.stroke();
+          var hx = cx + u.x * r, hy = cy + u.y * r;
+          var pa = Math.atan2(u.y, u.x);
+          ctx.beginPath();
+          ctx.moveTo(hx, hy);
+          ctx.lineTo(hx - Math.cos(pa - 0.4) * 10, hy - Math.sin(pa - 0.4) * 10);
+          ctx.lineTo(hx - Math.cos(pa + 0.4) * 10, hy - Math.sin(pa + 0.4) * 10);
+          ctx.closePath(); ctx.fillStyle = '#c33'; ctx.fill();
+          ctx.fillStyle = '#222'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText('vítr', cx, cy + r + 16);
+          ctx.restore();
+        }
+
+        function draw() {
+          drawWater();
+          drawPort();
+          drawFinish();
+          drawBoat();
+          drawWindBadge();
+        }
+
+        // ---- simulation ----
+        function physics(dt) {
+          // steering
+          if (keys['ArrowLeft'])  state.heading += 75 * dt;
+          if (keys['ArrowRight']) state.heading -= 75 * dt;
+          // sail trim
+          if (keys['ArrowUp'])   state.trim = Math.max(0,  state.trim - 70 * dt);
+          if (keys['ArrowDown']) state.trim = Math.min(90, state.trim + 70 * dt);
+
+          // sail force: wind hitting the sail face, projected onto heading
+          var windTo = angUnitS(state.wind.to);
+          var leeSign = (angUnitS(state.heading).x * windTo.y - angUnitS(state.heading).y * windTo.x) >= 0 ? 1 : -1;
+          var boomDeg = state.heading + 180 + leeSign * state.trim;
+          var n = angUnitS(boomDeg + 90); // sail normal
+          var dot = (windTo.x * n.x + windTo.y * n.y) * WIND_SPEED;
+          var fwd = angUnitS(state.heading);
+          var thrust = (n.x * fwd.x + n.y * fwd.y) * dot * 26;
+          if (thrust < 0) thrust *= 0.25; // can't really sail backwards
+
+          state.speed += thrust * dt;
+          state.speed -= state.speed * 0.9 * dt;          // drag
+          state.speed = Math.max(-1, Math.min(14, state.speed));
+
+          // move (world +y = up; screen handled in sy)
+          state.x += fwd.x * state.speed * dt;
+          state.y += -fwd.y * state.speed * dt;           // fwd.y is screen-space, flip back to world
+
+          // bounds
+          if (state.x < PORT_X) { state.x = PORT_X; state.speed *= 0.3; }
+          if (state.y < 3)   { state.y = 3;   state.speed *= 0.4; }
+          if (state.y > 97)  { state.y = 97;  state.speed *= 0.4; }
+
+          if (state.x >= FINISH_X) {
+            state.won = true;
+            msgEl.textContent = '🎉 Doplul jsi do cíle!';
+          }
+        }
+
+        function frame(now) {
+          var dt = started ? Math.min(0.05, (now - lastT) / 1000) : 0;
+          lastT = now;
+          waveT += dt;
+
+          if (started && !state.won) physics(dt);
+
+          // HUD
+          trimVal.textContent = Math.round(state.trim);
+          speedVal.textContent = Math.max(0, state.speed).toFixed(1);
+          distVal.textContent = Math.max(0, Math.round((FINISH_X - state.x) * 3));
+
+          draw();
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+
+        // responsive: keep internal resolution, scale via CSS
+        function fit() {
+          var w = wrap.querySelector('.sail-stage').clientWidth;
+          canvas.style.height = Math.round(w * (canvas.height / canvas.width)) + 'px';
+        }
+        fit();
+        window.addEventListener('resize', fit);
+      })();
+    </script>
+  </div>
+</body>
+</html>
