@@ -117,7 +117,7 @@
           + '      <div class="keyrow"><kbd>←</kbd><kbd>→</kbd><span>kormidlo &mdash; zatáčej loď</span></div>'
           + '      <div class="keyrow"><kbd>↑</kbd><kbd>↓</kbd><span>plachta &mdash; přitáhni / povol</span></div>'
           + '    </div>'
-          + '    <div class="hint">Vyplouváš z přístavu vlevo. Natoč plachtu k větru tak, aby tě hnal, a doplul až k cílovým praporkům vpravo.</div>'
+          + '    <div class="hint">Vyplouváš z přístavu vlevo a míříš k cílovým praporkům vpravo. Natoč plachtu tak, aby tě vítr hnal. Když fouká proti tobě (od východu), nelze plout přímo &ndash; musíš křižovat (plout v cik-cak pod úhlem k větru).</div>'
           + '    <button type="button" class="start-btn">Vyplout (mezerník)</button>'
           + '  </div>'
           + '</div>'
@@ -151,14 +151,18 @@
         var PORT_X = 9, FINISH_X = 94, WIND_SPEED = 1.0;
 
         // Wind described by where it BLOWS TOWARD, in math degrees (0 = +x right, 90 = +y up).
-        // Chosen so the rightward course is sailable (no dead headwind from the east).
+        // East wind blows toward the west (180) -> dead headwind, must be beaten upwind by tacking.
         var WIND_DIRS = [
-          { from: 'západu',      to: 0 },
+          { from: 'západu',       to: 0 },
           { from: 'severozápadu', to: -45 },
           { from: 'jihozápadu',   to: 45 },
           { from: 'severu',       to: -90 },
           { from: 'jihu',         to: 90 },
+          { from: 'severovýchodu', to: -135 },
+          { from: 'jihovýchodu',   to: 135 },
+          { from: 'východu',       to: 180 },
         ];
+        var NO_GO = 42; // degrees either side of straight-into-wind where the sail can't drive
 
         var state, started, lastT;
         var keys = {};
@@ -267,6 +271,15 @@
         }
 
         function angUnitS(aDeg) { var a = deg2rad(aDeg); return { x: Math.cos(a), y: -Math.sin(a) }; }
+        function angNorm(d) { return ((d + 180) % 360 + 360) % 360 - 180; }
+
+        // How well the sail can drive: 1 normally, ramping to 0 as the bow points into the
+        // wind (the "no-go" zone). The wind comes FROM (wind.to + 180); pointing there = in irons.
+        function sailPower() {
+          var bowToWind = Math.abs(angNorm(state.heading - (state.wind.to + 180)));
+          if (bowToWind >= NO_GO) return 1;
+          return Math.max(0, (bowToWind - (NO_GO - 10)) / 10);
+        }
 
         function drawBoat() {
           var P = { x: sx(state.x), y: sy(state.y) };
@@ -297,23 +310,38 @@
           var windTo = angUnitS(state.wind.to);
           // which side is leeward (screen): cross of fwd & windTo
           var leeSign = (fwd.x * windTo.y - fwd.y * windTo.x) >= 0 ? 1 : -1;
-          var boomDeg = h + 180 + leeSign * trim;
-          var boom = angUnitS(boomDeg);
           var sailLen = L * 0.95;
-          var clew = { x: mast.x + boom.x * sailLen, y: mast.y + boom.y * sailLen };
-          // billow control point, bulging downwind
-          var bn = { x: -boom.y, y: boom.x };
-          if (bn.x * windTo.x + bn.y * windTo.y < 0) { bn.x = -bn.x; bn.y = -bn.y; }
-          var midB = { x: (mast.x + clew.x) / 2 + bn.x * 9, y: (mast.y + clew.y) / 2 + bn.y * 9 };
+          var power = sailPower();
 
-          ctx.beginPath();
-          ctx.moveTo(mast.x, mast.y);
-          ctx.quadraticCurveTo(midB.x, midB.y, clew.x, clew.y);
-          ctx.quadraticCurveTo(midB.x, midB.y, mast.x, mast.y);
-          ctx.closePath();
-          ctx.fillStyle = 'rgba(255,255,255,0.95)';
-          ctx.fill();
-          ctx.strokeStyle = '#cfd6db'; ctx.lineWidth = 1.5; ctx.stroke();
+          if (power < 0.55) {
+            // luffing / in irons: limp sail flapping fore-aft, no drive
+            var aft = angUnitS(h + 180);
+            var clewL = { x: mast.x + aft.x * sailLen * 0.9, y: mast.y + aft.y * sailLen * 0.9 };
+            var fperp = { x: -aft.y, y: aft.x };
+            var flap = Math.sin(waveT * 16) * 7 * (1 - power);
+            var ctrl = { x: (mast.x + clewL.x) / 2 + fperp.x * flap, y: (mast.y + clewL.y) / 2 + fperp.y * flap };
+            ctx.beginPath();
+            ctx.moveTo(mast.x, mast.y);
+            ctx.quadraticCurveTo(ctrl.x, ctrl.y, clewL.x, clewL.y);
+            ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
+          } else {
+            // drawing sail: boom swings to leeward, billowing downwind
+            var boomDeg = h + 180 + leeSign * trim;
+            var boom = angUnitS(boomDeg);
+            var clew = { x: mast.x + boom.x * sailLen, y: mast.y + boom.y * sailLen };
+            var bn = { x: -boom.y, y: boom.x };
+            if (bn.x * windTo.x + bn.y * windTo.y < 0) { bn.x = -bn.x; bn.y = -bn.y; }
+            var bulge = 9 * power;
+            var midB = { x: (mast.x + clew.x) / 2 + bn.x * bulge, y: (mast.y + clew.y) / 2 + bn.y * bulge };
+            ctx.beginPath();
+            ctx.moveTo(mast.x, mast.y);
+            ctx.quadraticCurveTo(midB.x, midB.y, clew.x, clew.y);
+            ctx.quadraticCurveTo(midB.x, midB.y, mast.x, mast.y);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            ctx.fill();
+            ctx.strokeStyle = '#cfd6db'; ctx.lineWidth = 1.5; ctx.stroke();
+          }
           // mast dot
           ctx.beginPath(); ctx.arc(mast.x, mast.y, 2.5, 0, Math.PI * 2);
           ctx.fillStyle = '#2a2a2a'; ctx.fill();
@@ -370,6 +398,7 @@
           var fwd = angUnitS(state.heading);
           var thrust = (n.x * fwd.x + n.y * fwd.y) * dot * 26;
           if (thrust < 0) thrust *= 0.25; // can't really sail backwards
+          thrust *= sailPower();           // sail luffs in the no-go zone -> no drive
 
           state.speed += thrust * dt;
           state.speed -= state.speed * 0.9 * dt;          // drag
@@ -387,6 +416,7 @@
           if (state.x >= FINISH_X) {
             state.won = true;
             msgEl.textContent = '🎉 Doplul jsi do cíle!';
+            msgEl.style.color = '#2a6e2a';
           }
         }
 
@@ -401,6 +431,14 @@
           trimVal.textContent = Math.round(state.trim);
           speedVal.textContent = Math.max(0, state.speed).toFixed(1);
           distVal.textContent = Math.max(0, Math.round((FINISH_X - state.x) * 3));
+          if (started && !state.won) {
+            if (sailPower() < 0.45) {
+              msgEl.textContent = '⚠️ Plachta plápolá – jsi proti větru, křižuj (cik-cak)!';
+              msgEl.style.color = '#b5651d';
+            } else {
+              msgEl.textContent = '';
+            }
+          }
 
           draw();
           requestAnimationFrame(frame);
