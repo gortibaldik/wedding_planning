@@ -115,9 +115,9 @@
           + '    <h3>Jachting</h3>'
           + '    <div class="keys">'
           + '      <div class="keyrow"><kbd>←</kbd><kbd>→</kbd><span>kormidlo &mdash; zatáčej loď</span></div>'
-          + '      <div class="keyrow"><kbd>↑</kbd><kbd>↓</kbd><span>plachta &mdash; přitáhni / povol</span></div>'
+          + '      <div class="keyrow"><kbd>↑</kbd><kbd>↓</kbd><span>plachta &mdash; přehoď z jedné strany na druhou</span></div>'
           + '    </div>'
-          + '    <div class="hint">Vyplouváš z přístavu vlevo a míříš k cílovým praporkům vpravo. Natoč plachtu tak, aby tě vítr hnal. Když fouká proti tobě (od východu), nelze plout přímo &ndash; musíš křižovat (plout v cik-cak pod úhlem k větru).</div>'
+          + '    <div class="hint">Vyplouváš z přístavu vlevo a míříš k cílovým praporkům vpravo. Natoč plachtu tak, aby tě vítr hnal. Když projedeš větrem (zatočíš na druhou stranu), přehoď i plachtu klávesami ↑/↓ přes střed na druhou stranu &ndash; jinak se obrátí naprázdno a loď se zastaví. Proti větru (od východu) musíš křižovat v cik-cak.</div>'
           + '    <button type="button" class="start-btn">Vyplout (mezerník)</button>'
           + '  </div>'
           + '</div>'
@@ -169,7 +169,8 @@
 
         function reset() {
           var wind = WIND_DIRS[Math.floor(Math.random() * WIND_DIRS.length)];
-          state = { x: PORT_X, y: 50, heading: 0, speed: 0, trim: 45, wind: wind, won: false };
+          state = { x: PORT_X, y: 50, heading: 0, speed: 0, sail: 45, wind: wind, won: false };
+          state.sail = leewardSign(state.heading) * 45; // start with the sail set on the leeward side
           started = false;
           overlay.classList.remove('hidden');
           windVal.textContent = 'od ' + wind.from;
@@ -190,7 +191,7 @@
 
         window.addEventListener('keydown', function(e) {
           var k = e.key;
-          if (k === ' ' || k === 'Enter') { startGame(); e.preventDefault(); return; }
+          if (k === ' ' || k === 'Enter') { e.preventDefault(); startGame(); return; }
           if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].indexOf(k) !== -1) {
             keys[k] = true; e.preventDefault();
           }
@@ -281,6 +282,24 @@
           return Math.max(0, (bowToWind - (NO_GO - 10)) / 10);
         }
 
+        // The side the wind naturally pushes the sail toward (leeward) for a given heading.
+        function leewardSign(h) {
+          var f = angUnitS(h), w = angUnitS(state.wind.to);
+          return (f.x * w.y - f.y * w.x) >= 0 ? 1 : -1;
+        }
+
+        // Sail line angle. state.sail is the signed position the player sets, -90..+90:
+        // 0 = sheeted in along the centreline, +/-90 = boom all the way out on either side.
+        function boomAngleDeg() { return state.heading + 180 + state.sail; }
+
+        // How well the set sail drives the boat: >0 correct (leeward) side, <=0 backwinded.
+        function driveFactor() {
+          var n = angUnitS(boomAngleDeg() + 90); // sail normal
+          var fwd = angUnitS(state.heading);
+          var windTo = angUnitS(state.wind.to);
+          return (n.x * fwd.x + n.y * fwd.y) * (windTo.x * n.x + windTo.y * n.y);
+        }
+
         function drawBoat() {
           var P = { x: sx(state.x), y: sy(state.y) };
           var h = state.heading;
@@ -305,30 +324,26 @@
           // mast (a bit forward of centre)
           var mast = { x: P.x + fwd.x * L * 0.12, y: P.y + fwd.y * L * 0.12 };
 
-          // sail: boom swings to the leeward side; trim 0 = sheeted in (aft), 90 = full out (abeam)
-          var trim = state.trim;
+          // sail rendered at the angle the player has set it to
           var windTo = angUnitS(state.wind.to);
-          // which side is leeward (screen): cross of fwd & windTo
-          var leeSign = (fwd.x * windTo.y - fwd.y * windTo.x) >= 0 ? 1 : -1;
           var sailLen = L * 0.95;
           var power = sailPower();
+          var drive = driveFactor();
+          // boom always renders on the side the player set it on
+          var boom = angUnitS(boomAngleDeg());
+          var clew = { x: mast.x + boom.x * sailLen, y: mast.y + boom.y * sailLen };
 
-          if (power < 0.55) {
-            // luffing / in irons: limp sail flapping fore-aft, no drive
-            var aft = angUnitS(h + 180);
-            var clewL = { x: mast.x + aft.x * sailLen * 0.9, y: mast.y + aft.y * sailLen * 0.9 };
-            var fperp = { x: -aft.y, y: aft.x };
-            var flap = Math.sin(waveT * 16) * 7 * (1 - power);
-            var ctrl = { x: (mast.x + clewL.x) / 2 + fperp.x * flap, y: (mast.y + clewL.y) / 2 + fperp.y * flap };
+          if (power < 0.55 || drive <= 0.04) {
+            // luffing (in irons) or backwinded (wrong side): limp, flapping sail, no drive
+            var flap = Math.sin(waveT * 16) * 7;
+            var bp = { x: -boom.y, y: boom.x };
+            var midF = { x: (mast.x + clew.x) / 2 + bp.x * flap, y: (mast.y + clew.y) / 2 + bp.y * flap };
             ctx.beginPath();
             ctx.moveTo(mast.x, mast.y);
-            ctx.quadraticCurveTo(ctrl.x, ctrl.y, clewL.x, clewL.y);
+            ctx.quadraticCurveTo(midF.x, midF.y, clew.x, clew.y);
             ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
           } else {
-            // drawing sail: boom swings to leeward, billowing downwind
-            var boomDeg = h + 180 + leeSign * trim;
-            var boom = angUnitS(boomDeg);
-            var clew = { x: mast.x + boom.x * sailLen, y: mast.y + boom.y * sailLen };
+            // working sail: billows downwind, fuller the better it drives
             var bn = { x: -boom.y, y: boom.x };
             if (bn.x * windTo.x + bn.y * windTo.y < 0) { bn.x = -bn.x; bn.y = -bn.y; }
             var bulge = 9 * power;
@@ -385,20 +400,15 @@
           // steering
           if (keys['ArrowLeft'])  state.heading += 75 * dt;
           if (keys['ArrowRight']) state.heading -= 75 * dt;
-          // sail trim
-          if (keys['ArrowUp'])   state.trim = Math.max(0,  state.trim - 70 * dt);
-          if (keys['ArrowDown']) state.trim = Math.min(90, state.trim + 70 * dt);
+          // sail: swings across the whole range, through the centreline to the other side
+          if (keys['ArrowUp'])   state.sail = Math.min(90,  state.sail + 90 * dt);
+          if (keys['ArrowDown']) state.sail = Math.max(-90, state.sail - 90 * dt);
 
-          // sail force: wind hitting the sail face, projected onto heading
-          var windTo = angUnitS(state.wind.to);
-          var leeSign = (angUnitS(state.heading).x * windTo.y - angUnitS(state.heading).y * windTo.x) >= 0 ? 1 : -1;
-          var boomDeg = state.heading + 180 + leeSign * state.trim;
-          var n = angUnitS(boomDeg + 90); // sail normal
-          var dot = (windTo.x * n.x + windTo.y * n.y) * WIND_SPEED;
+          // sail force from the side the player has set the sail on
           var fwd = angUnitS(state.heading);
-          var thrust = (n.x * fwd.x + n.y * fwd.y) * dot * 26;
-          if (thrust < 0) thrust *= 0.25; // can't really sail backwards
-          thrust *= sailPower();           // sail luffs in the no-go zone -> no drive
+          var thrust = driveFactor() * WIND_SPEED * 26;
+          if (thrust < 0) thrust *= 0.25; // sail backwinded (wrong side) -> barely any drive
+          thrust *= sailPower();          // sail luffs in the no-go zone -> no drive
 
           state.speed += thrust * dt;
           state.speed -= state.speed * 0.9 * dt;          // drag
@@ -428,12 +438,15 @@
           if (started && !state.won) physics(dt);
 
           // HUD
-          trimVal.textContent = Math.round(state.trim);
+          trimVal.textContent = Math.round(Math.abs(state.sail));
           speedVal.textContent = Math.max(0, state.speed).toFixed(1);
           distVal.textContent = Math.max(0, Math.round((FINISH_X - state.x) * 3));
           if (started && !state.won) {
             if (sailPower() < 0.45) {
               msgEl.textContent = '⚠️ Plachta plápolá – jsi proti větru, křižuj (cik-cak)!';
+              msgEl.style.color = '#b5651d';
+            } else if (driveFactor() <= 0.04) {
+              msgEl.textContent = '⚠️ Přehoď plachtu na druhou stranu (mezerník)!';
               msgEl.style.color = '#b5651d';
             } else {
               msgEl.textContent = '';

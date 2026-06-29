@@ -155,6 +155,18 @@
         </div>
       </div>
       {% endfor %}
+      {% if enable_games %}
+      <div class="section-divider"><span>🪶</span></div>
+      <div class="section">
+        <h3 class="section-title">{{ games_title }}</h3>
+        <div class="section-body">
+          <div class="games-cta">
+            <p class="games-description">{{ games_description }}</p>
+            <a class="games-link" href="/games">{{ games_title }} →</a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
     <div class="admin-section">
       <div class="admin-header" onclick="toggleAdmin()">

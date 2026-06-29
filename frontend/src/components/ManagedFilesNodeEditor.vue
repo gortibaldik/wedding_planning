@@ -68,6 +68,15 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
         />
         <span class="mfne__label">Enable rickroll</span>
       </label>
+      <label class="mfne__field mfne__field--inline">
+        <input
+          type="checkbox"
+          class="mfne__checkbox"
+          :checked="value.enable_games"
+          @change="emit('update', ['enable_games'], ($event.target as HTMLInputElement).checked)"
+        />
+        <span class="mfne__label">Enable games</span>
+      </label>
     </details>
 
     <details class="mfne__group" open>
@@ -184,6 +193,27 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
           </div>
         </template>
       </details>
+    </details>
+
+    <details class="mfne__group" open>
+      <summary class="mfne__legend">Games</summary>
+      <label class="mfne__field">
+        <span class="mfne__label">Title</span>
+        <input
+          class="mfne__input"
+          :value="value.games_title"
+          @input="onText(['games_title'], $event)"
+        />
+      </label>
+      <label class="mfne__field">
+        <span class="mfne__label">Description</span>
+        <textarea
+          class="mfne__input"
+          :value="value.games_description"
+          rows="3"
+          @input="onText(['games_description'], $event)"
+        />
+      </label>
     </details>
 
     <details class="mfne__group" open>

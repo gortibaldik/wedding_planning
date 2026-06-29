@@ -416,6 +416,45 @@ html[lang="ru"] {
   }
 }
 
+.games-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+
+  .games-description {
+    color: $color-green-dark;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 36rem;
+  }
+
+  .games-link {
+    font-family: 'Carelia-Upright', serif;
+    font-size: 1.2rem;
+    color: $color-green-light;
+    background: $color-green;
+    border: 1px solid $color-green-dark;
+    border-radius: 8px;
+    padding: 0.7rem 1.8rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: $color-green-light;
+      color: $color-green-dark;
+      transform: translateY(-2px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+}
+
 .admin-section {
   margin-top: auto;
   width: 100%;
