@@ -21,8 +21,8 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
 
 <template>
   <div class="mfne">
-    <section class="mfne__group">
-      <h3 class="mfne__legend">Page</h3>
+    <details class="mfne__group" open>
+      <summary class="mfne__legend">Page</summary>
       <label class="mfne__field">
         <span class="mfne__label">Language code</span>
         <input class="mfne__input" :value="value.lang" @input="onText(['lang'], $event)" />
@@ -35,10 +35,10 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
           @input="onText(['page_title'], $event)"
         />
       </label>
-    </section>
+    </details>
 
-    <section class="mfne__group">
-      <h3 class="mfne__legend">Couple</h3>
+    <details class="mfne__group" open>
+      <summary class="mfne__legend">Couple</summary>
       <label class="mfne__field">
         <span class="mfne__label">Bride</span>
         <input class="mfne__input" :value="value.bride" @input="onText(['bride'], $event)" />
@@ -55,10 +55,10 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
         <span class="mfne__label">Groom</span>
         <input class="mfne__input" :value="value.groom" @input="onText(['groom'], $event)" />
       </label>
-    </section>
+    </details>
 
-    <section class="mfne__group">
-      <h3 class="mfne__legend">Features</h3>
+    <details class="mfne__group" open>
+      <summary class="mfne__legend">Features</summary>
       <label class="mfne__field mfne__field--inline">
         <input
           type="checkbox"
@@ -68,10 +68,19 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
         />
         <span class="mfne__label">Enable rickroll</span>
       </label>
-    </section>
+      <label class="mfne__field mfne__field--inline">
+        <input
+          type="checkbox"
+          class="mfne__checkbox"
+          :checked="value.enable_games"
+          @change="emit('update', ['enable_games'], ($event.target as HTMLInputElement).checked)"
+        />
+        <span class="mfne__label">Enable games</span>
+      </label>
+    </details>
 
-    <section class="mfne__group">
-      <h3 class="mfne__legend">Wedding date</h3>
+    <details class="mfne__group" open>
+      <summary class="mfne__legend">Wedding date</summary>
       <label class="mfne__field">
         <span class="mfne__label">Label</span>
         <input
@@ -88,15 +97,15 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
           @input="onText(['wedding_date'], $event)"
         />
       </label>
-    </section>
+    </details>
 
-    <section class="mfne__group">
-      <h3 class="mfne__legend">Sections</h3>
-      <div v-for="(section, i) in value.sections" :key="i" class="mfne__subgroup">
-        <h4 class="mfne__sublegend">
+    <details class="mfne__group" open>
+      <summary class="mfne__legend">Sections</summary>
+      <details v-for="(section, i) in value.sections" :key="i" class="mfne__subgroup" open>
+        <summary class="mfne__sublegend">
           Section {{ i + 1 }}
           <span class="mfne__type-tag">{{ section.type }}</span>
-          <span class="mfne__reorder">
+          <span class="mfne__reorder" @click.stop>
             <button
               type="button"
               class="mfne__move-btn"
@@ -116,7 +125,7 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
               ↓
             </button>
           </span>
-        </h4>
+        </summary>
         <label class="mfne__field">
           <span class="mfne__label">Title</span>
           <input
@@ -183,11 +192,32 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
             </div>
           </div>
         </template>
-      </div>
-    </section>
+      </details>
+    </details>
 
-    <section class="mfne__group">
-      <h3 class="mfne__legend">Admin</h3>
+    <details class="mfne__group" open>
+      <summary class="mfne__legend">Games</summary>
+      <label class="mfne__field">
+        <span class="mfne__label">Title</span>
+        <input
+          class="mfne__input"
+          :value="value.games_title"
+          @input="onText(['games_title'], $event)"
+        />
+      </label>
+      <label class="mfne__field">
+        <span class="mfne__label">Description</span>
+        <textarea
+          class="mfne__input"
+          :value="value.games_description"
+          rows="3"
+          @input="onText(['games_description'], $event)"
+        />
+      </label>
+    </details>
+
+    <details class="mfne__group" open>
+      <summary class="mfne__legend">Admin</summary>
       <label class="mfne__field">
         <span class="mfne__label">Title</span>
         <input
@@ -212,7 +242,7 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
           @input="onText(['admin', 'login_prompt'], $event)"
         />
       </label>
-    </section>
+    </details>
   </div>
 </template>
 
@@ -224,42 +254,91 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
 }
 
 .mfne__group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   padding: 16px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #fafbfc;
 }
 
+.mfne__group[open] > *:not(summary) {
+  margin-top: 10px;
+}
+
+.mfne__group > *:not(summary) + *:not(summary) {
+  margin-top: 10px;
+}
+
 .mfne__legend {
-  margin: 0 0 4px;
   font-size: 14px;
   font-weight: 700;
   color: #1f2937;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.mfne__legend::-webkit-details-marker {
+  display: none;
+}
+
+.mfne__legend::before {
+  content: '▸';
+  font-size: 12px;
+  color: #6b7280;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.mfne__group[open] > .mfne__legend::before {
+  transform: rotate(90deg);
 }
 
 .mfne__subgroup {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   padding: 12px;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   background: white;
 }
 
+.mfne__subgroup[open] > *:not(summary) {
+  margin-top: 10px;
+}
+
+.mfne__subgroup > *:not(summary) + *:not(summary) {
+  margin-top: 10px;
+}
+
 .mfne__sublegend {
-  margin: 0;
   font-size: 13px;
   font-weight: 600;
   color: #374151;
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.mfne__sublegend::-webkit-details-marker {
+  display: none;
+}
+
+.mfne__sublegend::before {
+  content: '▸';
+  font-size: 11px;
+  color: #6b7280;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.mfne__subgroup[open] > .mfne__sublegend::before {
+  transform: rotate(90deg);
 }
 
 .mfne__type-tag {

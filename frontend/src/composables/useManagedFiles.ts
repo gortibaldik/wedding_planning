@@ -52,6 +52,9 @@ export interface I18nFile {
   wedding_date_label: string
   wedding_date: string
   enable_rickroll: boolean
+  enable_games: boolean
+  games_title: string
+  games_description: string
   sections: I18nSection[]
   admin: I18nAdmin
 }
