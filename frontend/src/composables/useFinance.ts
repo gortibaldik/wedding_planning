@@ -289,6 +289,28 @@ export function useFinance() {
     }
   }
 
+  const updateItem = async (id: string, input: FinanceItemInput): Promise<boolean> => {
+    saving.value = true
+    errorMsg.value = ''
+    try {
+      const res = await authFetch(`/finance/set/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(input)
+      })
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}))
+        throw new Error(detail.detail || `HTTP ${res.status}`)
+      }
+      await refreshAll()
+      return true
+    } catch (e) {
+      errorMsg.value = 'Failed to save: ' + (e instanceof Error ? e.message : String(e))
+      return false
+    } finally {
+      saving.value = false
+    }
+  }
+
   const deleteItem = async (id: string) => {
     errorMsg.value = ''
     try {
@@ -401,6 +423,7 @@ export function useFinance() {
     loadMonthBreakdown,
     refreshAll,
     addItem,
+    updateItem,
     deleteItem,
     importPreview,
     removeImportRow,
