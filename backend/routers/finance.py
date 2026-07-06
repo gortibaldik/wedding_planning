@@ -1,6 +1,7 @@
+import base64
 import logging
 import uuid
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from typing import Annotated
 
@@ -11,6 +12,16 @@ from pydantic import BaseModel
 from backend.dependencies import get_current_user, get_redis
 
 from .utils.compression import compress, decompress
+from .utils.revolut import (
+    COL_AMOUNT,
+    COL_COMPLETED,
+    COL_CURRENCY,
+    COL_DESCRIPTION,
+    COL_STARTED,
+    COL_STATE,
+    COL_TYPE,
+    parse_statement,
+)
 
 FINANCE_ACCESS_ROLE = "finance-access"
 
@@ -193,3 +204,126 @@ async def delete_item(
     if not await redis.hdel(ALL_ITEMS_KEY, item_id):
         raise HTTPException(status_code=404, detail="Item not found")
     return {"status": "ok"}
+
+
+# ---- Revolut statement import ----
+
+
+class ImportFileRequest(BaseModel):
+    """A base64-encoded Revolut XLSX export awaiting a preview parse."""
+
+    filename: str
+    content_base64: str
+
+
+class ImportRow(FinanceItemInput):
+    """A previewed, still-editable expense parsed from a Revolut statement.
+
+    The ``source_*`` fields are read-only context to help the user review each
+    row; only the inherited :class:`FinanceItemInput` fields are persisted when
+    the reviewed rows are committed.
+    """
+
+    source_amount: float
+    source_currency: str
+    source_type: str
+    source_state: str
+
+
+def _row_date(row: dict) -> date | None:
+    """Pick the transaction date, preferring completion over start."""
+    for col in (COL_COMPLETED, COL_STARTED):
+        value = row.get(col)
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str) and value.strip():
+            try:
+                return datetime.fromisoformat(value.strip()).date()
+            except ValueError:
+                continue
+    return None
+
+
+def _dedup_key(name: str, price: float, item_date: date) -> tuple[str, float, str]:
+    """Identity of an expense for import de-duplication: (name, price, date)."""
+    return (name, round(float(price), 2), item_date.isoformat())
+
+
+@router.post("/import/preview")
+async def preview_import(
+    request: ImportFileRequest,
+    redis: Annotated[aioredis.Redis, Depends(get_redis)],
+    user: Annotated[dict, Depends(get_current_user)],
+) -> list[ImportRow]:
+    """Parse an uploaded Revolut XLSX and return editable expense rows.
+
+    Only outgoing transactions (negative amount) become rows, with
+    ``price = |amount|``; incoming transfers/top-ups are dropped. Rows that
+    already exist in the database (same name, price and date) are dropped too,
+    so re-importing an overlapping statement doesn't duplicate them. Nothing is
+    persisted here — the user reviews and edits the rows, then commits them.
+    """
+    try:
+        data = base64.b64decode(request.content_base64, validate=True)
+        parsed = parse_statement(data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Could not parse file") from e
+
+    existing = {
+        _dedup_key(item.name, item.price, item.date)
+        for item in await _load_all_items(redis)
+    }
+
+    # Imported statement expenses default to shared/joint spending.
+    buyer = "Joint"
+    rows: list[ImportRow] = []
+    for entry in parsed:
+        amount = entry.get(COL_AMOUNT)
+        if not isinstance(amount, int | float) or amount >= 0:
+            continue
+        item_date = _row_date(entry)
+        if item_date is None:
+            continue
+        name = str(entry.get(COL_DESCRIPTION) or entry.get(COL_TYPE) or "").strip()
+        price = round(-float(amount), 2)
+        if _dedup_key(name, price, item_date) in existing:
+            continue
+        rows.append(
+            ImportRow(
+                name=name,
+                price=price,
+                category="",
+                date=item_date,
+                buyer=buyer,
+                source_amount=float(amount),
+                source_currency=str(entry.get(COL_CURRENCY) or ""),
+                source_type=str(entry.get(COL_TYPE) or ""),
+                source_state=str(entry.get(COL_STATE) or ""),
+            )
+        )
+    logger.info(
+        "Parsed %d expense rows from '%s' for %s",
+        len(rows),
+        request.filename,
+        user.get("sub"),
+    )
+    return rows
+
+
+@router.post("/import/commit")
+async def commit_import(
+    items: list[FinanceItemInput],
+    redis: Annotated[aioredis.Redis, Depends(get_redis)],
+) -> list[FinanceItem]:
+    """Bulk-create the reviewed import rows, returning them with generated ids."""
+    created: list[FinanceItem] = []
+    mapping: dict[str, str] = {}
+    for item_input in items:
+        item = FinanceItem(id=str(uuid.uuid4()), **item_input.model_dump())
+        mapping[item.id] = compress(item.model_dump_json())
+        created.append(item)
+    if mapping:
+        await redis.hset(ALL_ITEMS_KEY, mapping=mapping)
+    return created

@@ -18,6 +18,21 @@ export interface FinanceItem {
 /** Payload for creating an item (no id yet). */
 export type FinanceItemInput = Omit<FinanceItem, 'id'>
 
+/**
+ * One previewed expense parsed from a Revolut statement, mirroring
+ * `backend/routers/finance.py::ImportRow`. The `source_*` fields are read-only
+ * context; only the `FinanceItemInput` fields are persisted on commit.
+ */
+export interface ImportRow extends FinanceItemInput {
+  source_amount: number
+  source_currency: string
+  source_type: string
+  source_state: string
+}
+
+/** An import row plus a stable local key, for editing in the review table. */
+export type EditableImportRow = ImportRow & { _key: number }
+
 /** A row returned by the SQL-like `/finance/grouped` endpoint. */
 interface GroupedResult {
   keys: Record<string, string | number>
@@ -90,6 +105,11 @@ const breakdownYear = ref<number>(now.getFullYear())
 const breakdownMonth = ref<number>(now.getMonth() + 1)
 const monthBreakdown = ref<SeriesPoint[]>([])
 
+// Revolut statement import (preview -> review/edit -> commit)
+const importRows = ref<EditableImportRow[]>([])
+const importing = ref(false)
+let importKeySeq = 0
+
 const loading = ref(false)
 const saving = ref(false)
 const errorMsg = ref('')
@@ -117,6 +137,15 @@ const getJson = async <T>(path: string): Promise<T> => {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json() as Promise<T>
 }
+
+/** Read a File into a base64 string (without the `data:...;base64,` prefix). */
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '')
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read file'))
+    reader.readAsDataURL(file)
+  })
 
 /** Sum item prices by their `name`, biggest first — used for the month breakdown. */
 const aggregateByName = (items: FinanceItem[]): SeriesPoint[] => {
@@ -271,6 +300,77 @@ export function useFinance() {
     }
   }
 
+  /** Upload a Revolut XLSX and load its parsed expenses into `importRows`. */
+  const importPreview = async (file: File): Promise<boolean> => {
+    importing.value = true
+    errorMsg.value = ''
+    try {
+      const content_base64 = await fileToBase64(file)
+      const res = await authFetch('/finance/import/preview', {
+        method: 'POST',
+        body: JSON.stringify({ filename: file.name, content_base64 })
+      })
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}))
+        throw new Error(detail.detail || `HTTP ${res.status}`)
+      }
+      const rows = (await res.json()) as ImportRow[]
+      importKeySeq = 0
+      importRows.value = rows.map(row => ({ ...row, _key: importKeySeq++ }))
+      return true
+    } catch (e) {
+      errorMsg.value = 'Failed to parse file: ' + (e instanceof Error ? e.message : String(e))
+      return false
+    } finally {
+      importing.value = false
+    }
+  }
+
+  const removeImportRow = (key: number) => {
+    importRows.value = importRows.value.filter(row => row._key !== key)
+  }
+
+  const clearImport = () => {
+    importRows.value = []
+  }
+
+  /**
+   * Persist the given import rows (defaults to all), remove them from the
+   * preview, and refresh all views. Rows not passed in are left for further
+   * review.
+   */
+  const commitImport = async (rows: EditableImportRow[] = importRows.value): Promise<boolean> => {
+    if (!rows.length) return false
+    saving.value = true
+    errorMsg.value = ''
+    try {
+      const payload: FinanceItemInput[] = rows.map(row => ({
+        name: row.name,
+        price: Number(row.price),
+        category: row.category,
+        date: row.date,
+        buyer: row.buyer
+      }))
+      const res = await authFetch('/finance/import/commit', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}))
+        throw new Error(detail.detail || `HTTP ${res.status}`)
+      }
+      const importedKeys = new Set(rows.map(row => row._key))
+      importRows.value = importRows.value.filter(row => !importedKeys.has(row._key))
+      await refreshAll()
+      return true
+    } catch (e) {
+      errorMsg.value = 'Failed to import: ' + (e instanceof Error ? e.message : String(e))
+      return false
+    } finally {
+      saving.value = false
+    }
+  }
+
   const formatMoney = (value: number): string =>
     value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -287,6 +387,8 @@ export function useFinance() {
     breakdownMonth,
     monthBreakdown,
     availableYears,
+    importRows,
+    importing,
     loading,
     saving,
     errorMsg,
@@ -300,6 +402,10 @@ export function useFinance() {
     refreshAll,
     addItem,
     deleteItem,
+    importPreview,
+    removeImportRow,
+    clearImport,
+    commitImport,
     // helpers
     formatMoney,
     MONTH_NAMES
