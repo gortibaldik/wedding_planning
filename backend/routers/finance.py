@@ -231,8 +231,8 @@ class ImportRow(FinanceItemInput):
 
 
 def _row_date(row: dict) -> date | None:
-    """Pick the transaction date, preferring completion over start."""
-    for col in (COL_COMPLETED, COL_STARTED):
+    """Pick the transaction date, preferring start over completion."""
+    for col in (COL_STARTED, COL_COMPLETED):
         value = row.get(col)
         if isinstance(value, datetime):
             return value.date()
