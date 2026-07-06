@@ -31,6 +31,29 @@ export interface SeriesPoint {
   value: number
 }
 
+/** A named, colored monthly series for one category (multi-series line chart). */
+export interface CategorySeries {
+  name: string
+  color: string
+  points: SeriesPoint[]
+}
+
+/** Categorical palette used to color per-category lines, assigned by sorted order. */
+const CATEGORY_COLORS = [
+  '#3b82f6',
+  '#ef4444',
+  '#10b981',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#14b8a6',
+  '#f97316',
+  '#6366f1',
+  '#84cc16',
+  '#06b6d4',
+  '#a855f7'
+]
+
 const MONTH_NAMES = [
   'Jan',
   'Feb',
@@ -58,6 +81,8 @@ const filterCategory = ref<string | null>(null)
 // Time-series charts
 const monthlySeries = ref<SeriesPoint[]>([])
 const yearlySeries = ref<SeriesPoint[]>([])
+// Monthly totals split per category, aligned to a shared set of month labels.
+const monthlyByCategory = ref<CategorySeries[]>([])
 
 // Per-month breakdown (bar + pie)
 const now = new Date()
@@ -149,6 +174,42 @@ export function useFinance() {
         .map(({ label, value }) => ({ label, value }))
     })
 
+  /** Monthly totals split by category, aligned to one shared month axis. */
+  const loadMonthlyByCategory = () =>
+    withErrorHandling(async () => {
+      const rows = await getJson<GroupedResult[]>(
+        '/grouped?group_by=year&group_by=month&group_by=category'
+      )
+
+      // Collect the chronological set of (year, month) buckets -> x labels.
+      const buckets = new Map<number, string>()
+      for (const row of rows) {
+        const year = Number(row.keys.year)
+        const month = Number(row.keys.month)
+        buckets.set(year * 100 + month, `${MONTH_NAMES[month - 1]} ${year}`)
+      }
+      const sortedKeys = [...buckets.keys()].sort((a, b) => a - b)
+      const labels = sortedKeys.map(k => buckets.get(k)!)
+      const indexOfKey = new Map(sortedKeys.map((k, i) => [k, i]))
+
+      // Fill each category's values against the shared axis (0 where absent).
+      const byCat = new Map<string, number[]>()
+      for (const row of rows) {
+        const category = String(row.keys.category)
+        const idx = indexOfKey.get(Number(row.keys.year) * 100 + Number(row.keys.month))!
+        if (!byCat.has(category)) byCat.set(category, new Array(labels.length).fill(0))
+        byCat.get(category)![idx] += row.total_price
+      }
+
+      monthlyByCategory.value = [...byCat.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([name, values], i) => ({
+          name,
+          color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+          points: values.map((value, j) => ({ label: labels[j], value }))
+        }))
+    })
+
   /** Yearly totals, as a time series. Also drives `availableYears`. */
   const loadYearlySeries = () =>
     withErrorHandling(async () => {
@@ -171,6 +232,7 @@ export function useFinance() {
       loadCategories(),
       loadListItems(),
       loadMonthlySeries(),
+      loadMonthlyByCategory(),
       loadYearlySeries(),
       loadMonthBreakdown()
     ])
@@ -220,6 +282,7 @@ export function useFinance() {
     filterCategory,
     monthlySeries,
     yearlySeries,
+    monthlyByCategory,
     breakdownYear,
     breakdownMonth,
     monthBreakdown,
@@ -231,6 +294,7 @@ export function useFinance() {
     loadCategories,
     loadListItems,
     loadMonthlySeries,
+    loadMonthlyByCategory,
     loadYearlySeries,
     loadMonthBreakdown,
     refreshAll,
