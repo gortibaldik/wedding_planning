@@ -9,6 +9,7 @@ const {
   listItems,
   filterYear,
   filterCategory,
+  filterKind,
   availableYears,
   loading,
   saving,
@@ -16,7 +17,8 @@ const {
   addItem,
   updateItem,
   deleteItem,
-  formatMoney
+  isDeposit,
+  formatPrice
 } = useFinance()
 
 // ---- Add-item form (local display state) ----
@@ -31,13 +33,14 @@ const emptyForm = (): FinanceItemInput => ({
 const form = reactive<FinanceItemInput>(emptyForm())
 const showForm = ref(false)
 
+// A negative price is a valid entry: it records an deposit (money put in).
 const formValid = computed(
   () =>
     form.name.trim() !== '' &&
     form.category.trim() !== '' &&
     form.buyer.trim() !== '' &&
     form.date !== '' &&
-    form.price > 0
+    Number(form.price) !== 0
 )
 
 const submitForm = async () => {
@@ -59,7 +62,7 @@ const editValid = computed(
     editForm.category.trim() !== '' &&
     editForm.buyer.trim() !== '' &&
     editForm.date !== '' &&
-    editForm.price > 0
+    Number(editForm.price) !== 0
 )
 
 const startEdit = (item: FinanceItem) => {
@@ -86,7 +89,7 @@ const saveEdit = async () => {
 const { PAGE_SIZES, pageSize, page, totalPages, pagedItems } = usePagination(listItems)
 
 // Reload the list when its filters change, and start over from the first page.
-watch([filterYear, filterCategory], () => {
+watch([filterYear, filterCategory, filterKind], () => {
   page.value = 1
   loadListItems()
 })
@@ -111,6 +114,14 @@ watch([filterYear, filterCategory], () => {
           </select>
         </label>
         <label>
+          Type
+          <select v-model="filterKind">
+            <option value="all">All</option>
+            <option value="expenses">Expenses</option>
+            <option value="deposits">Deposits</option>
+          </select>
+        </label>
+        <label>
           Per page
           <select v-model.number="pageSize">
             <option v-for="size in PAGE_SIZES" :key="size" :value="size">{{ size }}</option>
@@ -124,7 +135,7 @@ watch([filterYear, filterCategory], () => {
 
     <form v-if="showForm" class="fin__form" @submit.prevent="submitForm">
       <input v-model="form.name" placeholder="Name" />
-      <input v-model.number="form.price" type="number" step="0.01" min="0" placeholder="Price" />
+      <input v-model.number="form.price" type="number" step="0.01" placeholder="Price" />
       <input v-model="form.category" list="fin-categories" placeholder="Category" />
       <input v-model="form.buyer" placeholder="Buyer" />
       <input v-model="form.date" type="date" />
@@ -167,7 +178,6 @@ watch([filterYear, filterCategory], () => {
                 v-model.number="editForm.price"
                 type="number"
                 step="0.01"
-                min="0"
                 class="fin__cell-input fin__cell-input--num"
               />
             </td>
@@ -190,7 +200,12 @@ watch([filterYear, filterCategory], () => {
               <span class="fin__chip">{{ item.category }}</span>
             </td>
             <td>{{ item.buyer }}</td>
-            <td class="fin__num">{{ formatMoney(item.price) }}</td>
+            <td
+              class="fin__num"
+              :class="isDeposit(item.price) ? 'fin__amount--deposit' : 'fin__amount--expense'"
+            >
+              {{ formatPrice(item.price) }}
+            </td>
             <td class="fin__row-actions">
               <button class="fin__icon-btn" title="Edit" @click="startEdit(item)">✎</button>
               <button class="fin__delete" title="Delete" @click="deleteItem(item.id)">×</button>

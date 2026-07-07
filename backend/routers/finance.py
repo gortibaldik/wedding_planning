@@ -101,12 +101,18 @@ def _matches(
     category: str | None,
     year: int | None,
     month: int | None,
+    price_gte: float | None = None,
+    price_lte: float | None = None,
 ) -> bool:
     if category is not None and item.category != category:
         return False
     if year is not None and item.date.year != year:
         return False
-    if month is not None and item.date.month != month:  # noqa: SIM103
+    if month is not None and item.date.month != month:
+        return False
+    if price_gte is not None and item.price < price_gte:
+        return False
+    if price_lte is not None and item.price > price_lte:  # noqa: SIM103
         return False
     return True
 
@@ -117,10 +123,20 @@ async def get_items(
     category: Annotated[str | None, Query()] = None,
     year: Annotated[int | None, Query()] = None,
     month: Annotated[int | None, Query(ge=1, le=12)] = None,
+    price_gte: Annotated[float | None, Query()] = None,
+    price_lte: Annotated[float | None, Query()] = None,
 ) -> list[FinanceItem]:
-    """Return the full list of items, optionally filtered by category / year / month."""
+    """Return the full list of items.
+
+    Optionally filtered by category / year / month / price range
+    (e.g. ``price_gte=0`` for expenses only, ``price_lte=0`` for deposits only).
+    """
     items = await _load_all_items(redis)
-    items = [item for item in items if _matches(item, category, year, month)]
+    items = [
+        item
+        for item in items
+        if _matches(item, category, year, month, price_gte, price_lte)
+    ]
     items.sort(key=lambda item: item.date, reverse=True)
     return items
 
@@ -132,6 +148,8 @@ async def get_items_grouped(
     category: Annotated[str | None, Query()] = None,
     year: Annotated[int | None, Query()] = None,
     month: Annotated[int | None, Query(ge=1, le=12)] = None,
+    price_gte: Annotated[float | None, Query()] = None,
+    price_lte: Annotated[float | None, Query()] = None,
 ) -> list[GroupedResult]:
     """Filter the items, then aggregate them by the requested ``group_by`` dimensions.
 
@@ -145,7 +163,7 @@ async def get_items_grouped(
     items = await _load_all_items(redis)
     groups: dict[tuple[str | int, ...], GroupedResult] = {}
     for item in items:
-        if not _matches(item, category, year, month):
+        if not _matches(item, category, year, month, price_gte, price_lte):
             continue
         values = tuple(_group_value(item, dim) for dim in dimensions)
         group = groups.get(values)
@@ -259,13 +277,15 @@ async def preview_import(
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
     user: Annotated[dict, Depends(get_current_user)],
 ) -> list[ImportRow]:
-    """Parse an uploaded Revolut XLSX and return editable expense rows.
+    """Parse an uploaded Revolut XLSX and return editable rows.
 
-    Only outgoing transactions (negative amount) become rows, with
-    ``price = |amount|``; incoming transfers/top-ups are dropped. Rows that
-    already exist in the database (same name, price and date) are dropped too,
-    so re-importing an overlapping statement doesn't duplicate them. Nothing is
-    persisted here — the user reviews and edits the rows, then commits them.
+    Every non-zero transaction becomes a row with ``price = -amount``: outgoing
+    payments (negative amount) turn into expenses with a positive price, while
+    incoming transfers/top-ups (positive amount) turn into deposits with a
+    negative price. Rows that already exist in the database (same name, price
+    and date) are dropped, so re-importing an overlapping statement doesn't
+    duplicate them. Nothing is persisted here — the user reviews and edits the
+    rows, then commits them.
     """
     try:
         data = base64.b64decode(request.content_base64, validate=True)
@@ -287,7 +307,7 @@ async def preview_import(
     import_stats_dict = defaultdict(lambda: 0)
     for entry in parsed:
         amount = entry.get(COL_AMOUNT)
-        if not isinstance(amount, int | float) or amount >= 0:
+        if not isinstance(amount, int | float) or amount == 0:
             import_stats_dict["error_amount"] += 1
             continue
         item_date = _row_date(entry)
@@ -296,6 +316,7 @@ async def preview_import(
             continue
         name = str(entry.get(COL_DESCRIPTION) or entry.get(COL_TYPE) or "").strip()
         price = round(-float(amount), 2)
+        logger.info(f"name: '{name}', price: {price}, item_date: {item_date}")
         if _dedup_key(name, price, item_date) in existing:
             import_stats_dict["error_duplicate"] += 1
             continue
@@ -305,7 +326,8 @@ async def preview_import(
             ImportRow(
                 name=name,
                 price=price,
-                category="",
+                # Incoming money (negative price) is a deposit by default.
+                category="Deposit" if price < 0 else "",
                 date=item_date,
                 buyer=buyer,
                 source_amount=float(amount),
@@ -315,7 +337,7 @@ async def preview_import(
             )
         )
     logger.info(
-        f"Parsed {len(rows)} expense rows from '{request.filename}' for {user.get('sub')}"
+        f"Parsed {len(rows)} rows from '{request.filename}' for {user.get('sub')}"
     )
     logger.info(f"Import stats: {json.dumps(import_stats_dict)}")
     return rows

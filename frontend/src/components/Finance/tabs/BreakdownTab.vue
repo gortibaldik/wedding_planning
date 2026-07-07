@@ -8,6 +8,7 @@ const {
   breakdownYear,
   breakdownMonth,
   monthBreakdown,
+  monthDeposits,
   loadMonthBreakdown,
   formatMoney,
   MONTH_NAMES
@@ -37,6 +38,10 @@ watch([breakdownYear, breakdownMonth], loadMonthBreakdown)
     <div class="fin__card">
       <h3 class="fin__card-title">Spending per good — {{ monthLabel }}</h3>
       <BarChart :bars="monthBreakdown" :format-value="formatMoney" />
+    </div>
+    <div v-if="monthDeposits.length" class="fin__card">
+      <h3 class="fin__card-title">Money added — {{ monthLabel }}</h3>
+      <BarChart :bars="monthDeposits" color="#16a34a" :format-value="formatMoney" />
     </div>
     <div class="fin__card">
       <h3 class="fin__card-title">Share per good — {{ monthLabel }}</h3>

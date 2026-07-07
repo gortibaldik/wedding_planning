@@ -2,8 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import { useFinance } from '@/composables/useFinance'
 import LineChart, { type ChartSeries } from '../LineChart.vue'
+import BarChart from '../BarChart.vue'
 
-const { monthlySeries, yearlySeries, monthlyByCategory, formatMoney } = useFinance()
+const { monthlySeries, monthlyByCategory, depositsByBuyer, depositsTotals, formatMoney } =
+  useFinance()
 
 // ---- Monthly chart: single total, or split into per-category lines ----
 const splitByCategory = ref(false)
@@ -48,10 +50,6 @@ const monthlyChart = computed<ChartSeries[]>(() =>
     ? monthlyByCategory.value.filter(s => selectedCategories.value.includes(s.name))
     : [{ name: 'Total', color: '#3b82f6', points: monthlySeries.value }]
 )
-
-const yearlyChart = computed<ChartSeries[]>(() => [
-  { name: 'Total', color: '#10b981', points: yearlySeries.value }
-])
 </script>
 
 <template>
@@ -82,13 +80,26 @@ const yearlyChart = computed<ChartSeries[]>(() => [
       <LineChart :series="monthlyChart" :format-value="formatMoney" />
     </div>
     <div class="fin__card">
-      <h3 class="fin__card-title">Spending per year</h3>
-      <LineChart :series="yearlyChart" :format-value="formatMoney" />
+      <h3 class="fin__card-title">Money added per month, by member</h3>
+      <LineChart :series="depositsByBuyer" :format-value="formatMoney" />
+    </div>
+    <div class="fin__card">
+      <h3 class="fin__card-title">Total added, by member</h3>
+      <BarChart :bars="depositsTotals" color="#16a34a" :format-value="formatMoney" />
+      <p v-if="!depositsTotals.length" class="fin__empty-note">
+        No deposits yet — import a statement or add an item with a negative price.
+      </p>
     </div>
   </section>
 </template>
 
 <style scoped>
+.fin__empty-note {
+  margin: 0;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
 .fin__chart-menu {
   display: flex;
   gap: 16px;

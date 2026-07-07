@@ -140,3 +140,11 @@
 .fin__delete:hover {
   color: #ef4444;
 }
+
+.fin__amount--expense {
+  color: #dc2626;
+}
+
+.fin__amount--deposit {
+  color: #16a34a;
+}

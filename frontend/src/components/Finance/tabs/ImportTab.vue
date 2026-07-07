@@ -13,7 +13,8 @@ const {
   removeImportRow,
   clearImport,
   commitImport,
-  formatMoney
+  formatMoney,
+  isDeposit
 } = useFinance()
 
 const { setSubTab } = useFinanceSubTabs()
@@ -107,8 +108,8 @@ const doCommitImport = async () => {
     <div class="fin__card">
       <h3 class="fin__card-title">Import a Revolut statement</h3>
       <p class="fin__hint">
-        Upload the Excel export from Revolut. Only outgoing payments (expenses) are picked up.
-        Review and edit the rows below, then approve to add them.
+        Upload the Excel export from Revolut. Outgoing payments become expenses (red) and incoming
+        money becomes deposits (green). Review and edit the rows below, then approve to add them.
       </p>
       <div class="fin__import-actions">
         <input
@@ -127,7 +128,7 @@ const doCommitImport = async () => {
     <div v-if="importRows.length" class="fin__import-review">
       <div class="fin__toolbar">
         <div class="fin__import-summary">
-          {{ importRows.length }} expense{{ importRows.length === 1 ? '' : 's' }} — total
+          {{ importRows.length }} row{{ importRows.length === 1 ? '' : 's' }} — net total
           {{ formatMoney(importTotal) }}
         </div>
         <div class="fin__import-buttons">
@@ -245,8 +246,8 @@ const doCommitImport = async () => {
                 v-model.number="row.price"
                 type="number"
                 step="0.01"
-                min="0"
                 class="fin__cell-input fin__cell-input--num"
+                :class="isDeposit(row.price) ? 'fin__amount--deposit' : 'fin__amount--expense'"
               />
             </td>
             <td class="fin__num fin__source">

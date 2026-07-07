@@ -7,6 +7,7 @@ const { authFetch } = useAuth()
 export interface FinanceItem {
   id: string
   name: string
+  /** Positive = expense; negative = deposit (money put in, e.g. a top-up). */
   price: number
   category: string
   /** ISO date string, e.g. "2026-07-06". */
@@ -14,6 +15,9 @@ export interface FinanceItem {
   /** The person who purchased the item. */
   buyer: string
 }
+
+/** Which kinds of items the list shows: everything, expenses, or deposits. */
+export type ItemKindFilter = 'all' | 'expenses' | 'deposits'
 
 /** Payload for creating an item (no id yet). */
 export type FinanceItemInput = Omit<FinanceItem, 'id'>
@@ -92,18 +96,24 @@ const categories = ref<string[]>([])
 const listItems = ref<FinanceItem[]>([])
 const filterYear = ref<number | null>(null)
 const filterCategory = ref<string | null>(null)
+const filterKind = ref<ItemKindFilter>('all')
 
-// Time-series charts
+// Time-series charts (expenses only)
 const monthlySeries = ref<SeriesPoint[]>([])
 const yearlySeries = ref<SeriesPoint[]>([])
 // Monthly totals split per category, aligned to a shared set of month labels.
 const monthlyByCategory = ref<CategorySeries[]>([])
+
+// Deposits (money put in), as positive values
+const depositsByBuyer = ref<CategorySeries[]>([])
+const depositsTotals = ref<SeriesPoint[]>([])
 
 // Per-month breakdown (bar + pie)
 const now = new Date()
 const breakdownYear = ref<number>(now.getFullYear())
 const breakdownMonth = ref<number>(now.getMonth() + 1)
 const monthBreakdown = ref<SeriesPoint[]>([])
+const monthDeposits = ref<SeriesPoint[]>([])
 
 // Revolut statement import (preview -> review/edit -> commit)
 const importRows = ref<EditableImportRow[]>([])
@@ -180,15 +190,19 @@ export function useFinance() {
     withErrorHandling(async () => {
       const query = buildQuery({
         year: filterYear.value,
-        category: filterCategory.value
+        category: filterCategory.value,
+        price_gte: filterKind.value === 'expenses' ? 0 : null,
+        price_lte: filterKind.value === 'deposits' ? 0 : null
       })
       listItems.value = await getJson<FinanceItem[]>(`/get${query}`)
     })
 
-  /** Monthly totals across the whole history, as a chronological time series. */
+  /** Monthly expense totals across the whole history, as a chronological time series. */
   const loadMonthlySeries = () =>
     withErrorHandling(async () => {
-      const rows = await getJson<GroupedResult[]>('/grouped?group_by=year&group_by=month')
+      const rows = await getJson<GroupedResult[]>(
+        '/grouped?group_by=year&group_by=month&price_gte=0'
+      )
       monthlySeries.value = rows
         .map(row => {
           const year = Number(row.keys.year)
@@ -203,46 +217,73 @@ export function useFinance() {
         .map(({ label, value }) => ({ label, value }))
     })
 
-  /** Monthly totals split by category, aligned to one shared month axis. */
+  /**
+   * Turn per-(year, month, dimension) grouped rows into named monthly series
+   * aligned to one shared month axis (0 where absent). `scale` lets callers
+   * flip stored signs, e.g. -1 to show deposits as positive values.
+   */
+  const buildAlignedSeries = (
+    rows: GroupedResult[],
+    dimension: 'category' | 'buyer',
+    scale = 1
+  ): CategorySeries[] => {
+    // Collect the chronological set of (year, month) buckets -> x labels.
+    const buckets = new Map<number, string>()
+    for (const row of rows) {
+      const year = Number(row.keys.year)
+      const month = Number(row.keys.month)
+      buckets.set(year * 100 + month, `${MONTH_NAMES[month - 1]} ${year}`)
+    }
+    const sortedKeys = [...buckets.keys()].sort((a, b) => a - b)
+    const labels = sortedKeys.map(k => buckets.get(k)!)
+    const indexOfKey = new Map(sortedKeys.map((k, i) => [k, i]))
+
+    // Fill each series' values against the shared axis (0 where absent).
+    const bySeries = new Map<string, number[]>()
+    for (const row of rows) {
+      const name = String(row.keys[dimension])
+      const idx = indexOfKey.get(Number(row.keys.year) * 100 + Number(row.keys.month))!
+      if (!bySeries.has(name)) bySeries.set(name, new Array(labels.length).fill(0))
+      bySeries.get(name)![idx] += row.total_price * scale
+    }
+
+    return [...bySeries.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, values], i) => ({
+        name,
+        color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+        points: values.map((value, j) => ({ label: labels[j], value }))
+      }))
+  }
+
+  /** Monthly expense totals split by category, aligned to one shared month axis. */
   const loadMonthlyByCategory = () =>
     withErrorHandling(async () => {
       const rows = await getJson<GroupedResult[]>(
-        '/grouped?group_by=year&group_by=month&group_by=category'
+        '/grouped?group_by=year&group_by=month&group_by=category&price_gte=0'
       )
-
-      // Collect the chronological set of (year, month) buckets -> x labels.
-      const buckets = new Map<number, string>()
-      for (const row of rows) {
-        const year = Number(row.keys.year)
-        const month = Number(row.keys.month)
-        buckets.set(year * 100 + month, `${MONTH_NAMES[month - 1]} ${year}`)
-      }
-      const sortedKeys = [...buckets.keys()].sort((a, b) => a - b)
-      const labels = sortedKeys.map(k => buckets.get(k)!)
-      const indexOfKey = new Map(sortedKeys.map((k, i) => [k, i]))
-
-      // Fill each category's values against the shared axis (0 where absent).
-      const byCat = new Map<string, number[]>()
-      for (const row of rows) {
-        const category = String(row.keys.category)
-        const idx = indexOfKey.get(Number(row.keys.year) * 100 + Number(row.keys.month))!
-        if (!byCat.has(category)) byCat.set(category, new Array(labels.length).fill(0))
-        byCat.get(category)![idx] += row.total_price
-      }
-
-      monthlyByCategory.value = [...byCat.entries()]
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([name, values], i) => ({
-          name,
-          color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
-          points: values.map((value, j) => ({ label: labels[j], value }))
-        }))
+      monthlyByCategory.value = buildAlignedSeries(rows, 'category')
     })
 
-  /** Yearly totals, as a time series. Also drives `availableYears`. */
+  /** Money added per member: monthly series plus all-time totals (as positive values). */
+  const loadDeposits = () =>
+    withErrorHandling(async () => {
+      const rows = await getJson<GroupedResult[]>(
+        '/grouped?group_by=year&group_by=month&group_by=buyer&price_lte=0'
+      )
+      depositsByBuyer.value = buildAlignedSeries(rows, 'buyer', -1)
+      depositsTotals.value = depositsByBuyer.value
+        .map(series => ({
+          label: series.name,
+          value: series.points.reduce((sum, p) => sum + p.value, 0)
+        }))
+        .sort((a, b) => b.value - a.value)
+    })
+
+  /** Yearly expense totals, as a time series. Also drives `availableYears`. */
   const loadYearlySeries = () =>
     withErrorHandling(async () => {
-      const rows = await getJson<GroupedResult[]>('/grouped?group_by=year')
+      const rows = await getJson<GroupedResult[]>('/grouped?group_by=year&price_gte=0')
       yearlySeries.value = rows
         .map(row => ({ label: String(row.keys.year), value: row.total_price }))
         .sort((a, b) => Number(a.label) - Number(b.label))
@@ -253,7 +294,10 @@ export function useFinance() {
     withErrorHandling(async () => {
       const query = buildQuery({ year: breakdownYear.value, month: breakdownMonth.value })
       const items = await getJson<FinanceItem[]>(`/get${query}`)
-      monthBreakdown.value = aggregateByName(items)
+      monthBreakdown.value = aggregateByName(items.filter(item => item.price >= 0))
+      monthDeposits.value = aggregateByName(
+        items.filter(item => item.price < 0).map(item => ({ ...item, price: -item.price }))
+      )
     })
 
   const refreshAll = async () => {
@@ -263,6 +307,7 @@ export function useFinance() {
       loadMonthlySeries(),
       loadMonthlyByCategory(),
       loadYearlySeries(),
+      loadDeposits(),
       loadMonthBreakdown()
     ])
   }
@@ -396,18 +441,29 @@ export function useFinance() {
   const formatMoney = (value: number): string =>
     value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+  /** Deposits (money put in) are stored with a negative price. */
+  const isDeposit = (price: number): boolean => price < 0
+
+  /** Price for display: deposits flip to a positive amount with a leading `+`. */
+  const formatPrice = (price: number): string =>
+    isDeposit(price) ? `+${formatMoney(-price)}` : formatMoney(price)
+
   return {
     // state
     categories,
     listItems,
     filterYear,
     filterCategory,
+    filterKind,
     monthlySeries,
     yearlySeries,
     monthlyByCategory,
+    depositsByBuyer,
+    depositsTotals,
     breakdownYear,
     breakdownMonth,
     monthBreakdown,
+    monthDeposits,
     availableYears,
     importRows,
     importing,
@@ -420,6 +476,7 @@ export function useFinance() {
     loadMonthlySeries,
     loadMonthlyByCategory,
     loadYearlySeries,
+    loadDeposits,
     loadMonthBreakdown,
     refreshAll,
     addItem,
@@ -431,6 +488,8 @@ export function useFinance() {
     commitImport,
     // helpers
     formatMoney,
+    isDeposit,
+    formatPrice,
     MONTH_NAMES
   }
 }
