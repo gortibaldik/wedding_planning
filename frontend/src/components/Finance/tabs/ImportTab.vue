@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { useFinance } from '@/composables/useFinance'
 import { useFinanceSubTabs } from '@/composables/useFinanceSubTabs'
+import { usePagination } from '@/composables/usePagination'
+import FinancePager from '../FinancePager.vue'
 
 const {
   importRows,
@@ -16,13 +18,18 @@ const {
 
 const { setSubTab } = useFinanceSubTabs()
 
+const { PAGE_SIZES, pageSize, page, totalPages, pagedItems: pagedRows } = usePagination(importRows)
+
 // ---- Revolut import ----
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const onFileChange = async (event: Event) => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (file) await importPreview(file)
+  if (file) {
+    const ok = await importPreview(file)
+    if (ok) page.value = 1 // a new statement starts back on the first page
+  }
   input.value = '' // allow re-selecting the same file
 }
 
@@ -177,6 +184,18 @@ const doCommitImport = async () => {
         </div>
       </div>
 
+      <div class="fin__toolbar">
+        <div class="fin__filters">
+          <label>
+            Per page
+            <select v-model.number="pageSize">
+              <option v-for="size in PAGE_SIZES" :key="size" :value="size">{{ size }}</option>
+            </select>
+          </label>
+        </div>
+        <FinancePager v-model="page" :total-pages="totalPages" />
+      </div>
+
       <table class="fin__table">
         <thead>
           <tr>
@@ -199,7 +218,7 @@ const doCommitImport = async () => {
         </thead>
         <tbody>
           <tr
-            v-for="row in importRows"
+            v-for="row in pagedRows"
             :key="row._key"
             :class="{ 'fin__row--selected': isRowSelected(row._key) }"
           >
@@ -239,6 +258,8 @@ const doCommitImport = async () => {
           </tr>
         </tbody>
       </table>
+
+      <FinancePager v-model="page" :total-pages="totalPages" />
     </div>
   </section>
 </template>

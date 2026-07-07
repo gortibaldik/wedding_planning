@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useFinance, type FinanceItem, type FinanceItemInput } from '@/composables/useFinance'
+import { usePagination } from '@/composables/usePagination'
+import FinancePager from '../FinancePager.vue'
 
 const {
   categories,
@@ -81,8 +83,13 @@ const saveEdit = async () => {
   if (ok) editingId.value = null
 }
 
-// Reload the list when its filters change.
-watch([filterYear, filterCategory], loadListItems)
+const { PAGE_SIZES, pageSize, page, totalPages, pagedItems } = usePagination(listItems)
+
+// Reload the list when its filters change, and start over from the first page.
+watch([filterYear, filterCategory], () => {
+  page.value = 1
+  loadListItems()
+})
 </script>
 
 <template>
@@ -103,6 +110,12 @@ watch([filterYear, filterCategory], loadListItems)
             <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
           </select>
         </label>
+        <label>
+          Per page
+          <select v-model.number="pageSize">
+            <option v-for="size in PAGE_SIZES" :key="size" :value="size">{{ size }}</option>
+          </select>
+        </label>
       </div>
       <button class="fin__btn fin__btn--primary" @click="showForm = !showForm">
         {{ showForm ? 'Cancel' : '+ Add item' }}
@@ -120,6 +133,8 @@ watch([filterYear, filterCategory], loadListItems)
       </button>
     </form>
 
+    <FinancePager v-model="page" :total-pages="totalPages" />
+
     <table class="fin__table">
       <thead>
         <tr>
@@ -132,7 +147,7 @@ watch([filterYear, filterCategory], loadListItems)
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in listItems" :key="item.id">
+        <tr v-for="item in pagedItems" :key="item.id">
           <template v-if="editingId === item.id">
             <td><input v-model="editForm.date" type="date" class="fin__cell-input" /></td>
             <td><input v-model="editForm.name" class="fin__cell-input" placeholder="Name" /></td>
@@ -187,6 +202,8 @@ watch([filterYear, filterCategory], loadListItems)
         </tr>
       </tbody>
     </table>
+
+    <FinancePager v-model="page" :total-pages="totalPages" />
   </section>
 </template>
 
