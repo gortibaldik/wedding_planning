@@ -1,0 +1,142 @@
+/* Shared styles for the finance tab and its sub-tab components. Global (not
+   scoped) so the tab components can use them; safe because everything is
+   namespaced under the `fin__` BEM prefix. */
+
+.fin__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 900px;
+}
+
+.fin__card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.fin__card-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.fin__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fin__filters {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.fin__filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.fin__filters select,
+.fin__filters input {
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+}
+
+.fin__btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fin__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fin__btn--primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.fin__btn--primary:disabled {
+  background: #93c5fd;
+  border-color: #93c5fd;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.fin__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.fin__table th,
+.fin__table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.fin__table th {
+  background: #f9fafb;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+}
+
+.fin__num {
+  text-align: right;
+}
+
+.fin__cell-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+}
+
+.fin__cell-input--num {
+  text-align: right;
+}
+
+.fin__delete {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 6px;
+}
+
+.fin__delete:hover {
+  color: #ef4444;
+}
