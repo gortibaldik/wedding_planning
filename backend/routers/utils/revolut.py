@@ -17,14 +17,41 @@ import openpyxl
 # these back as literal text rather than un-escaping them, so we do it here.
 _OOXML_ESCAPE = re.compile(r"_x([0-9A-Fa-f]{4})_")
 
-# Column headers, in their repaired (correct) form.
-COL_TYPE = "Typ"
-COL_DESCRIPTION = "Popis"
-COL_AMOUNT = "Částka"
-COL_STARTED = "Datum zahájení"
-COL_COMPLETED = "Datum dokončení"
+# Canonical column names (the English export headers). Rows returned by
+# :func:`parse_statement` are always keyed by these, regardless of the
+# statement's language.
+COL_TYPE = "Type"
+COL_PRODUCT = "Product"
+COL_DESCRIPTION = "Description"
+COL_AMOUNT = "Amount"
+COL_STARTED = "Started Date"
+COL_COMPLETED = "Completed Date"
+COL_FEE = "Fee"
 COL_STATE = "State"
-COL_CURRENCY = "Měna"
+COL_CURRENCY = "Currency"
+COL_BALANCE = "Balance"
+
+# Localized header -> canonical name. Headers are matched after mojibake
+# repair; unknown headers are kept verbatim.
+_HEADER_TO_CANONICAL = {
+    # Czech
+    "Typ": COL_TYPE,
+    "Produkt": COL_PRODUCT,
+    "Datum zahájení": COL_STARTED,
+    "Datum dokončení": COL_COMPLETED,
+    "Popis": COL_DESCRIPTION,
+    "Částka": COL_AMOUNT,
+    "Poplatek": COL_FEE,
+    "Měna": COL_CURRENCY,
+    "Stav": COL_STATE,
+    "Zůstatek": COL_BALANCE,
+}
+
+
+def _canonical_header(header: Any) -> Any:
+    if not isinstance(header, str):
+        return header
+    return _HEADER_TO_CANONICAL.get(header.strip(), header)
 
 
 def _unescape_ooxml(value: str) -> str:
@@ -53,14 +80,14 @@ def parse_statement(data: bytes) -> list[dict[str, Any]]:
     """Read the workbook bytes into a list of ``{header: value}`` rows.
 
     Every string cell is repaired via :func:`fix_mojibake`; fully empty rows are
-    skipped. Header names are the repaired first-row labels (see the ``COL_*``
-    constants).
+    skipped. Localized header labels (currently Czech and English) are mapped to
+    the canonical ``COL_*`` names; unrecognized labels are kept as-is.
     """
     workbook = openpyxl.load_workbook(BytesIO(data), read_only=True, data_only=True)
     try:
         worksheet = workbook.active
         rows = worksheet.iter_rows(values_only=True)
-        header = [fix_mojibake(cell) for cell in next(rows, ())]
+        header = [_canonical_header(fix_mojibake(cell)) for cell in next(rows, ())]
         result: list[dict[str, Any]] = []
         for row in rows:
             if all(cell is None for cell in row):

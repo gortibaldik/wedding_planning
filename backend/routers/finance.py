@@ -1,6 +1,8 @@
 import base64
+import json
 import logging
 import uuid
+from collections import defaultdict
 from datetime import date, datetime
 from enum import Enum
 from typing import Annotated
@@ -271,25 +273,34 @@ async def preview_import(
     except Exception as e:
         raise HTTPException(status_code=400, detail="Could not parse file") from e
 
+    logger.info(f"Parsed {len(parsed)} rows.")
+
     existing = {
         _dedup_key(item.name, item.price, item.date)
         for item in await _load_all_items(redis)
     }
+    logger.info(f"There were {len(existing)} rows already in the database.")
 
     # Imported statement expenses default to shared/joint spending.
     buyer = "Joint"
     rows: list[ImportRow] = []
+    import_stats_dict = defaultdict(lambda: 0)
     for entry in parsed:
         amount = entry.get(COL_AMOUNT)
         if not isinstance(amount, int | float) or amount >= 0:
+            import_stats_dict["error_amount"] += 1
             continue
         item_date = _row_date(entry)
         if item_date is None:
+            import_stats_dict["error_date"] += 1
             continue
         name = str(entry.get(COL_DESCRIPTION) or entry.get(COL_TYPE) or "").strip()
         price = round(-float(amount), 2)
         if _dedup_key(name, price, item_date) in existing:
+            import_stats_dict["error_duplicate"] += 1
             continue
+
+        import_stats_dict["ok"] += 1
         rows.append(
             ImportRow(
                 name=name,
@@ -304,11 +315,9 @@ async def preview_import(
             )
         )
     logger.info(
-        "Parsed %d expense rows from '%s' for %s",
-        len(rows),
-        request.filename,
-        user.get("sub"),
+        f"Parsed {len(rows)} expense rows from '{request.filename}' for {user.get('sub')}"
     )
+    logger.info(f"Import stats: {json.dumps(import_stats_dict)}")
     return rows
 
 
