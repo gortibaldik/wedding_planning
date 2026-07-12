@@ -16,6 +16,7 @@ from .dependencies import (
 from .routers import (
     authorization,
     family_structure,
+    finance,
     index,
     invitation_lists,
     managed_files,
@@ -50,4 +51,5 @@ app.include_router(invitation_lists.router)
 app.include_router(family_structure.router)
 app.include_router(seating.router)
 app.include_router(managed_files.router)
+app.include_router(finance.router)
 app.include_router(index.router)

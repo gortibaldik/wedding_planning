@@ -74,6 +74,11 @@ const loading = ref(false)
 const saving = ref(false)
 const errorMsg = ref<string>('')
 
+const downloading = ref(false)
+const previewing = ref(false)
+const dbErrorMsg = ref<string>('')
+const dumpPreview = ref<string>('')
+
 const currentDoc = computed<I18nFile | undefined>(() => filesByLang.value[selectedLang.value])
 
 const isDirty = computed(() => {
@@ -165,6 +170,80 @@ export function useManagedFiles() {
     ;(parent as I18nObject)[path[path.length - 1] as string] = newValue
   }
 
+  const fetchRedisDump = async (): Promise<unknown> => {
+    const res = await authFetch('/managed-files/redis-dump')
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    return res.json()
+  }
+
+  /**
+   * Recursively expand any string that is itself serialized JSON into a real
+   * object/array, so the preview renders nested data with proper indentation
+   * instead of escaped single-line blobs.
+   */
+  const deepParse = (value: unknown): unknown => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      const looksLikeJson =
+        (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))
+      if (looksLikeJson) {
+        try {
+          return deepParse(JSON.parse(trimmed))
+        } catch {
+          return value
+        }
+      }
+      return value
+    }
+    if (Array.isArray(value)) return value.map(deepParse)
+    if (value !== null && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, deepParse(v)])
+      )
+    }
+    return value
+  }
+
+  const formatDump = (data: unknown): string => JSON.stringify(deepParse(data), null, 2)
+
+  const downloadRedisDump = async () => {
+    downloading.value = true
+    dbErrorMsg.value = ''
+    try {
+      const data = await fetchRedisDump()
+      const blob = new Blob([formatDump(data)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `redis-dump-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      dbErrorMsg.value = 'Failed to download: ' + (e instanceof Error ? e.message : String(e))
+    } finally {
+      downloading.value = false
+    }
+  }
+
+  const previewRedisDump = async () => {
+    previewing.value = true
+    dbErrorMsg.value = ''
+    try {
+      const data = await fetchRedisDump()
+      dumpPreview.value = formatDump(data)
+    } catch (e) {
+      dbErrorMsg.value = 'Failed to load: ' + (e instanceof Error ? e.message : String(e))
+    } finally {
+      previewing.value = false
+    }
+  }
+
   return {
     langs,
     defaultLang,
@@ -178,6 +257,12 @@ export function useManagedFiles() {
     revert,
     save,
     updateAtPath,
-    moveInArray
+    moveInArray,
+    downloading,
+    previewing,
+    dbErrorMsg,
+    dumpPreview,
+    downloadRedisDump,
+    previewRedisDump
   }
 }

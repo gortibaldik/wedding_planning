@@ -102,7 +102,7 @@ const buildRootGroups = (ids: Iterable<string>): RootGroup[] => {
 }
 
 type InvitationFilter = 'all' | 'sent' | 'not_sent'
-type RsvpFilter = 'all' | 'not_answered' | 'answered'
+type RsvpFilter = 'all' | 'not_answered' | 'will_come' | 'wont_come'
 
 const filterInvitation = ref<InvitationFilter>('all')
 const filterRsvp = ref<RsvpFilter>('all')
@@ -116,7 +116,8 @@ const filteredIds = computed<string[]>(() => {
     if (filterInvitation.value === 'sent' && !entry.invitation_given) return false
     if (filterInvitation.value === 'not_sent' && entry.invitation_given) return false
     if (filterRsvp.value === 'not_answered' && entry.rsvpd !== 'NOT_ANSWERED') return false
-    if (filterRsvp.value === 'answered' && entry.rsvpd === 'NOT_ANSWERED') return false
+    if (filterRsvp.value === 'will_come' && entry.rsvpd !== 'WILL_COME') return false
+    if (filterRsvp.value === 'wont_come' && entry.rsvpd !== 'WONT_COME') return false
     return true
   })
 })
@@ -263,7 +264,8 @@ onMounted(async () => {
               v-for="opt in [
                 ['all', 'All'],
                 ['not_answered', 'Pending'],
-                ['answered', 'Answered']
+                ['will_come', 'Coming'],
+                ['wont_come', 'Not Coming']
               ] as const"
               :key="opt[0]"
               class="it__filter-btn"

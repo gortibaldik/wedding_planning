@@ -12,8 +12,9 @@ from backend.config import Config
 from backend.dependencies import get_config
 
 from .family_structure import CHANGE_STATUS_ROLE
+from .finance import FINANCE_ACCESS_ROLE
 from .invitation_lists import UNIVERSAL_INVITATION_LIST_SETTER_ROLE
-from .managed_files import MANAGED_FILES_EDITOR_ROLE
+from .managed_files import MANAGED_FILES_DUMP_ROLE, MANAGED_FILES_EDITOR_ROLE
 
 router = APIRouter(prefix="/auth")
 logger = logging.getLogger(__name__)
@@ -31,6 +32,12 @@ def _create_token_and_redirect(
                 MANAGED_FILES_EDITOR_ROLE,
             ]
         )
+
+    if email in config.managed_files_dump_users:
+        roles.append(MANAGED_FILES_DUMP_ROLE)
+
+    if email in config.finance_tracking:
+        roles.append(FINANCE_ACCESS_ROLE)
 
     jwt_token = jwt.encode(
         {

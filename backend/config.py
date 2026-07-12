@@ -17,5 +17,13 @@ class Config(BaseSettings):
 
     super_users: list[str] = Field(default_factory=lambda: ["ferotre@gmail.com"])
 
+    managed_files_dump_users: list[str] = Field(
+        default_factory=lambda: ["ferotre@gmail.com"]
+    )
+    """Emails of users allowed to download the full Redis data dump."""
+
+    finance_tracking: list[str] = Field(default_factory=lambda: ["ferotre@gmail.com"])
+    """Emails of users allowed to access the home finance tracking data."""
+
     google_application_credentials_json: str = ""
     google_drive_i18n_folder_id: str = ""

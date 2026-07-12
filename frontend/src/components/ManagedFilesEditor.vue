@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useManagedFiles } from '@/composables/useManagedFiles'
+import { useAuth } from '@/composables/useAuth'
 import ManagedFilesNodeEditor from './ManagedFilesNodeEditor.vue'
 
 const {
@@ -16,53 +17,139 @@ const {
   revert,
   save,
   updateAtPath,
-  moveInArray
+  moveInArray,
+  downloading,
+  previewing,
+  dbErrorMsg,
+  dumpPreview,
+  downloadRedisDump,
+  previewRedisDump
 } = useManagedFiles()
 
-onMounted(loadAll)
+const { storedUserInfo } = useAuth()
+const canDumpDatabase = computed(
+  () => storedUserInfo.value?.roles?.includes('managed-files-dump') ?? false
+)
+
+const SUB_TABS = ['cms', 'database'] as const
+type SubTab = (typeof SUB_TABS)[number]
+
+// The active subtab lives in the URL hash's second segment (e.g.
+// `#managed-files/database`) so a reload / shared link keeps the same subpage.
+// The `database` subtab is only available to users with the dump role.
+const getSubTabFromHash = (): SubTab => {
+  const sub = window.location.hash.slice(1).split('/')[1]
+  if (sub === 'database') return canDumpDatabase.value ? 'database' : 'cms'
+  return (SUB_TABS as readonly string[]).includes(sub) ? (sub as SubTab) : 'cms'
+}
+
+const activeSubTab = ref<SubTab>(getSubTabFromHash())
+
+const setSubTab = (sub: SubTab) => {
+  activeSubTab.value = sub
+  const tab = window.location.hash.slice(1).split('/')[0] || 'managed-files'
+  window.location.hash = `${tab}/${sub}`
+}
+
+const onHashChange = () => {
+  activeSubTab.value = getSubTabFromHash()
+}
+
+onMounted(() => {
+  loadAll()
+  window.addEventListener('hashchange', onHashChange)
+})
+onUnmounted(() => window.removeEventListener('hashchange', onHashChange))
 </script>
 
 <template>
   <div class="mf">
-    <div class="mf__controls">
-      <div class="mf__select-group">
-        <label class="mf__label">Language file</label>
-        <select v-model="selectedLang" class="mf__select" :disabled="loading">
-          <option v-for="l in langs" :key="l" :value="l">
-            {{ l }}{{ l === defaultLang ? ' (default)' : '' }}
-          </option>
-        </select>
-      </div>
-
-      <div class="mf__btn-group">
-        <button
-          class="mf__save-btn"
-          :class="{ 'mf__save-btn--disabled': !isDirty || saving }"
-          :disabled="!isDirty || saving"
-          @click="save"
-        >
-          {{ saving ? 'Saving...' : `Save ${selectedLang}.json` }}
-        </button>
-        <button
-          class="mf__revert-btn"
-          :class="{ 'mf__revert-btn--disabled': !isDirty }"
-          :disabled="!isDirty"
-          @click="revert"
-        >
-          Revert
-        </button>
-        <button class="mf__reload-btn" :disabled="loading || saving" @click="loadAll">
-          Reload
-        </button>
-      </div>
+    <div class="mf__subtabs">
+      <button
+        class="mf__subtab"
+        :class="{ 'mf__subtab--active': activeSubTab === 'cms' }"
+        @click="setSubTab('cms')"
+      >
+        CMS (landing page)
+      </button>
+      <button
+        v-if="canDumpDatabase"
+        class="mf__subtab"
+        :class="{ 'mf__subtab--active': activeSubTab === 'database' }"
+        @click="setSubTab('database')"
+      >
+        Database management
+      </button>
     </div>
 
-    <div v-if="errorMsg" class="mf__error">{{ errorMsg }}</div>
-    <div v-if="loading" class="mf__loading">Loading...</div>
+    <template v-if="activeSubTab === 'database'">
+      <div class="mf__controls">
+        <div class="mf__select-group">
+          <label class="mf__label">Redis backup</label>
+          <p class="mf__hint">Download a full snapshot of all data currently stored in Redis.</p>
+        </div>
+        <div class="mf__btn-group">
+          <button
+            class="mf__reload-btn"
+            :disabled="downloading || previewing"
+            @click="previewRedisDump"
+          >
+            {{ previewing ? 'Loading...' : 'Preview' }}
+          </button>
+          <button
+            class="mf__save-btn"
+            :disabled="downloading || previewing"
+            @click="downloadRedisDump"
+          >
+            {{ downloading ? 'Downloading...' : 'Download all data' }}
+          </button>
+        </div>
+      </div>
+      <div v-if="dbErrorMsg" class="mf__error">{{ dbErrorMsg }}</div>
+      <pre v-if="dumpPreview" class="mf__dump">{{ dumpPreview }}</pre>
+    </template>
 
-    <div v-if="!loading && selectedLang && currentDoc" class="mf__editor">
-      <ManagedFilesNodeEditor :value="currentDoc" @update="updateAtPath" @move="moveInArray" />
-    </div>
+    <template v-else>
+      <div class="mf__controls">
+        <div class="mf__select-group">
+          <label class="mf__label">Language file</label>
+          <select v-model="selectedLang" class="mf__select" :disabled="loading">
+            <option v-for="l in langs" :key="l" :value="l">
+              {{ l }}{{ l === defaultLang ? ' (default)' : '' }}
+            </option>
+          </select>
+        </div>
+
+        <div class="mf__btn-group">
+          <button
+            class="mf__save-btn"
+            :class="{ 'mf__save-btn--disabled': !isDirty || saving }"
+            :disabled="!isDirty || saving"
+            @click="save"
+          >
+            {{ saving ? 'Saving...' : `Save ${selectedLang}.json` }}
+          </button>
+          <button
+            class="mf__revert-btn"
+            :class="{ 'mf__revert-btn--disabled': !isDirty }"
+            :disabled="!isDirty"
+            @click="revert"
+          >
+            Revert
+          </button>
+          <button class="mf__reload-btn" :disabled="loading || saving" @click="loadAll">
+            Reload
+          </button>
+        </div>
+      </div>
+
+      <div v-if="errorMsg" class="mf__error">{{ errorMsg }}</div>
+      <div v-if="loading" class="mf__loading">Loading...</div>
+
+      <div v-if="!loading && selectedLang && currentDoc" class="mf__editor">
+        <ManagedFilesNodeEditor :value="currentDoc" @update="updateAtPath" @move="moveInArray" />
+      </div>
+    </template>
   </div>
 </template>
 
@@ -77,6 +164,39 @@ onMounted(loadAll)
   flex-direction: column;
   gap: 16px;
   background: #f9fafb;
+}
+
+.mf__subtabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.mf__subtab {
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.mf__subtab:hover {
+  color: #374151;
+}
+
+.mf__subtab--active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.mf__hint {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
 }
 
 .mf__controls {
@@ -204,6 +324,22 @@ onMounted(loadAll)
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   padding: 16px;
+}
+
+.mf__dump {
+  background: #1f2937;
+  color: #e5e7eb;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre;
+  overflow: auto;
+  max-height: 60vh;
 }
 
 @media (max-width: 768px) {
