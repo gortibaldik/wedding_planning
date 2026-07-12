@@ -168,14 +168,38 @@
         ];
         var NO_GO = 42; // degrees either side of straight-into-wind where the sail can't drive
 
+        // Sail polar for the lift/drag model, read off a measured CL/CD-vs-angle-
+        // of-attack chart: attached flow to ~25° (steep lift rise to the 1.52
+        // peak), separating to ~50°, stalled beyond (lift collapses while drag
+        // keeps growing). Rows are [aoa°, CL, CD]; polarValue interpolates
+        // linearly between rows. Defined up here because reset() already runs the
+        // speed model during script init.
+        var SAIL_POLAR = [
+          [ 0, 0.00, 0.10],
+          [10, 0.15, 0.14],
+          [15, 0.88, 0.17],
+          [18, 1.16, 0.18],
+          [20, 1.40, 0.21],
+          [25, 1.52, 0.25],
+          [30, 1.47, 0.32],
+          [40, 1.38, 0.45],
+          [50, 0.95, 0.55],
+          [60, 0.75, 0.75],
+          [70, 0.44, 0.97],
+          [80, 0.29, 1.25],
+          [90, 0.15, 1.40]
+        ];
+        // tuning: brings the aero force into the same speed range as defaultSpeedModel
+        var LD_THRUST_SCALE = 10;
+
         var state, started, lastT;
         var keys = {};
 
-        // Active speed model — swap algorithms by reassigning this. The default is
-        // defined in the simulation section below (function declarations hoist, so
-        // referencing it here is safe); assigned before reset() first runs because
+        // Active speed model — swap algorithms by reassigning this (the models are
+        // defined in the simulation section below; function declarations hoist, so
+        // referencing them here is safe). Assigned before reset() first runs because
         // reset() uses it to fill the boat's derived aero values.
-        var speedModel = defaultSpeedModel;
+        var speedModel = liftDragSpeedModel;
 
         function reset() {
           var wind = WIND_DIRS[Math.floor(Math.random() * WIND_DIRS.length)];
@@ -488,6 +512,69 @@
 
           var speed = boat.speed + thrust * dt;
           speed -= speed * 0.9 * dt;      // drag
+          return Math.max(-1, Math.min(14, speed));
+        }
+
+        // ---- lift/drag speed model ----
+        // Coefficient curves interpolated from the SAIL_POLAR table (defined with
+        // the other constants at the top).
+        function polarValue(aoa, col) {
+          var t = SAIL_POLAR;
+          if (aoa <= t[0][0]) return t[0][col];
+          for (var i = 1; i < t.length; i++) {
+            if (aoa <= t[i][0]) {
+              var f = (aoa - t[i - 1][0]) / (t[i][0] - t[i - 1][0]);
+              return t[i - 1][col] + f * (t[i][col] - t[i - 1][col]);
+            }
+          }
+          return t[t.length - 1][col];
+        }
+
+        function coefficientOfLift(aoa) { return polarValue(aoa, 1); }
+        function coefficientOfDrag(aoa) { return polarValue(aoa, 2); }
+
+        // tuning: brings the aero force into the same speed range as defaultSpeedModel
+        var LD_THRUST_SCALE = 40;
+
+        // More realistic model: the boom's angle against the wind is the angle of
+        // attack; the coefficient curves turn it into lift (perpendicular to the
+        // wind) and drag (along the wind); their sum projected onto the heading is
+        // the thrust. Note the projection uses the wind-to-heading geometry, not
+        // the angle of attack itself — downwind the drive is pure drag (aoa 90°,
+        // zero lift), upwind it is mostly lift. No explicit no-go zone is needed:
+        // pointing too high leaves the sail with no usable angle of attack.
+        function liftDragSpeedModel(boat, dt) {
+          var fwd = angUnitS(boat.heading);
+          var windTo = angUnitS(state.wind.to);
+
+          // signed angle between the wind flow and the sail chord (the boom line);
+          // the sign says which side of the sail the wind strikes
+          var alpha = angNorm(state.wind.to - boomAngle(boat));
+          // a chord has no front/back: fold the angle of attack to 0..90
+          var aoa = Math.abs(alpha) > 90 ? 180 - Math.abs(alpha) : Math.abs(alpha);
+
+          var lift = coefficientOfLift(aoa) * WIND_SPEED * WIND_SPEED * 0.5;
+          var drag = coefficientOfDrag(aoa) * WIND_SPEED * WIND_SPEED * 0.5;
+
+          // lift acts perpendicular to the wind, away from the sail's windward
+          // side: pick the perpendicular with a positive component along the
+          // sail's downwind-facing normal
+          var n = angUnitS(boomAngle(boat) + 90);
+          if (n.x * windTo.x + n.y * windTo.y < 0) { n.x = -n.x; n.y = -n.y; }
+          var l = { x: -windTo.y, y: windTo.x };
+          if (l.x * n.x + l.y * n.y < 0) { l.x = -l.x; l.y = -l.y; }
+
+          // thrust = lift·sin(β) − drag·cos(β) with β the heading-to-wind angle,
+          // done vectorially so every sign case (backwinded, in irons) works out
+          var thrust = (lift * (l.x * fwd.x + l.y * fwd.y)
+                      + drag * (windTo.x * fwd.x + windTo.y * fwd.y)) * LD_THRUST_SCALE;
+
+          boat.sailFull = aoa >= 10; // flow nearly along the chord -> the sail just flaps
+          boat.driving = thrust > 0.5;
+          boat.thrust = thrust;
+
+          var speed = boat.speed + thrust * dt;
+          speed -= speed * 0.9 * dt;      // hull drag
           return Math.max(-1, Math.min(14, speed));
         }
 
