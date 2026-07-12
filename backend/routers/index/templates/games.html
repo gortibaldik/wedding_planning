@@ -100,6 +100,7 @@
       .sail-hud .msg { color: #2a6e2a; font-weight: 700; min-height: 1.2em; }
       .sail-hud button { padding: 6px 12px; border-radius: 6px; border: 1px solid #888; background: #fff; cursor: pointer; }
       .sail-hud button:hover { background: #f3f3f3; }
+      .sail-hud .power-toggle { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none; color: #444; }
     </style>
     {% raw %}
     <script>
@@ -129,6 +130,7 @@
           + '    <span>Plachta: <b class="trim-val">45</b>°</span>'
           + '    <span>Do cíle: <b class="dist-val">0</b> m</span>'
           + '  </div>'
+          + '  <label class="power-toggle"><input type="checkbox" class="power-chk" /> Síly</label>'
           + '  <span class="msg"></span>'
           + '  <button type="button" class="new-game">Nová hra</button>'
           + '</div>';
@@ -139,6 +141,7 @@
         var overlay = wrap.querySelector('.sail-overlay');
         var startBtn = wrap.querySelector('.start-btn');
         var newGameBtn = wrap.querySelector('.new-game');
+        var powerChk = wrap.querySelector('.power-chk');
         var windVal = wrap.querySelector('.wind-val');
         var speedVal = wrap.querySelector('.speed-val');
         var trimVal = wrap.querySelector('.trim-val');
@@ -179,7 +182,7 @@
           var boat = {
             x: PORT_X, y: 50, heading: 0, speed: 0, sail: 45, won: false,
             // derived quantities, filled in by the speed model
-            sailFull: false, driving: false
+            sailFull: false, driving: false, thrust: 0
           };
           state = { boat: boat, wind: wind };
           boat.sail = leewardSign(boat.heading) * 45; // start with the sail set on the leeward side
@@ -312,6 +315,14 @@
          *  @returns {number} boom direction in degrees */
         function boomAngle(boat) { return boat.heading + 180 + boat.sail; }
 
+        /** Mast position (the sail's pivot, a bit forward of centre) in screen space.
+         *  @param {{x: number, y: number, heading: number}} boat
+         *  @returns {{x: number, y: number}} screen coordinates */
+        function mastPos(boat) {
+          var fwd = angUnitS(boat.heading);
+          return { x: sx(boat.x) + fwd.x * 3.6, y: sy(boat.y) + fwd.y * 3.6 };
+        }
+
         function drawBoat() {
           var boat = state.boat;
           var P = { x: sx(boat.x), y: sy(boat.y) };
@@ -335,7 +346,7 @@
           ctx.strokeStyle = '#3a2512'; ctx.lineWidth = 1.5; ctx.stroke();
 
           // mast (a bit forward of centre)
-          var mast = { x: P.x + fwd.x * L * 0.12, y: P.y + fwd.y * L * 0.12 };
+          var mast = mastPos(boat);
 
           // sail rendered at the angle the player has set it to
           var windTo = angUnitS(state.wind.to);
@@ -373,6 +384,40 @@
           ctx.fillStyle = '#2a2a2a'; ctx.fill();
         }
 
+        /** Arrow from `from` in direction `aDeg` (math degrees, see angUnitS),
+         *  `len` px long, with an arrowhead and an optional label past the tip. */
+        function drawArrow(from, aDeg, len, color, label) {
+          if (len < 2) return; // nothing meaningful to show
+          var u = angUnitS(aDeg);
+          var tipX = from.x + u.x * len, tipY = from.y + u.y * len;
+          ctx.save();
+          ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(tipX, tipY); ctx.stroke();
+          var pa = Math.atan2(u.y, u.x);
+          ctx.beginPath();
+          ctx.moveTo(tipX, tipY);
+          ctx.lineTo(tipX - Math.cos(pa - 0.4) * 9, tipY - Math.sin(pa - 0.4) * 9);
+          ctx.lineTo(tipX - Math.cos(pa + 0.4) * 9, tipY - Math.sin(pa + 0.4) * 9);
+          ctx.closePath(); ctx.fill();
+          if (label) {
+            ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(label, tipX + u.x * 14, tipY + u.y * 14 + 4);
+          }
+          ctx.restore();
+        }
+
+        // Force overlay (the "Síly" checkbox): wind and current thrust as arrows
+        // rooted at the mast. Thrust acts along the heading; a negative thrust
+        // (backwinded sail) points backwards.
+        function drawForces() {
+          var boat = state.boat;
+          var mast = mastPos(boat);
+          drawArrow(mast, state.wind.to, 45, '#c33', 'vítr');
+          var t = boat.thrust, ang = boat.heading;
+          if (t < 0) { ang += 180; t = -t; }
+          drawArrow(mast, ang, Math.min(80, t * 3), '#1d7a1d', 'tah');
+        }
+
         function drawWindBadge() {
           var cx = canvas.width - 46, cy = 46, r = 26;
           ctx.save();
@@ -403,17 +448,19 @@
           drawPort();
           drawFinish();
           drawBoat();
+          if (powerChk.checked) drawForces();
           drawWindBadge();
         }
 
         // ---- simulation ----
 
         // Speed model: owns the whole aero evaluation for a frame. Given the boat's
-        // control state (heading, sail) and the wind, it must (a) store two booleans
-        // back on the boat for the renderer (drawBoat) and the HUD warnings:
-        // sailFull (sail filled, i.e. not luffing in the no-go zone) and driving
-        // (sail on the correct side and pulling) — and (b) return the boat's new
-        // speed after `dt` seconds.
+        // control state (heading, sail) and the wind, it must (a) store the derived
+        // values back on the boat for the renderer and the HUD warnings: the
+        // booleans sailFull (sail filled, i.e. not luffing in the no-go zone) and
+        // driving (sail on the correct side and pulling), plus thrust (signed
+        // force along the heading, shown by the force-arrows overlay) — and
+        // (b) return the boat's new speed after `dt` seconds.
         // reset() calls it once with dt = 0 just to fill the derived values (speed
         // comes back unchanged). Swap in a different algorithm by reassigning
         // `speedModel` (declared above reset).
@@ -437,6 +484,7 @@
           var thrust = drive * WIND_SPEED * 26;
           if (thrust < 0) thrust *= 0.25; // sail backwinded (wrong side) -> barely any drive
           thrust *= power;                // sail luffs in the no-go zone -> no drive
+          boat.thrust = thrust;
 
           var speed = boat.speed + thrust * dt;
           speed -= speed * 0.9 * dt;      // drag
