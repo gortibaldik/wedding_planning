@@ -101,6 +101,7 @@
       .sail-hud button { padding: 6px 12px; border-radius: 6px; border: 1px solid #888; background: #fff; cursor: pointer; }
       .sail-hud button:hover { background: #f3f3f3; }
     </style>
+    {% raw %}
     <script>
       (function initSailing() {
         var mount = document.getElementById('game-1-mount');
@@ -167,10 +168,22 @@
         var state, started, lastT;
         var keys = {};
 
+        // Active speed model — swap algorithms by reassigning this. The default is
+        // defined in the simulation section below (function declarations hoist, so
+        // referencing it here is safe); assigned before reset() first runs because
+        // reset() uses it to fill the boat's derived aero values.
+        var speedModel = defaultSpeedModel;
+
         function reset() {
           var wind = WIND_DIRS[Math.floor(Math.random() * WIND_DIRS.length)];
-          state = { x: PORT_X, y: 50, heading: 0, speed: 0, sail: 45, wind: wind, won: false };
-          state.sail = leewardSign(state.heading) * 45; // start with the sail set on the leeward side
+          var boat = {
+            x: PORT_X, y: 50, heading: 0, speed: 0, sail: 45, won: false,
+            // derived quantities, filled in by the speed model
+            sailFull: false, driving: false
+          };
+          state = { boat: boat, wind: wind };
+          boat.sail = leewardSign(boat.heading) * 45; // start with the sail set on the leeward side
+          speedModel(boat, 0); // refresh the derived values so the paused boat renders correctly
           started = false;
           overlay.classList.remove('hidden');
           windVal.textContent = 'od ' + wind.from;
@@ -271,16 +284,20 @@
           });
         }
 
-        function angUnitS(aDeg) { var a = deg2rad(aDeg); return { x: Math.cos(a), y: -Math.sin(a) }; }
-        function angNorm(d) { return ((d + 180) % 360 + 360) % 360 - 180; }
-
-        // How well the sail can drive: 1 normally, ramping to 0 as the bow points into the
-        // wind (the "no-go" zone). The wind comes FROM (wind.to + 180); pointing there = in irons.
-        function sailPower() {
-          var bowToWind = Math.abs(angNorm(state.heading - (state.wind.to + 180)));
-          if (bowToWind >= NO_GO) return 1;
-          return Math.max(0, (bowToWind - (NO_GO - 10)) / 10);
+        /** Angle in degrees (0 = +x right, 90 = +y up) -> screen-space unit vector
+         *  (y flipped, since screen +y goes down). e.g. 90 -> {x: 0, y: -1}.
+         *  @param {number} aDeg - angle in degrees
+         *  @returns {{x: number, y: number}} unit vector in screen space */
+        function angUnitS(aDeg) {
+          var a = deg2rad(aDeg);
+          return { x: Math.cos(a), y: -Math.sin(a) };
         }
+
+        /** Normalize an angle in degrees to [-180, 180), so differences come out as
+         *  the shortest signed turn (e.g. 350 -> -10). e.g. 190 -> -170, 360 -> 0.
+         *  @param {number} d - angle in degrees
+         *  @returns {number} equivalent angle in [-180, 180) */
+        function angNorm(d) { return ((d + 180) % 360 + 360) % 360 - 180; }
 
         // The side the wind naturally pushes the sail toward (leeward) for a given heading.
         function leewardSign(h) {
@@ -288,21 +305,17 @@
           return (f.x * w.y - f.y * w.x) >= 0 ? 1 : -1;
         }
 
-        // Sail line angle. state.sail is the signed position the player sets, -90..+90:
-        // 0 = sheeted in along the centreline, +/-90 = boom all the way out on either side.
-        function boomAngleDeg() { return state.heading + 180 + state.sail; }
-
-        // How well the set sail drives the boat: >0 correct (leeward) side, <=0 backwinded.
-        function driveFactor() {
-          var n = angUnitS(boomAngleDeg() + 90); // sail normal
-          var fwd = angUnitS(state.heading);
-          var windTo = angUnitS(state.wind.to);
-          return (n.x * fwd.x + n.y * fwd.y) * (windTo.x * n.x + windTo.y * n.y);
-        }
+        /** Boom direction in degrees. boat.sail is the signed position the player sets,
+         *  -90..+90: 0 = sheeted in along the centreline, +/-90 = boom all the way out
+         *  on either side.
+         *  @param {{heading: number, sail: number}} boat
+         *  @returns {number} boom direction in degrees */
+        function boomAngle(boat) { return boat.heading + 180 + boat.sail; }
 
         function drawBoat() {
-          var P = { x: sx(state.x), y: sy(state.y) };
-          var h = state.heading;
+          var boat = state.boat;
+          var P = { x: sx(boat.x), y: sy(boat.y) };
+          var h = boat.heading;
           var fwd = angUnitS(h);              // screen-space forward
           var perp = { x: -fwd.y, y: fwd.x }; // screen-space port/starboard
           var L = 30, Wd = 9;
@@ -327,13 +340,11 @@
           // sail rendered at the angle the player has set it to
           var windTo = angUnitS(state.wind.to);
           var sailLen = L * 0.95;
-          var power = sailPower();
-          var drive = driveFactor();
           // boom always renders on the side the player set it on
-          var boom = angUnitS(boomAngleDeg());
+          var boom = angUnitS(boomAngle(boat));
           var clew = { x: mast.x + boom.x * sailLen, y: mast.y + boom.y * sailLen };
 
-          if (power < 0.55 || drive <= 0.04) {
+          if (!boat.sailFull || !boat.driving) {
             // luffing (in irons) or backwinded (wrong side): limp, flapping sail, no drive
             var flap = Math.sin(waveT * 16) * 7;
             var bp = { x: -boom.y, y: boom.x };
@@ -343,10 +354,10 @@
             ctx.quadraticCurveTo(midF.x, midF.y, clew.x, clew.y);
             ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
           } else {
-            // working sail: billows downwind, fuller the better it drives
+            // working sail: billows downwind
             var bn = { x: -boom.y, y: boom.x };
             if (bn.x * windTo.x + bn.y * windTo.y < 0) { bn.x = -bn.x; bn.y = -bn.y; }
-            var bulge = 9 * power;
+            var bulge = 9;
             var midB = { x: (mast.x + clew.x) / 2 + bn.x * bulge, y: (mast.y + clew.y) / 2 + bn.y * bulge };
             ctx.beginPath();
             ctx.moveTo(mast.x, mast.y);
@@ -396,38 +407,69 @@
         }
 
         // ---- simulation ----
-        function physics(dt) {
-          // steering
-          if (keys['ArrowLeft'])  state.heading += 75 * dt;
-          if (keys['ArrowRight']) state.heading -= 75 * dt;
-          // sail: swings across the whole range, through the centreline to the other side
-          if (keys['ArrowUp'])   state.sail = Math.min(90,  state.sail + 90 * dt);
-          if (keys['ArrowDown']) state.sail = Math.max(-90, state.sail - 90 * dt);
+
+        // Speed model: owns the whole aero evaluation for a frame. Given the boat's
+        // control state (heading, sail) and the wind, it must (a) store two booleans
+        // back on the boat for the renderer (drawBoat) and the HUD warnings:
+        // sailFull (sail filled, i.e. not luffing in the no-go zone) and driving
+        // (sail on the correct side and pulling) — and (b) return the boat's new
+        // speed after `dt` seconds.
+        // reset() calls it once with dt = 0 just to fill the derived values (speed
+        // comes back unchanged). Swap in a different algorithm by reassigning
+        // `speedModel` (declared above reset).
+        function defaultSpeedModel(boat, dt) {
+          var fwd = angUnitS(boat.heading);
+          var windTo = angUnitS(state.wind.to);
+
+          // sail power: 1 normally, ramping to 0 as the bow points into the wind (the
+          // "no-go" zone). The wind comes FROM (wind.to + 180); pointing there = in irons.
+          var bowToWind = Math.abs(angNorm(boat.heading - (state.wind.to + 180)));
+          var power = bowToWind >= NO_GO ? 1 : Math.max(0, (bowToWind - (NO_GO - 10)) / 10);
+
+          // drive: >0 correct (leeward) side, <=0 backwinded (wrong side).
+          var n = angUnitS(boomAngle(boat) + 90); // sail normal
+          var drive = (n.x * fwd.x + n.y * fwd.y) * (windTo.x * n.x + windTo.y * n.y);
+
+          boat.sailFull = power >= 0.5;
+          boat.driving = drive > 0.04;
 
           // sail force from the side the player has set the sail on
-          var fwd = angUnitS(state.heading);
-          var thrust = driveFactor() * WIND_SPEED * 26;
+          var thrust = drive * WIND_SPEED * 26;
           if (thrust < 0) thrust *= 0.25; // sail backwinded (wrong side) -> barely any drive
-          thrust *= sailPower();          // sail luffs in the no-go zone -> no drive
+          thrust *= power;                // sail luffs in the no-go zone -> no drive
 
-          state.speed += thrust * dt;
-          state.speed -= state.speed * 0.9 * dt;          // drag
-          state.speed = Math.max(-1, Math.min(14, state.speed));
+          var speed = boat.speed + thrust * dt;
+          speed -= speed * 0.9 * dt;      // drag
+          return Math.max(-1, Math.min(14, speed));
+        }
+
+        // Advances the boat by `dt` seconds: (1) applies the player's input,
+        // (2) delegates the speed update (and the aero evaluation behind it) to
+        // `speedModel`, and (3) integrates motion. Only called while sailing;
+        // while paused the derived values stay valid (heading, sail and wind
+        // can't change) — reset() fills them for a fresh boat.
+        function updateBoat(boat, dt) {
+          // --- input ---
+          // steering
+          if (keys['ArrowLeft'])  boat.heading += 75 * dt;
+          if (keys['ArrowRight']) boat.heading -= 75 * dt;
+          // sail: swings across the whole range, through the centreline to the other side
+          if (keys['ArrowUp'])   boat.sail = Math.min(90,  boat.sail + 90 * dt);
+          if (keys['ArrowDown']) boat.sail = Math.max(-90, boat.sail - 90 * dt);
+
+          boat.speed = speedModel(boat, dt);
 
           // move (world +y = up; screen handled in sy)
-          state.x += fwd.x * state.speed * dt;
-          state.y += -fwd.y * state.speed * dt;           // fwd.y is screen-space, flip back to world
+          var fwd = angUnitS(boat.heading);
+          boat.x += fwd.x * boat.speed * dt;
+          boat.y += -fwd.y * boat.speed * dt;           // fwd.y is screen-space, flip back to world
 
           // bounds
-          if (state.x < PORT_X) { state.x = PORT_X; state.speed *= 0.3; }
-          if (state.y < 3)   { state.y = 3;   state.speed *= 0.4; }
-          if (state.y > 97)  { state.y = 97;  state.speed *= 0.4; }
+          if (boat.x < PORT_X) { boat.x = PORT_X; boat.speed *= 0.3; }
+          if (boat.y < 3)   { boat.y = 3;   boat.speed *= 0.4; }
+          if (boat.y > 97)  { boat.y = 97;  boat.speed *= 0.4; }
 
-          if (state.x >= FINISH_X) {
-            state.won = true;
-            msgEl.textContent = '🎉 Doplul jsi do cíle!';
-            msgEl.style.color = '#2a6e2a';
-          }
+          if (boat.x >= FINISH_X) boat.won = true;
         }
 
         function frame(now) {
@@ -435,17 +477,21 @@
           lastT = now;
           waveT += dt;
 
-          if (started && !state.won) physics(dt);
+          var boat = state.boat;
+          if (started && !boat.won) updateBoat(boat, dt);
 
           // HUD
-          trimVal.textContent = Math.round(Math.abs(state.sail));
-          speedVal.textContent = Math.max(0, state.speed).toFixed(1);
-          distVal.textContent = Math.max(0, Math.round((FINISH_X - state.x) * 3));
-          if (started && !state.won) {
-            if (sailPower() < 0.45) {
+          trimVal.textContent = Math.round(Math.abs(boat.sail));
+          speedVal.textContent = Math.max(0, boat.speed).toFixed(1);
+          distVal.textContent = Math.max(0, Math.round((FINISH_X - boat.x) * 3));
+          if (boat.won) {
+            msgEl.textContent = '🎉 Doplul jsi do cíle!';
+            msgEl.style.color = '#2a6e2a';
+          } else if (started) {
+            if (!boat.sailFull) {
               msgEl.textContent = '⚠️ Plachta plápolá – jsi proti větru, křižuj (cik-cak)!';
               msgEl.style.color = '#b5651d';
-            } else if (driveFactor() <= 0.04) {
+            } else if (!boat.driving) {
               msgEl.textContent = '⚠️ Přehoď plachtu na druhou stranu (mezerník)!';
               msgEl.style.color = '#b5651d';
             } else {
@@ -467,6 +513,7 @@
         window.addEventListener('resize', fit);
       })();
     </script>
+    {% endraw %}
   </div>
 </body>
 </html>
