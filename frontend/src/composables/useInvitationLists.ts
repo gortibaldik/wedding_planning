@@ -52,6 +52,8 @@ const finalNotFound = ref<boolean>(false)
 const finalEntries = ref<Record<string, FinalEntry>>({})
 /** Snapshot of final entries at last fetch/save, used for dirty detection. */
 const savedFinalSnapshot = ref<string>('')
+/** Whether the most recently selected (fetched) list is the final list. */
+const isSelectedListFinal = ref<boolean>(false)
 
 const usersLists = computed(() =>
   allLists.value.filter(l => l.owner_sub === storedUserInfo.value.sub)
@@ -197,6 +199,7 @@ export function useInvitationLists() {
       throw new Error(`HTTP ${res.status}`)
     }
     const list: InvitationList = await res.json()
+    isSelectedListFinal.value = isFinalListData(list)
     if (isFinalListData(list)) {
       applyFinalList(list)
     } else if (finalList.value?.metadata.id === list.metadata.id) {
@@ -354,6 +357,7 @@ export function useInvitationLists() {
     }
     finalList.value = null
     finalNotFound.value = true
+    isSelectedListFinal.value = false
   }
 
   const revertFinalEntries = () => {
@@ -409,6 +413,7 @@ export function useInvitationLists() {
     finalEntries,
     finalInvitedIds,
     finalEntriesDirty,
+    isSelectedListFinal,
     fetchFinalList,
     setFinalList,
     unsetFinalList,

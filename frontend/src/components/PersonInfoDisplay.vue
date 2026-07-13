@@ -10,7 +10,13 @@ const props = defineProps({
   displayRootName: { type: Boolean, default: true }
 })
 
-const { getPersonName, getMultiPersonNodeName, getPersonNodeId } = useInvitationLists()
+const {
+  getPersonName,
+  getMultiPersonNodeName,
+  getPersonNodeId,
+  finalEntries,
+  isSelectedListFinal
+} = useInvitationLists()
 const { findRootNode } = useBaseGraph()
 const personName = computed(() => getPersonName(props.personId))
 const multiPersonName = computed(() => getMultiPersonNodeName(props.personId))
@@ -38,6 +44,25 @@ const personRootName = computed(() => {
   }
   return rootNode.value.data.name
 })
+
+/** RSVP badge shown only while the currently selected list is the final one. */
+const rsvpBadge = computed(() => {
+  if (!isSelectedListFinal.value) {
+    return null
+  }
+  const entry = finalEntries.value[props.personId]
+  if (!entry) {
+    return null
+  }
+  switch (entry.rsvpd) {
+    case 'WILL_COME':
+      return { label: 'Accepted', modifier: 'person__rsvp--accepted' }
+    case 'WONT_COME':
+      return { label: 'Declined', modifier: 'person__rsvp--declined' }
+    default:
+      return { label: 'No answer', modifier: 'person__rsvp--pending' }
+  }
+})
 </script>
 <template>
   <div class="person__item" :style="{ borderLeft: `4px solid ${personColor}` }">
@@ -47,6 +72,9 @@ const personRootName = computed(() => {
     >
     <span v-if="displayRootName && personRootName" class="guest-sidebar__item-group">{{
       personRootName
+    }}</span>
+    <span v-if="rsvpBadge" class="person__rsvp" :class="rsvpBadge.modifier">{{
+      rsvpBadge.label
     }}</span>
   </div>
 </template>
@@ -91,5 +119,30 @@ const personRootName = computed(() => {
   color: #9ca3af;
   font-weight: 400;
   margin-left: 4px;
+}
+
+.person__rsvp {
+  margin-left: auto;
+  align-self: center;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  margin-top: 4px;
+  border-radius: 999px;
+  color: white;
+}
+
+.person__rsvp--pending {
+  background: #9ca3af;
+}
+
+.person__rsvp--accepted {
+  background: #10b981;
+}
+
+.person__rsvp--declined {
+  background: #ef4444;
 }
 </style>

@@ -14,7 +14,7 @@ const {
   getMultiPersonNodeName,
   getPersonNodeId,
   fetchListById,
-  finalList,
+  isSelectedListFinal,
   setFinalList,
   unsetFinalList
 } = useInvitationLists()
@@ -40,10 +40,6 @@ const isOwner = computed(() => {
 
 const isUniversalSetter = computed(() => {
   return storedUserInfo.value?.roles?.includes('universal-invitation-list-setter') ?? false
-})
-
-const isSelectedFinal = computed(() => {
-  return !!selectedListId.value && selectedListId.value === finalList.value?.metadata.id
 })
 
 interface RootInfo {
@@ -287,7 +283,7 @@ onMounted(async () => {
 
       <div v-if="isUniversalSetter && selectedListId" class="it__btn-group">
         <button
-          v-if="!isSelectedFinal"
+          v-if="!isSelectedListFinal"
           class="it__final-btn"
           :disabled="settingFinal"
           @click="handleSetFinal"
@@ -316,7 +312,7 @@ onMounted(async () => {
         <h3 class="it__section-title">
           {{ selectedList.metadata.name }}
           <span class="it__owner-name">({{ selectedList.metadata.owner_name }})</span>
-          <span v-if="isSelectedFinal" class="it__final-badge">FINAL</span>
+          <span v-if="isSelectedListFinal" class="it__final-badge">FINAL</span>
           - {{ myInvitedIds.size }} invited
         </h3>
       </div>
