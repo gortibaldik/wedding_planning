@@ -226,7 +226,7 @@ onMounted(async () => {
         </div>
         <div v-for="id in group.ids" :key="id" class="it__entry">
           <div class="it__col-person" data-label="Guest">
-            <PersonInfoDisplay :person-id="id" :display-root-name="false" />
+            <PersonInfoDisplay :person-id="id" :display-root-name="false" :display-rsvp="false" />
           </div>
           <div class="it__col-center" data-label="Invitation sent">
             <input

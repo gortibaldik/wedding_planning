@@ -7,7 +7,9 @@ import { computed } from 'vue'
 const props = defineProps({
   personId: { type: String, required: true },
   displayMultiPersonName: { type: Boolean, default: true },
-  displayRootName: { type: Boolean, default: true }
+  displayRootName: { type: Boolean, default: true },
+  /** Opt-out for views that already display the RSVP status elsewhere. */
+  displayRsvp: { type: Boolean, default: true }
 })
 
 const {
@@ -47,7 +49,7 @@ const personRootName = computed(() => {
 
 /** RSVP badge shown only while the currently selected list is the final one. */
 const rsvpBadge = computed(() => {
-  if (!isSelectedListFinal.value) {
+  if (!props.displayRsvp || !isSelectedListFinal.value) {
     return null
   }
   const entry = finalEntries.value[props.personId]
