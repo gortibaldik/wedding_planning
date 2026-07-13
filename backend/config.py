@@ -15,6 +15,7 @@ class Config(BaseSettings):
     token_expiration_hours: int = 6
     rediscloud_url: str = ""
 
+    allowed_users: list[str] = Field(default_factory=lambda: ["ferotre@gmail.com"])
     super_users: list[str] = Field(default_factory=lambda: ["ferotre@gmail.com"])
 
     managed_files_dump_users: list[str] = Field(
