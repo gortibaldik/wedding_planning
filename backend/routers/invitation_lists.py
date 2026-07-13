@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from enum import Enum
 from typing import Annotated
@@ -76,19 +77,58 @@ class EntriesData(BaseModel):
     entries: list[InvitationEntry]
 
 
-async def _get_list_by_id(redis: aioredis.Redis, list_id: str) -> InvitationList | None:
-    meta_raw = await redis.hget(ALL_LIST_IDS_KEY, list_id)
+async def _get_entries(
+    redis: aioredis.Redis, list_id: str
+) -> list[InvitationEntry] | None:
+    entries_raw = await redis.get(_list_entries_key(list_id))
+    if entries_raw is None:
+        return None
+
+    return EntriesData.model_validate_json(decompress(entries_raw)).entries
+
+
+async def _get_final_entries(
+    redis: aioredis.Redis,
+) -> list[FinalInvitationListEntry] | None:
+    entries_raw = await redis.get(FINAL_LIST_ENTRIES_KEY)
+    if entries_raw is None:
+        return None
+
+    return SetFinalEntriesRequest.model_validate_json(
+        decompress(entries_raw)
+    ).final_entries
+
+
+async def _get_list_by_id(
+    redis: aioredis.Redis, list_id: str
+) -> InvitationList | FinalInvitationList | None:
+    meta_task = redis.hget(ALL_LIST_IDS_KEY, list_id)
+    final_list_task = redis.get(FINAL_LIST_ID_KEY)
+    meta_raw, final_list_id = await asyncio.gather(meta_task, final_list_task)
     if meta_raw is None:
         return None
 
     metadata = ListMetadata.model_validate_json(decompress(meta_raw))
-    entries_raw = await redis.get(_list_entries_key(list_id))
-    entries = (
-        EntriesData.model_validate_json(decompress(entries_raw)).entries
-        if entries_raw is not None
-        else []
-    )
-    return InvitationList(metadata=metadata, entries=entries)
+
+    if metadata.id == final_list_id:
+        invitation_list = FinalInvitationList(
+            metadata=metadata, entries=[], final_entries=[]
+        )
+    else:
+        invitation_list = InvitationList(metadata=metadata, entries=[])
+
+    get_entries_task = _get_entries(redis=redis, list_id=list_id)
+    if isinstance(invitation_list, FinalInvitationList):
+        get_final_entries_task = _get_final_entries(redis)
+        entries, final_entries = await asyncio.gather(
+            get_entries_task, get_final_entries_task
+        )
+        invitation_list.final_entries = final_entries or []
+    else:
+        entries = await get_entries_task
+
+    invitation_list.entries = entries or []
+    return invitation_list
 
 
 @router.get("/get-all-ids")
@@ -103,7 +143,7 @@ async def get_all_ids(
 async def get_list(
     list_id: str,
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
-) -> InvitationList:
+) -> InvitationList | FinalInvitationList:
     inv_list = await _get_list_by_id(redis, list_id)
     if inv_list is None:
         raise HTTPException(status_code=404, detail="List not found")
@@ -224,13 +264,8 @@ async def get_final(
     if final_id is None:
         raise HTTPException(status_code=404, detail="List not found")
     invitation_list = await _get_list_by_id(redis, final_id)
-    final_entries_raw = decompress(await redis.get(FINAL_LIST_ENTRIES_KEY))
-    final_entries = SetFinalEntriesRequest.model_validate_json(final_entries_raw)
-    return FinalInvitationList(
-        metadata=invitation_list.metadata,
-        entries=invitation_list.entries,
-        final_entries=final_entries.final_entries,
-    )
+    assert isinstance(invitation_list, FinalInvitationList)  # noqa: S101
+    return invitation_list
 
 
 @router.post("/set-final-entries")
