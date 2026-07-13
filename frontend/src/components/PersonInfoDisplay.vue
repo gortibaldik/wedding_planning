@@ -66,13 +66,19 @@ const rsvpBadge = computed(() => {
 </script>
 <template>
   <div class="person__item" :style="{ borderLeft: `4px solid ${personColor}` }">
-    <span class="it__person-name">{{ personName }}</span>
-    <span v-if="displayMultiPersonName && multiPersonName" class="it__person-group"
+    <span class="it__person-name" :title="personName">{{ personName }}</span>
+    <span
+      v-if="displayMultiPersonName && multiPersonName"
+      class="it__person-group"
+      :title="multiPersonName"
       >({{ multiPersonName }})</span
     >
-    <span v-if="displayRootName && personRootName" class="guest-sidebar__item-group">{{
-      personRootName
-    }}</span>
+    <span
+      v-if="displayRootName && personRootName"
+      class="guest-sidebar__item-group"
+      :title="personRootName"
+      >{{ personRootName }}</span
+    >
     <span v-if="rsvpBadge" class="person__rsvp" :class="rsvpBadge.modifier">{{
       rsvpBadge.label
     }}</span>

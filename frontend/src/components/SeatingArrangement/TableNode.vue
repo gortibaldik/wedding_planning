@@ -459,6 +459,21 @@ const handleUnassign = (guestId: string): void => {
   margin-bottom: 0;
 }
 
+/* Seats have a fixed height, so truncate long texts instead of wrapping. */
+.seat__guest :deep(.it__person-name),
+.seat__guest :deep(.it__person-group),
+.seat__guest :deep(.guest-sidebar__item-group) {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seat__guest :deep(.person__rsvp) {
+  font-size: 7px;
+  padding: 0 3px;
+}
+
 .seat__remove {
   position: absolute;
   top: 0;
