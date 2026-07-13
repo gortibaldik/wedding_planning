@@ -34,6 +34,9 @@ export interface FinalInvitationListData extends InvitationList {
   final_entries: FinalEntry[]
 }
 
+const isFinalListData = (list: InvitationList): list is FinalInvitationListData =>
+  'final_entries' in list
+
 const allLists = ref<ListMetadata[]>([])
 const selectedListId = ref<string | null>(null)
 const selectedList = ref<InvitationList | null>(null)
@@ -182,14 +185,33 @@ export function useInvitationLists() {
     selectedListId.value = listId
   }
 
+  /**
+   * Fetch a single list without applying it to the graph.
+   *
+   * If the backend marks the list as final, the final list state is
+   * populated from the response, saving a separate get-final call.
+   */
+  const fetchListById = async (listId: string): Promise<InvitationList> => {
+    const res = await authFetch(`/invitation-lists/get/${listId}`)
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`)
+    }
+    const list: InvitationList = await res.json()
+    if (isFinalListData(list)) {
+      applyFinalList(list)
+    } else if (finalList.value?.metadata.id === list.metadata.id) {
+      // The list is no longer final on the backend
+      finalList.value = null
+      finalNotFound.value = true
+    }
+    return list
+  }
+
   const fetchList = async (listId: string) => {
     loading.value = true
     try {
-      const res = await authFetch(`/invitation-lists/get/${listId}`)
-      if (res.ok) {
-        selectedList.value = await res.json()
-        applyInvitations()
-      }
+      selectedList.value = await fetchListById(listId)
+      applyInvitations()
     } catch (e) {
       console.warn('Failed to fetch invitation list:', e)
     } finally {
@@ -290,15 +312,19 @@ export function useInvitationLists() {
     () => serializeFinalEntries(finalEntries.value) !== savedFinalSnapshot.value
   )
 
+  const applyFinalList = (list: FinalInvitationListData) => {
+    finalList.value = list
+    finalNotFound.value = false
+    finalEntries.value = buildFinalEntries()
+    takeFinalSnapshot()
+  }
+
   const fetchFinalList = async () => {
     finalLoading.value = true
     try {
       const res = await authFetch('/invitation-lists/get-final')
       if (res.ok) {
-        finalList.value = await res.json()
-        finalNotFound.value = false
-        finalEntries.value = buildFinalEntries()
-        takeFinalSnapshot()
+        applyFinalList(await res.json())
       } else if (res.status === 404) {
         finalList.value = null
         finalNotFound.value = true
@@ -308,6 +334,26 @@ export function useInvitationLists() {
     } finally {
       finalLoading.value = false
     }
+  }
+
+  const setFinalList = async (listId: string) => {
+    const res = await authFetch(`/invitation-lists/set-final/${listId}`, { method: 'POST' })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    // Refetch so the final list state is populated from the backend
+    await fetchListById(listId)
+  }
+
+  const unsetFinalList = async () => {
+    const res = await authFetch('/invitation-lists/unset-final', { method: 'POST' })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    finalList.value = null
+    finalNotFound.value = true
   }
 
   const revertFinalEntries = () => {
@@ -339,6 +385,7 @@ export function useInvitationLists() {
     loading,
     fetchAllIds,
     fetchList,
+    fetchListById,
     applyInvitations,
     saveList,
     ensureDefaultList,
@@ -363,6 +410,8 @@ export function useInvitationLists() {
     finalInvitedIds,
     finalEntriesDirty,
     fetchFinalList,
+    setFinalList,
+    unsetFinalList,
     revertFinalEntries,
     saveFinalEntries
   }
