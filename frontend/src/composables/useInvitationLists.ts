@@ -42,6 +42,14 @@ const loading = ref<boolean>(false)
 const savedInvitedSnapshot = ref<string>('')
 let initialized = false
 
+const finalList = ref<FinalInvitationListData | null>(null)
+const finalLoading = ref<boolean>(false)
+const finalSaving = ref<boolean>(false)
+const finalNotFound = ref<boolean>(false)
+const finalEntries = ref<Record<string, FinalEntry>>({})
+/** Snapshot of final entries at last fetch/save, used for dirty detection. */
+const savedFinalSnapshot = ref<string>('')
+
 const usersLists = computed(() =>
   allLists.value.filter(l => l.owner_sub === storedUserInfo.value.sub)
 )
@@ -243,6 +251,86 @@ export function useInvitationLists() {
     }
   }
 
+  const finalInvitedIds = computed<string[]>(() => {
+    if (!finalList.value) return []
+    return finalList.value.entries.filter(e => e.invited).map(e => e.person_id)
+  })
+
+  const makeDefaultFinalEntry = (personId: string): FinalEntry => ({
+    person_id: personId,
+    invitation_given: false,
+    rsvpd: 'NOT_ANSWERED',
+    notes: ''
+  })
+
+  const buildFinalEntries = (): Record<string, FinalEntry> => {
+    const existing: Record<string, FinalEntry> = {}
+    if (finalList.value?.final_entries) {
+      for (const entry of finalList.value.final_entries) {
+        existing[entry.person_id] = entry
+      }
+    }
+    const map: Record<string, FinalEntry> = {}
+    for (const id of finalInvitedIds.value) {
+      map[id] = { ...makeDefaultFinalEntry(id), ...(existing[id] ?? {}) }
+    }
+    return map
+  }
+
+  const serializeFinalEntries = (entries: Record<string, FinalEntry>): string => {
+    const keys = Object.keys(entries).sort()
+    return JSON.stringify(keys.map(k => entries[k]))
+  }
+
+  const takeFinalSnapshot = () => {
+    savedFinalSnapshot.value = serializeFinalEntries(finalEntries.value)
+  }
+
+  const finalEntriesDirty = computed(
+    () => serializeFinalEntries(finalEntries.value) !== savedFinalSnapshot.value
+  )
+
+  const fetchFinalList = async () => {
+    finalLoading.value = true
+    try {
+      const res = await authFetch('/invitation-lists/get-final')
+      if (res.ok) {
+        finalList.value = await res.json()
+        finalNotFound.value = false
+        finalEntries.value = buildFinalEntries()
+        takeFinalSnapshot()
+      } else if (res.status === 404) {
+        finalList.value = null
+        finalNotFound.value = true
+      }
+    } catch (e) {
+      console.warn('Failed to fetch final list:', e)
+    } finally {
+      finalLoading.value = false
+    }
+  }
+
+  const revertFinalEntries = () => {
+    finalEntries.value = buildFinalEntries()
+  }
+
+  const saveFinalEntries = async () => {
+    finalSaving.value = true
+    try {
+      const res = await authFetch('/invitation-lists/set-final-entries', {
+        method: 'POST',
+        body: JSON.stringify({ final_entries: Object.values(finalEntries.value) })
+      })
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}))
+        throw new Error(detail.detail || `HTTP ${res.status}`)
+      }
+      takeFinalSnapshot()
+    } finally {
+      finalSaving.value = false
+    }
+  }
+
   return {
     allLists,
     usersLists,
@@ -266,6 +354,16 @@ export function useInvitationLists() {
     updatePersonName,
     togglePersonInvite,
     isPersonInvited,
-    canUserInvite
+    canUserInvite,
+    finalList,
+    finalLoading,
+    finalSaving,
+    finalNotFound,
+    finalEntries,
+    finalInvitedIds,
+    finalEntriesDirty,
+    fetchFinalList,
+    revertFinalEntries,
+    saveFinalEntries
   }
 }

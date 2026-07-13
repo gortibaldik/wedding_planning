@@ -1,64 +1,29 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import {
-  useInvitationLists,
-  FinalEntry,
-  FinalInvitationListData
-} from '@/composables/useInvitationLists'
+import { useInvitationLists } from '@/composables/useInvitationLists'
 import { RootData } from '@/composables/useStoredData'
 import { useAuth } from '@/composables/useAuth'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 
-const { initInvitationLists, getPersonName, getMultiPersonNodeName, getPersonNodeId } =
-  useInvitationLists()
-const { authFetch, isUniversalInvitationListSetter } = useAuth()
+const {
+  initInvitationLists,
+  getPersonName,
+  getMultiPersonNodeName,
+  getPersonNodeId,
+  finalList,
+  finalLoading,
+  finalSaving,
+  finalNotFound,
+  finalEntries,
+  finalInvitedIds,
+  finalEntriesDirty,
+  fetchFinalList,
+  revertFinalEntries,
+  saveFinalEntries
+} = useInvitationLists()
+const { isUniversalInvitationListSetter } = useAuth()
 const { findRootNode } = useBaseGraph()
-
-const finalList = ref<FinalInvitationListData | null>(null)
-const loading = ref(false)
-const saving = ref(false)
-const notFound = ref(false)
-
-const finalEntries = ref<Record<string, FinalEntry>>({})
-const savedSnapshot = ref<string>('')
-
-const invitedIds = computed<string[]>(() => {
-  if (!finalList.value) return []
-  return finalList.value.entries.filter(e => e.invited).map(e => e.person_id)
-})
-
-const makeDefault = (personId: string): FinalEntry => ({
-  person_id: personId,
-  invitation_given: false,
-  rsvpd: 'NOT_ANSWERED',
-  notes: ''
-})
-
-const buildFinalEntries = (): Record<string, FinalEntry> => {
-  const existing: Record<string, FinalEntry> = {}
-  if (finalList.value?.final_entries) {
-    for (const entry of finalList.value.final_entries) {
-      existing[entry.person_id] = entry
-    }
-  }
-  const map: Record<string, FinalEntry> = {}
-  for (const id of invitedIds.value) {
-    map[id] = { ...makeDefault(id), ...(existing[id] ?? {}) }
-  }
-  return map
-}
-
-const serializeEntries = (entries: Record<string, FinalEntry>): string => {
-  const keys = Object.keys(entries).sort()
-  return JSON.stringify(keys.map(k => entries[k]))
-}
-
-const takeSnapshot = () => {
-  savedSnapshot.value = serializeEntries(finalEntries.value)
-}
-
-const dirty = computed(() => serializeEntries(finalEntries.value) !== savedSnapshot.value)
 
 interface RootInfo {
   name: string
@@ -110,7 +75,7 @@ const filtersOpen = ref(false)
 const filtersActive = computed(() => filterInvitation.value !== 'all' || filterRsvp.value !== 'all')
 
 const filteredIds = computed<string[]>(() => {
-  return invitedIds.value.filter(id => {
+  return finalInvitedIds.value.filter(id => {
     const entry = finalEntries.value[id]
     if (!entry) return true
     if (filterInvitation.value === 'sent' && !entry.invitation_given) return false
@@ -126,46 +91,15 @@ const groupedByRoot = computed<RootGroup[]>(() =>
   buildRootGroups(filteredIds.value).filter(g => g.ids.length > 0)
 )
 
-const fetchFinalList = async () => {
-  loading.value = true
-  try {
-    const res = await authFetch('/invitation-lists/get-final')
-    if (res.ok) {
-      finalList.value = await res.json()
-      notFound.value = false
-      finalEntries.value = buildFinalEntries()
-      takeSnapshot()
-    } else if (res.status === 404) {
-      finalList.value = null
-      notFound.value = true
-    }
-  } catch (e) {
-    console.warn('Failed to fetch final list:', e)
-  } finally {
-    loading.value = false
-  }
-}
-
 const handleRevert = () => {
-  finalEntries.value = buildFinalEntries()
+  revertFinalEntries()
 }
 
 const handleSave = async () => {
-  saving.value = true
   try {
-    const res = await authFetch('/invitation-lists/set-final-entries', {
-      method: 'POST',
-      body: JSON.stringify({ final_entries: Object.values(finalEntries.value) })
-    })
-    if (!res.ok) {
-      const detail = await res.json().catch(() => ({}))
-      throw new Error(detail.detail || `HTTP ${res.status}`)
-    }
-    takeSnapshot()
+    await saveFinalEntries()
   } catch (e) {
     alert('Failed to save: ' + (e instanceof Error ? e.message : String(e)))
-  } finally {
-    saving.value = false
   }
 }
 
@@ -177,24 +111,26 @@ onMounted(async () => {
 
 <template>
   <div class="it">
-    <div v-if="loading" class="it__loading">Loading...</div>
+    <div v-if="finalLoading" class="it__loading">Loading...</div>
 
-    <div v-if="notFound && !loading" class="it__empty-state">No final list has been set.</div>
+    <div v-if="finalNotFound && !finalLoading" class="it__empty-state">
+      No final list has been set.
+    </div>
 
-    <template v-if="finalList && !loading">
+    <template v-if="finalList && !finalLoading">
       <div v-if="isUniversalInvitationListSetter" class="it__controls">
         <button
           class="it__save-btn"
-          :class="{ 'it__save-btn--disabled': !dirty || saving }"
-          :disabled="!dirty || saving"
+          :class="{ 'it__save-btn--disabled': !finalEntriesDirty || finalSaving }"
+          :disabled="!finalEntriesDirty || finalSaving"
           @click="handleSave"
         >
-          {{ saving ? 'Saving...' : 'Save Changes' }}
+          {{ finalSaving ? 'Saving...' : 'Save Changes' }}
         </button>
         <button
           class="it__revert-btn"
-          :class="{ 'it__revert-btn--disabled': !dirty }"
-          :disabled="!dirty"
+          :class="{ 'it__revert-btn--disabled': !finalEntriesDirty }"
+          :disabled="!finalEntriesDirty"
           @click="handleRevert"
         >
           Revert Changes
@@ -207,8 +143,8 @@ onMounted(async () => {
           <span class="it__owner-name">({{ finalList.metadata.owner_name }})</span>
           <span class="it__final-badge">FINAL</span>
           - {{ filteredIds.length
-          }}<template v-if="filteredIds.length !== invitedIds.length"
-            >/{{ invitedIds.length }}</template
+          }}<template v-if="filteredIds.length !== finalInvitedIds.length"
+            >/{{ finalInvitedIds.length }}</template
           >
           invited
           <span class="it__filter-toggle" :class="{ 'it__filter-toggle--active': filtersActive }">
