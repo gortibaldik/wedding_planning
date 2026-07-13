@@ -212,6 +212,9 @@ async def delete_list(
         )
 
     # lol, this is very unsafe for any race conditions, but I decided to live with it
+    final_list_id = await redis.get(FINAL_LIST_ID_KEY)
+    if final_list_id == list_id:
+        await redis.delete(FINAL_LIST_ID_KEY)
     await redis.delete(_list_entries_key(list_id))
     await redis.hdel(ALL_LIST_IDS_KEY, list_id)
     return {"status": "ok"}

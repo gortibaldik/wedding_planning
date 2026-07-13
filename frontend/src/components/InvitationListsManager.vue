@@ -259,8 +259,9 @@ onMounted(async () => {
         </select>
       </div>
 
-      <div v-if="isOwner" class="it__btn-group">
+      <div v-if="(isOwner || isUniversalSetter) && selectedListId" class="it__btn-group">
         <button
+          v-if="isOwner"
           class="it__save-btn"
           :class="{ 'it__save-btn--disabled': !dirty || saving }"
           :disabled="!dirty || saving"
@@ -269,6 +270,7 @@ onMounted(async () => {
           {{ saving ? 'Saving...' : `Save Changes to ${selectedList?.metadata.name ?? 'List'}` }}
         </button>
         <button
+          v-if="isOwner"
           class="it__revert-btn"
           :class="{ 'it__revert-btn--disabled': !dirty }"
           :disabled="!dirty"

@@ -19,6 +19,7 @@ services:
       - REDISCLOUD_URL=redis://redis:6379
       - HOT_RELOAD=true
       - ENABLE_LOCAL_AUTH=true
+      - ALLOWED_USERS=["ferotre@gmail.com", "ferotre2@gmail.com"]
     env_file:
       - .env
     depends_on:
