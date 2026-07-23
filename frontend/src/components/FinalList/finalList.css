@@ -250,6 +250,9 @@
 }
 
 .it__root-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   padding: 10px 16px;
   font-size: 13px;
@@ -258,6 +261,28 @@
   background: #f9fafb;
   border-left: 4px solid;
   border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+  user-select: none;
+}
+
+.it__root-title:hover {
+  background: #f3f4f6;
+}
+
+.it__root-title .it__chevron {
+  margin-left: auto;
+}
+
+.it__chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
+.it__section--collapsed .it__root-title {
+  border-bottom: none;
+}
+
+.it__section--collapsed .it__entry {
+  display: none;
 }
 
 .it__empty {

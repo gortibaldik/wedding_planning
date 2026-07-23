@@ -5,6 +5,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useFinalListGrouping } from '@/composables/useFinalListGrouping'
 import PersonInfoDisplay from '@/components/PersonInfoDisplay.vue'
 import FinalListSection from '../FinalListSection.vue'
+import RootGroupSection from '../RootGroupSection.vue'
 
 const { finalList, finalEntries, finalInvitedIds } = useInvitationLists()
 const { isUniversalInvitationListSetter } = useAuth()
@@ -80,10 +81,13 @@ const groups = computed(() => buildRootGroups(filteredIds.value).filter(g => g.i
   </FinalListSection>
 
   <div v-if="groups.length === 0" class="it__empty">No one invited yet.</div>
-  <div v-for="group in groups" :key="group.name" class="it__section">
-    <h4 class="it__root-title" :style="{ borderLeftColor: group.color }">
-      {{ group.name }} ({{ group.ids.length }})
-    </h4>
+  <RootGroupSection
+    v-for="group in groups"
+    :key="group.name"
+    :name="group.name"
+    :color="group.color"
+    :count="group.ids.length"
+  >
     <div class="it__entry it__entry--header">
       <div class="it__col-person">Guest</div>
       <div class="it__col-center">Invitation sent</div>
@@ -127,5 +131,5 @@ const groups = computed(() => buildRootGroups(filteredIds.value).filter(g => g.i
         />
       </div>
     </div>
-  </div>
+  </RootGroupSection>
 </template>
