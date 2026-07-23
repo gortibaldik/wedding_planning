@@ -25,6 +25,7 @@ ALL_LIST_IDS_KEY = (
 )
 FINAL_LIST_ID_KEY = "invitation_lists:final_id"  # Redis string: list_id
 FINAL_LIST_ENTRIES_KEY = "invitation_lists:final:entries"
+HOTELS_KEY = "invitation_lists:hotels"  # Redis hash: hotel_id -> compressed HotelEntry
 
 
 def _list_entries_key(list_id: str) -> str:
@@ -35,6 +36,30 @@ class RSVPEnum(str, Enum):
     NOT_ANSWERED = "NOT_ANSWERED"
     WILL_COME = "WILL_COME"
     WONT_COME = "WONT_COME"
+
+
+class AccommodationPaymentEnum(str, Enum):
+    WE_PAID = "WE_PAID"
+    """We paid for the accommodation as a gift; no reimbursement expected."""
+
+    WE_RESERVED = "WE_RESERVED"
+    """We fronted/reserved it; ``paid_back`` tracks whether the guest reimbursed us."""
+
+    THEY_RESERVED_AND_PAID = "THEY_RESERVED_AND_PAID"
+    """The guest handled and paid for the accommodation themselves."""
+
+
+class HotelEntry(BaseModel):
+    id: str
+    name: str
+    google_maps_link: str = ""
+
+
+class AccommodationEntry(BaseModel):
+    hotel_id: str
+    payment: AccommodationPaymentEnum
+    paid_back: bool = False
+    """Whether the guest reimbursed us. Only meaningful when ``payment`` is WE_RESERVED."""
 
 
 class FinalInvitationListEntry(BaseModel):
@@ -48,6 +73,9 @@ class FinalInvitationListEntry(BaseModel):
 
     notes: str = ""
     """Any notes about the person."""
+
+    accommodation: AccommodationEntry | None = None
+    """Accommodation arranged for the person, if any."""
 
 
 class InvitationEntry(BaseModel):
@@ -102,6 +130,13 @@ async def _get_final_entries(
 async def _get_list_by_id(
     redis: aioredis.Redis, list_id: str
 ) -> InvitationList | FinalInvitationList | None:
+    """Load a full invitation list (metadata + entries) by its id.
+
+    Returns ``None`` if no list with ``list_id`` exists. If the list is the
+    one currently marked as final, a ``FinalInvitationList`` is returned with
+    its final entries populated; otherwise a plain ``InvitationList`` is
+    returned.
+    """
     meta_task = redis.hget(ALL_LIST_IDS_KEY, list_id)
     final_list_task = redis.get(FINAL_LIST_ID_KEY)
     meta_raw, final_list_id = await asyncio.gather(meta_task, final_list_task)
@@ -281,3 +316,28 @@ async def set_final_entries(
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     await redis.set(FINAL_LIST_ENTRIES_KEY, compress(request.model_dump_json()))
+
+
+@router.get("/hotels")
+async def get_hotels(
+    redis: Annotated[aioredis.Redis, Depends(get_redis)],
+) -> list[HotelEntry]:
+    raw = await redis.hgetall(HOTELS_KEY)
+    return [HotelEntry.model_validate_json(decompress(v)) for v in raw.values()]
+
+
+@router.post("/hotels")
+async def upsert_hotel(
+    hotel: HotelEntry,
+    redis: Annotated[aioredis.Redis, Depends(get_redis)],
+    user: Annotated[dict, Depends(get_current_user)],
+):
+    """Create or update a single hotel by its id.
+
+    Referenced from ``AccommodationEntry.hotel_id``. Hotels are stored
+    independently of any invitation list.
+    """
+    if not _is_universal_list_setter(user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    await redis.hset(HOTELS_KEY, hotel.id, compress(hotel.model_dump_json()))
