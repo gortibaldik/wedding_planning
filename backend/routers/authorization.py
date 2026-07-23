@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 def _create_token_and_redirect(
     email: str, name: str, config: Config
 ) -> RedirectResponse:
+    if email not in config.allowed_users:
+        return RedirectResponse(url=config.redirect_url_after_auth_base)
     roles = []
     if email in config.super_users:
         roles.extend(

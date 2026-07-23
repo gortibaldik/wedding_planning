@@ -23,16 +23,38 @@ export interface InvitationList {
 
 type RSVPStatus = 'NOT_ANSWERED' | 'WILL_COME' | 'WONT_COME'
 
+export type AccommodationPayment = 'WE_PAID' | 'WE_RESERVED' | 'THEY_RESERVED_AND_PAID'
+
+/** Default payment used when a hotel is first assigned to a guest. */
+export const DEFAULT_ACCOMMODATION_PAYMENT: AccommodationPayment = 'THEY_RESERVED_AND_PAID'
+
+export interface HotelEntry {
+  id: string
+  name: string
+  google_maps_link: string
+}
+
+export interface AccommodationEntry {
+  hotel_id: string
+  payment: AccommodationPayment
+  /** Whether the guest reimbursed us. Only meaningful when payment is WE_RESERVED. */
+  paid_back: boolean
+}
+
 export interface FinalEntry {
   person_id: string
   invitation_given: boolean
   rsvpd: RSVPStatus
   notes: string
+  accommodation: AccommodationEntry | null
 }
 
 export interface FinalInvitationListData extends InvitationList {
   final_entries: FinalEntry[]
 }
+
+const isFinalListData = (list: InvitationList): list is FinalInvitationListData =>
+  'final_entries' in list
 
 const allLists = ref<ListMetadata[]>([])
 const selectedListId = ref<string | null>(null)
@@ -41,6 +63,18 @@ const loading = ref<boolean>(false)
 /** Snapshot of invited person IDs at last fetch/save, used for dirty detection. */
 const savedInvitedSnapshot = ref<string>('')
 let initialized = false
+
+const finalList = ref<FinalInvitationListData | null>(null)
+const finalLoading = ref<boolean>(false)
+const finalSaving = ref<boolean>(false)
+const finalNotFound = ref<boolean>(false)
+const finalEntries = ref<Record<string, FinalEntry>>({})
+/** Hotels shared across guests, referenced by AccommodationEntry.hotel_id. */
+const finalHotels = ref<HotelEntry[]>([])
+/** Snapshot of final entries at last fetch/save, used for dirty detection. */
+const savedFinalSnapshot = ref<string>('')
+/** Whether the most recently selected (fetched) list is the final list. */
+const isSelectedListFinal = ref<boolean>(false)
 
 const usersLists = computed(() =>
   allLists.value.filter(l => l.owner_sub === storedUserInfo.value.sub)
@@ -174,14 +208,34 @@ export function useInvitationLists() {
     selectedListId.value = listId
   }
 
+  /**
+   * Fetch a single list without applying it to the graph.
+   *
+   * If the backend marks the list as final, the final list state is
+   * populated from the response, saving a separate get-final call.
+   */
+  const fetchListById = async (listId: string): Promise<InvitationList> => {
+    const res = await authFetch(`/invitation-lists/get/${listId}`)
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`)
+    }
+    const list: InvitationList = await res.json()
+    isSelectedListFinal.value = isFinalListData(list)
+    if (isFinalListData(list)) {
+      applyFinalList(list)
+    } else if (finalList.value?.metadata.id === list.metadata.id) {
+      // The list is no longer final on the backend
+      finalList.value = null
+      finalNotFound.value = true
+    }
+    return list
+  }
+
   const fetchList = async (listId: string) => {
     loading.value = true
     try {
-      const res = await authFetch(`/invitation-lists/get/${listId}`)
-      if (res.ok) {
-        selectedList.value = await res.json()
-        applyInvitations()
-      }
+      selectedList.value = await fetchListById(listId)
+      applyInvitations()
     } catch (e) {
       console.warn('Failed to fetch invitation list:', e)
     } finally {
@@ -243,6 +297,178 @@ export function useInvitationLists() {
     }
   }
 
+  const finalInvitedIds = computed<string[]>(() => {
+    if (!finalList.value) return []
+    return finalList.value.entries.filter(e => e.invited).map(e => e.person_id)
+  })
+
+  const makeDefaultFinalEntry = (personId: string): FinalEntry => ({
+    person_id: personId,
+    invitation_given: false,
+    rsvpd: 'NOT_ANSWERED',
+    notes: '',
+    accommodation: null
+  })
+
+  const buildFinalEntries = (): Record<string, FinalEntry> => {
+    const existing: Record<string, FinalEntry> = {}
+    if (finalList.value?.final_entries) {
+      for (const entry of finalList.value.final_entries) {
+        existing[entry.person_id] = entry
+      }
+    }
+    const map: Record<string, FinalEntry> = {}
+    for (const id of finalInvitedIds.value) {
+      const merged: FinalEntry = { ...makeDefaultFinalEntry(id), ...(existing[id] ?? {}) }
+      // Clone the nested accommodation so edits don't mutate the fetched baseline
+      // that revert rebuilds from.
+      merged.accommodation = merged.accommodation ? { ...merged.accommodation } : null
+      map[id] = merged
+    }
+    return map
+  }
+
+  const serializeFinalEntries = (entries: Record<string, FinalEntry>): string => {
+    const keys = Object.keys(entries).sort()
+    return JSON.stringify(keys.map(k => entries[k]))
+  }
+
+  const takeFinalSnapshot = () => {
+    savedFinalSnapshot.value = serializeFinalEntries(finalEntries.value)
+  }
+
+  const finalEntriesDirty = computed(
+    () => serializeFinalEntries(finalEntries.value) !== savedFinalSnapshot.value
+  )
+
+  const applyFinalList = (list: FinalInvitationListData) => {
+    finalList.value = list
+    finalNotFound.value = false
+    finalEntries.value = buildFinalEntries()
+    takeFinalSnapshot()
+  }
+
+  const fetchFinalList = async () => {
+    finalLoading.value = true
+    try {
+      const res = await authFetch('/invitation-lists/get-final')
+      if (res.ok) {
+        applyFinalList(await res.json())
+      } else if (res.status === 404) {
+        finalList.value = null
+        finalNotFound.value = true
+      }
+    } catch (e) {
+      console.warn('Failed to fetch final list:', e)
+    } finally {
+      finalLoading.value = false
+    }
+  }
+
+  const setFinalList = async (listId: string) => {
+    const res = await authFetch(`/invitation-lists/set-final/${listId}`, { method: 'POST' })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    // Refetch so the final list state is populated from the backend
+    await fetchListById(listId)
+  }
+
+  const unsetFinalList = async () => {
+    const res = await authFetch('/invitation-lists/unset-final', { method: 'POST' })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    finalList.value = null
+    finalNotFound.value = true
+    isSelectedListFinal.value = false
+  }
+
+  const revertFinalEntries = () => {
+    finalEntries.value = buildFinalEntries()
+  }
+
+  const saveFinalEntries = async () => {
+    finalSaving.value = true
+    try {
+      const res = await authFetch('/invitation-lists/set-final-entries', {
+        method: 'POST',
+        body: JSON.stringify({ final_entries: Object.values(finalEntries.value) })
+      })
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}))
+        throw new Error(detail.detail || `HTTP ${res.status}`)
+      }
+      takeFinalSnapshot()
+    } finally {
+      finalSaving.value = false
+    }
+  }
+
+  /** Fetch the shared hotel list, referenced by accommodation entries. */
+  const fetchHotels = async () => {
+    try {
+      const res = await authFetch('/invitation-lists/hotels')
+      if (res.ok) {
+        finalHotels.value = await res.json()
+      }
+    } catch (e) {
+      console.warn('Failed to fetch hotels:', e)
+    }
+  }
+
+  const getHotelById = (hotelId: string): HotelEntry | undefined =>
+    finalHotels.value.find(h => h.id === hotelId)
+
+  /**
+   * Create and persist a new hotel, returning its generated id.
+   *
+   * Hotels are persisted immediately (independently of the final entries Save)
+   * so that a hotel always exists on the backend before any entry references it.
+   */
+  const createHotel = async (name: string, googleMapsLink: string): Promise<string> => {
+    const hotel: HotelEntry = {
+      id: crypto.randomUUID(),
+      name,
+      google_maps_link: googleMapsLink
+    }
+    const res = await authFetch('/invitation-lists/hotels', {
+      method: 'POST',
+      body: JSON.stringify(hotel)
+    })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    finalHotels.value.push(hotel)
+    return hotel.id
+  }
+
+  /**
+   * Assign a hotel to a guest, creating the AccommodationEntry if needed.
+   *
+   * An empty hotelId clears the accommodation back to null.
+   */
+  const assignHotel = (personId: string, hotelId: string) => {
+    const entry = finalEntries.value[personId]
+    if (!entry) return
+    if (!hotelId) {
+      entry.accommodation = null
+      return
+    }
+    if (entry.accommodation) {
+      entry.accommodation.hotel_id = hotelId
+    } else {
+      entry.accommodation = {
+        hotel_id: hotelId,
+        payment: DEFAULT_ACCOMMODATION_PAYMENT,
+        paid_back: false
+      }
+    }
+  }
+
   return {
     allLists,
     usersLists,
@@ -251,6 +477,7 @@ export function useInvitationLists() {
     loading,
     fetchAllIds,
     fetchList,
+    fetchListById,
     applyInvitations,
     saveList,
     ensureDefaultList,
@@ -266,6 +493,24 @@ export function useInvitationLists() {
     updatePersonName,
     togglePersonInvite,
     isPersonInvited,
-    canUserInvite
+    canUserInvite,
+    finalList,
+    finalLoading,
+    finalSaving,
+    finalNotFound,
+    finalEntries,
+    finalHotels,
+    finalInvitedIds,
+    finalEntriesDirty,
+    isSelectedListFinal,
+    fetchFinalList,
+    fetchHotels,
+    createHotel,
+    getHotelById,
+    assignHotel,
+    setFinalList,
+    unsetFinalList,
+    revertFinalEntries,
+    saveFinalEntries
   }
 }

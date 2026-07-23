@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Body, Depends, HTTPException
@@ -31,6 +31,31 @@ class FamilyStructure(BaseModel):
 
 CURRENT_FAMILY_STRUCTURE_ID_KEY: str = "current_family_structure_id"
 FAMILY_STRUCTURE_RW_STATUS_KEY: str = "family_structure_rw_status"
+STATUS_TYPE = Literal["read", "read-write"]
+
+
+async def _get_family_structure_rw_status(redis: aioredis.Redis) -> STATUS_TYPE:
+    """Get the current editability status of the family genealogy tree structure.
+
+    The genealogy tree structure can be fixed to read only status. In that case, any request for
+    edit is rejected.
+
+    By default, the state is assumed to be in read-only mode.
+    """
+    current_status = await redis.get(FAMILY_STRUCTURE_RW_STATUS_KEY)
+    return current_status or "read"
+
+
+async def _switch_family_structure_rw_status(
+    redis: aioredis.Redis, old_status: STATUS_TYPE
+) -> STATUS_TYPE:
+    """Switch the family structure rw status and return the new value."""
+    new_status = "read"
+    if old_status == "read":
+        new_status = "read-write"
+
+    await redis.set(FAMILY_STRUCTURE_RW_STATUS_KEY, new_status)
+    return new_status
 
 
 @router.get("/get")
@@ -51,7 +76,7 @@ async def set_family_structure(
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
     request_body: Annotated[Any, Body()],
 ):
-    status = await redis.get(FAMILY_STRUCTURE_RW_STATUS_KEY)
+    status = await _get_family_structure_rw_status(redis)
     if status != "read-write":
         raise HTTPException(
             status_code=403, detail="Family structure is in read-only mode"
@@ -74,8 +99,7 @@ async def set_family_structure(
 async def get_family_structure_status(
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
 ) -> str:
-    status = await redis.get(FAMILY_STRUCTURE_RW_STATUS_KEY)
-    return status or "read"
+    return await _get_family_structure_rw_status(redis)
 
 
 CHANGE_STATUS_ROLE = "change-genealogy-tree-rw-status"
@@ -86,10 +110,11 @@ async def change_family_structure_status(
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
     user: Annotated[dict, Depends(get_current_user)],
 ) -> str:
+    """Switch the read-only / read-write status of the genealogy tree editability."""
     if CHANGE_STATUS_ROLE not in user.get("roles", []):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    current = await redis.get(FAMILY_STRUCTURE_RW_STATUS_KEY)
-    new_status = "read-write" if current != "read-write" else "read"
-    await redis.set(FAMILY_STRUCTURE_RW_STATUS_KEY, new_status)
+    current = await _get_family_structure_rw_status(redis)
+    new_status = await _switch_family_structure_rw_status(redis, old_status=current)
+
     return new_status

@@ -12,7 +12,11 @@ const {
   initInvitationLists,
   getPersonName,
   getMultiPersonNodeName,
-  getPersonNodeId
+  getPersonNodeId,
+  fetchListById,
+  isSelectedListFinal,
+  setFinalList,
+  unsetFinalList
 } = useInvitationLists()
 const { people } = useStoredData()
 const { authFetch, storedUserInfo } = useAuth()
@@ -37,26 +41,6 @@ const isOwner = computed(() => {
 const isUniversalSetter = computed(() => {
   return storedUserInfo.value?.roles?.includes('universal-invitation-list-setter') ?? false
 })
-
-const finalListId = ref<string | null>(null)
-
-const isSelectedFinal = computed(() => {
-  return !!selectedListId.value && selectedListId.value === finalListId.value
-})
-
-const fetchFinalListId = async () => {
-  try {
-    const res = await authFetch('/invitation-lists/get-final')
-    if (res.ok) {
-      const data = await res.json()
-      finalListId.value = data?.metadata?.id ?? null
-    } else if (res.status === 404) {
-      finalListId.value = null
-    }
-  } catch (e) {
-    console.warn('Failed to fetch final list:', e)
-  }
-}
 
 interface RootInfo {
   name: string
@@ -109,12 +93,6 @@ const uninvitedGroupedByRoot = computed<RootGroup[]>(() => {
 
 const uninvitedExpanded = ref(false)
 
-const fetchFullList = async (listId: string): Promise<InvitationList> => {
-  const res = await authFetch(`/invitation-lists/get/${listId}`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return await res.json()
-}
-
 const takeSnapshot = () => {
   savedSnapshot.value = [...myInvitedIds.value].sort().join(',')
 }
@@ -134,7 +112,7 @@ const handleSelectList = async (listId: string) => {
   updateHash(listId)
   loading.value = true
   try {
-    const list = await fetchFullList(listId)
+    const list = await fetchListById(listId)
     selectedList.value = list
     myInvitedIds.value = new Set(list.entries.filter(e => e.invited).map(e => e.person_id))
     takeSnapshot()
@@ -203,14 +181,7 @@ const handleSetFinal = async () => {
   if (!selectedListId.value) return
   settingFinal.value = true
   try {
-    const res = await authFetch(`/invitation-lists/set-final/${selectedListId.value}`, {
-      method: 'POST'
-    })
-    if (!res.ok) {
-      const detail = await res.json().catch(() => ({}))
-      throw new Error(detail.detail || `HTTP ${res.status}`)
-    }
-    finalListId.value = selectedListId.value
+    await setFinalList(selectedListId.value)
   } catch (e) {
     alert('Failed to set final: ' + (e instanceof Error ? e.message : String(e)))
   } finally {
@@ -221,12 +192,7 @@ const handleSetFinal = async () => {
 const handleUnsetFinal = async () => {
   settingFinal.value = true
   try {
-    const res = await authFetch('/invitation-lists/unset-final', { method: 'POST' })
-    if (!res.ok) {
-      const detail = await res.json().catch(() => ({}))
-      throw new Error(detail.detail || `HTTP ${res.status}`)
-    }
-    finalListId.value = null
+    await unsetFinalList()
   } catch (e) {
     alert('Failed to unset final: ' + (e instanceof Error ? e.message : String(e)))
   } finally {
@@ -263,7 +229,6 @@ const handleDelete = async () => {
 
 onMounted(async () => {
   await initInvitationLists()
-  await fetchFinalListId()
   const hashListId = getListIdFromHash()
   const listToSelect =
     hashListId && allLists.value.some(l => l.id === hashListId)
@@ -294,8 +259,9 @@ onMounted(async () => {
         </select>
       </div>
 
-      <div v-if="isOwner" class="it__btn-group">
+      <div v-if="(isOwner || isUniversalSetter) && selectedListId" class="it__btn-group">
         <button
+          v-if="isOwner"
           class="it__save-btn"
           :class="{ 'it__save-btn--disabled': !dirty || saving }"
           :disabled="!dirty || saving"
@@ -304,6 +270,7 @@ onMounted(async () => {
           {{ saving ? 'Saving...' : `Save Changes to ${selectedList?.metadata.name ?? 'List'}` }}
         </button>
         <button
+          v-if="isOwner"
           class="it__revert-btn"
           :class="{ 'it__revert-btn--disabled': !dirty }"
           :disabled="!dirty"
@@ -318,7 +285,7 @@ onMounted(async () => {
 
       <div v-if="isUniversalSetter && selectedListId" class="it__btn-group">
         <button
-          v-if="!isSelectedFinal"
+          v-if="!isSelectedListFinal"
           class="it__final-btn"
           :disabled="settingFinal"
           @click="handleSetFinal"
@@ -347,7 +314,7 @@ onMounted(async () => {
         <h3 class="it__section-title">
           {{ selectedList.metadata.name }}
           <span class="it__owner-name">({{ selectedList.metadata.owner_name }})</span>
-          <span v-if="isSelectedFinal" class="it__final-badge">FINAL</span>
+          <span v-if="isSelectedListFinal" class="it__final-badge">FINAL</span>
           - {{ myInvitedIds.size }} invited
         </h3>
       </div>

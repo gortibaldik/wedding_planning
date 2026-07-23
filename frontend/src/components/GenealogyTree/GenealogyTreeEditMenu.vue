@@ -41,7 +41,7 @@ const canChangeStatus = computed(() =>
 
         <!-- Mode section -->
         <div v-if="status === 'read-write' || canChangeStatus" class="toolbar__section">
-          <div class="toolbar__section-title">Mode</div>
+          <div class="toolbar__section-title">Genealogy Tree Mode</div>
 
           <label v-if="status === 'read-write'" class="toolbar__toggle">
             <input
@@ -53,7 +53,7 @@ const canChangeStatus = computed(() =>
             <span class="toolbar__toggle-track">
               <span class="toolbar__toggle-thumb" />
             </span>
-            <span class="toolbar__toggle-label">Read-Only</span>
+            <span class="toolbar__toggle-label">Read-Only Client Status</span>
           </label>
 
           <button
@@ -62,7 +62,11 @@ const canChangeStatus = computed(() =>
             :class="{ 'toolbar__btn--status-active': status === 'read-write' }"
             @click="emit('toggle-status')"
           >
-            {{ status === 'read-write' ? 'Set Read-Only' : 'Set Read-Write' }}
+            {{
+              status === 'read-write'
+                ? 'Set Read-Only Server Status'
+                : 'Set Read-Write Server Status'
+            }}
           </button>
         </div>
 

@@ -11,6 +11,7 @@ import PersonNode from '@/components/nodes/PersonNode.vue'
 import MultiPersonNode from '@/components/nodes/MultiPersonNode.vue'
 import GroupNode from '@/components/nodes/GroupNode.vue'
 import { useSidebarState } from '@/composables/useSidebarState'
+import { useInvitationLists } from '@/composables/useInvitationLists'
 import { useBaseGraph } from '@/composables/useBaseGraph'
 import { MultiPersonData, PersonData, useStoredData } from '@/composables/useStoredData'
 import { useBackendStorage } from '@/composables/useBackendStorage'
@@ -196,6 +197,12 @@ const onNodeDragStop = ({ node }) => {
     descendantStartPositions: new Map()
   }
 }
+
+const { initInvitationLists } = useInvitationLists()
+
+onMounted(() => {
+  initInvitationLists()
+})
 </script>
 
 <template>
