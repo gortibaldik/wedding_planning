@@ -23,11 +23,30 @@ export interface InvitationList {
 
 type RSVPStatus = 'NOT_ANSWERED' | 'WILL_COME' | 'WONT_COME'
 
+export type AccommodationPayment = 'WE_PAID' | 'WE_RESERVED' | 'THEY_RESERVED_AND_PAID'
+
+/** Default payment used when a hotel is first assigned to a guest. */
+export const DEFAULT_ACCOMMODATION_PAYMENT: AccommodationPayment = 'THEY_RESERVED_AND_PAID'
+
+export interface HotelEntry {
+  id: string
+  name: string
+  google_maps_link: string
+}
+
+export interface AccommodationEntry {
+  hotel_id: string
+  payment: AccommodationPayment
+  /** Whether the guest reimbursed us. Only meaningful when payment is WE_RESERVED. */
+  paid_back: boolean
+}
+
 export interface FinalEntry {
   person_id: string
   invitation_given: boolean
   rsvpd: RSVPStatus
   notes: string
+  accommodation: AccommodationEntry | null
 }
 
 export interface FinalInvitationListData extends InvitationList {
@@ -50,6 +69,8 @@ const finalLoading = ref<boolean>(false)
 const finalSaving = ref<boolean>(false)
 const finalNotFound = ref<boolean>(false)
 const finalEntries = ref<Record<string, FinalEntry>>({})
+/** Hotels shared across guests, referenced by AccommodationEntry.hotel_id. */
+const finalHotels = ref<HotelEntry[]>([])
 /** Snapshot of final entries at last fetch/save, used for dirty detection. */
 const savedFinalSnapshot = ref<string>('')
 /** Whether the most recently selected (fetched) list is the final list. */
@@ -285,7 +306,8 @@ export function useInvitationLists() {
     person_id: personId,
     invitation_given: false,
     rsvpd: 'NOT_ANSWERED',
-    notes: ''
+    notes: '',
+    accommodation: null
   })
 
   const buildFinalEntries = (): Record<string, FinalEntry> => {
@@ -297,7 +319,11 @@ export function useInvitationLists() {
     }
     const map: Record<string, FinalEntry> = {}
     for (const id of finalInvitedIds.value) {
-      map[id] = { ...makeDefaultFinalEntry(id), ...(existing[id] ?? {}) }
+      const merged: FinalEntry = { ...makeDefaultFinalEntry(id), ...(existing[id] ?? {}) }
+      // Clone the nested accommodation so edits don't mutate the fetched baseline
+      // that revert rebuilds from.
+      merged.accommodation = merged.accommodation ? { ...merged.accommodation } : null
+      map[id] = merged
     }
     return map
   }
@@ -381,6 +407,68 @@ export function useInvitationLists() {
     }
   }
 
+  /** Fetch the shared hotel list, referenced by accommodation entries. */
+  const fetchHotels = async () => {
+    try {
+      const res = await authFetch('/invitation-lists/hotels')
+      if (res.ok) {
+        finalHotels.value = await res.json()
+      }
+    } catch (e) {
+      console.warn('Failed to fetch hotels:', e)
+    }
+  }
+
+  const getHotelById = (hotelId: string): HotelEntry | undefined =>
+    finalHotels.value.find(h => h.id === hotelId)
+
+  /**
+   * Create and persist a new hotel, returning its generated id.
+   *
+   * Hotels are persisted immediately (independently of the final entries Save)
+   * so that a hotel always exists on the backend before any entry references it.
+   */
+  const createHotel = async (name: string, googleMapsLink: string): Promise<string> => {
+    const hotel: HotelEntry = {
+      id: crypto.randomUUID(),
+      name,
+      google_maps_link: googleMapsLink
+    }
+    const res = await authFetch('/invitation-lists/hotels', {
+      method: 'POST',
+      body: JSON.stringify(hotel)
+    })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    finalHotels.value.push(hotel)
+    return hotel.id
+  }
+
+  /**
+   * Assign a hotel to a guest, creating the AccommodationEntry if needed.
+   *
+   * An empty hotelId clears the accommodation back to null.
+   */
+  const assignHotel = (personId: string, hotelId: string) => {
+    const entry = finalEntries.value[personId]
+    if (!entry) return
+    if (!hotelId) {
+      entry.accommodation = null
+      return
+    }
+    if (entry.accommodation) {
+      entry.accommodation.hotel_id = hotelId
+    } else {
+      entry.accommodation = {
+        hotel_id: hotelId,
+        payment: DEFAULT_ACCOMMODATION_PAYMENT,
+        paid_back: false
+      }
+    }
+  }
+
   return {
     allLists,
     usersLists,
@@ -411,10 +499,15 @@ export function useInvitationLists() {
     finalSaving,
     finalNotFound,
     finalEntries,
+    finalHotels,
     finalInvitedIds,
     finalEntriesDirty,
     isSelectedListFinal,
     fetchFinalList,
+    fetchHotels,
+    createHotel,
+    getHotelById,
+    assignHotel,
     setFinalList,
     unsetFinalList,
     revertFinalEntries,
