@@ -13,10 +13,15 @@ const { buildRootGroups } = useFinalListGrouping()
 
 type InvitationFilter = 'all' | 'sent' | 'not_sent'
 type RsvpFilter = 'all' | 'not_answered' | 'will_come' | 'wont_come'
+type NotesFilter = 'all' | 'has_notes' | 'no_notes'
 
 const filterInvitation = ref<InvitationFilter>('all')
 const filterRsvp = ref<RsvpFilter>('all')
-const filtersActive = computed(() => filterInvitation.value !== 'all' || filterRsvp.value !== 'all')
+const filterNotes = ref<NotesFilter>('all')
+const filtersActive = computed(
+  () =>
+    filterInvitation.value !== 'all' || filterRsvp.value !== 'all' || filterNotes.value !== 'all'
+)
 
 const filteredIds = computed<string[]>(() =>
   finalInvitedIds.value.filter(id => {
@@ -27,6 +32,8 @@ const filteredIds = computed<string[]>(() =>
     if (filterRsvp.value === 'not_answered' && entry.rsvpd !== 'NOT_ANSWERED') return false
     if (filterRsvp.value === 'will_come' && entry.rsvpd !== 'WILL_COME') return false
     if (filterRsvp.value === 'wont_come' && entry.rsvpd !== 'WONT_COME') return false
+    if (filterNotes.value === 'has_notes' && entry.notes.trim() === '') return false
+    if (filterNotes.value === 'no_notes' && entry.notes.trim() !== '') return false
     return true
   })
 )
@@ -73,6 +80,22 @@ const groups = computed(() => buildRootGroups(filteredIds.value).filter(g => g.i
           class="it__filter-btn"
           :class="{ 'it__filter-btn--active': filterRsvp === opt[0] }"
           @click.stop="filterRsvp = opt[0]"
+        >
+          {{ opt[1] }}
+        </button>
+      </div>
+      <div class="it__filter-group">
+        <span class="it__filter-label">Notes</span>
+        <button
+          v-for="opt in [
+            ['all', 'All'],
+            ['has_notes', 'Has notes'],
+            ['no_notes', 'No notes']
+          ] as const"
+          :key="opt[0]"
+          class="it__filter-btn"
+          :class="{ 'it__filter-btn--active': filterNotes === opt[0] }"
+          @click.stop="filterNotes = opt[0]"
         >
           {{ opt[1] }}
         </button>
