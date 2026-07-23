@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 
 export function useSidebarState() {
   const toggleSidebar = () => {
