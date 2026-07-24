@@ -447,6 +447,35 @@ export function useInvitationLists() {
   }
 
   /**
+   * Update an existing hotel's name/link, persisting immediately.
+   *
+   * Uses the same upsert endpoint as {@link createHotel}; the hotel is matched
+   * by its id, so accommodation entries referencing it keep pointing at the
+   * updated hotel.
+   */
+  const updateHotel = async (
+    hotelId: string,
+    name: string,
+    googleMapsLink: string
+  ): Promise<void> => {
+    const hotel: HotelEntry = { id: hotelId, name, google_maps_link: googleMapsLink }
+    const res = await authFetch('/invitation-lists/hotels', {
+      method: 'POST',
+      body: JSON.stringify(hotel)
+    })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    const idx = finalHotels.value.findIndex(h => h.id === hotelId)
+    if (idx !== -1) {
+      finalHotels.value[idx] = hotel
+    } else {
+      finalHotels.value.push(hotel)
+    }
+  }
+
+  /**
    * Assign a hotel to a guest, creating the AccommodationEntry if needed.
    *
    * An empty hotelId clears the accommodation back to null.
@@ -506,6 +535,7 @@ export function useInvitationLists() {
     fetchFinalList,
     fetchHotels,
     createHotel,
+    updateHotel,
     getHotelById,
     assignHotel,
     setFinalList,

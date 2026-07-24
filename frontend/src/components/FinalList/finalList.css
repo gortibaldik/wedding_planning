@@ -573,6 +573,47 @@
   color: #047857;
 }
 
+/* --- Accommodation: hotel management --- */
+
+.it__hotels-mgmt {
+  padding-bottom: 8px;
+}
+
+.it__section-title--static {
+  cursor: default;
+}
+
+.it__section-title--static:hover {
+  background: transparent;
+}
+
+.it__hotel-mgmt-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) 20px auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+}
+
+.it__hotel-mgmt-row + .it__hotel-mgmt-row {
+  border-top: 1px solid #f3f4f6;
+}
+
+.it__hotel-mgmt-mapcol {
+  display: inline-block;
+  width: 20px;
+}
+
+@media (max-width: 768px) {
+  .it__hotel-mgmt-row {
+    grid-template-columns: 1fr 20px auto;
+  }
+
+  .it__hotel-mgmt-row .it__new-hotel-input:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
 .it__entry .person__item {
   border: none;
   border-radius: 0;

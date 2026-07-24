@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useInvitationLists, type AccommodationPayment } from '@/composables/useInvitationLists'
 import { useAuth } from '@/composables/useAuth'
 import { useFinalListGrouping } from '@/composables/useFinalListGrouping'
@@ -13,6 +13,7 @@ const {
   finalHotels,
   finalInvitedIds,
   createHotel,
+  updateHotel,
   getHotelById,
   assignHotel
 } = useInvitationLists()
@@ -93,6 +94,51 @@ const confirmNewHotel = async (id: string) => {
     alert('Failed to create hotel: ' + (e instanceof Error ? e.message : String(e)))
   } finally {
     creatingHotel.value = false
+  }
+}
+
+// --- Hotel management (bottom section) ---
+// Per-hotel editable drafts, keyed by hotel id. Kept in sync with the hotel
+// set (not with individual values) so in-progress edits survive a save of a
+// sibling hotel.
+const hotelDrafts = ref<Record<string, { name: string; link: string }>>({})
+
+// when finalHotels
+watch(
+  () => finalHotels.value.map(h => h.id).join(','), // the source
+  () => {
+    // the callback
+    for (const h of finalHotels.value) {
+      if (!hotelDrafts.value[h.id]) {
+        hotelDrafts.value[h.id] = { name: h.name, link: h.google_maps_link }
+      }
+    }
+    for (const id of Object.keys(hotelDrafts.value)) {
+      if (!finalHotels.value.some(h => h.id === id)) delete hotelDrafts.value[id]
+    }
+  },
+  { immediate: true }
+)
+
+const isHotelDirty = (id: string): boolean => {
+  const hotel = getHotelById(id)
+  const draft = hotelDrafts.value[id]
+  if (!hotel || !draft) return false
+  return draft.name.trim() !== hotel.name || draft.link.trim() !== hotel.google_maps_link
+}
+
+const savingHotelId = ref<string | null>(null)
+
+const saveHotel = async (id: string) => {
+  const draft = hotelDrafts.value[id]
+  if (!draft || !draft.name.trim()) return
+  savingHotelId.value = id
+  try {
+    await updateHotel(id, draft.name.trim(), draft.link.trim())
+  } catch (e) {
+    alert('Failed to save hotel: ' + (e instanceof Error ? e.message : String(e)))
+  } finally {
+    savingHotelId.value = null
   }
 }
 </script>
@@ -244,4 +290,46 @@ const confirmNewHotel = async (id: string) => {
       </div>
     </div>
   </RootGroupSection>
+
+  <section v-if="isUniversalInvitationListSetter" class="it__section it__hotels-mgmt">
+    <h3 class="it__section-title it__section-title--static">Manage hotels</h3>
+    <div v-if="finalHotels.length === 0" class="it__empty">No hotels yet.</div>
+    <div v-for="hotel in finalHotels" :key="hotel.id" class="it__hotel-mgmt-row">
+      <input
+        v-model="hotelDrafts[hotel.id].name"
+        class="it__new-hotel-input"
+        type="text"
+        placeholder="Hotel name"
+        @keyup.enter="saveHotel(hotel.id)"
+      />
+      <input
+        v-model="hotelDrafts[hotel.id].link"
+        class="it__new-hotel-input"
+        type="text"
+        placeholder="Google Maps link (optional)"
+        @keyup.enter="saveHotel(hotel.id)"
+      />
+      <a
+        v-if="hotelDrafts[hotel.id].link.trim()"
+        class="it__hotel-link"
+        :href="hotelDrafts[hotel.id].link"
+        target="_blank"
+        rel="noopener"
+        title="Open in Google Maps"
+        >🗺️</a
+      >
+      <span v-else class="it__hotel-mgmt-mapcol"></span>
+      <button
+        class="it__new-hotel-add"
+        :disabled="
+          !hotelDrafts[hotel.id].name.trim() ||
+          !isHotelDirty(hotel.id) ||
+          savingHotelId === hotel.id
+        "
+        @click="saveHotel(hotel.id)"
+      >
+        {{ savingHotelId === hotel.id ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </section>
 </template>
