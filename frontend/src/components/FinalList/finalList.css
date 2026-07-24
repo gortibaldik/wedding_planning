@@ -589,7 +589,7 @@
 
 .it__hotel-mgmt-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) 20px auto;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) 20px auto auto;
   align-items: center;
   gap: 10px;
   padding: 8px 16px;
@@ -604,9 +604,39 @@
   width: 20px;
 }
 
+.it__hotel-mgmt-remove {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: white;
+  color: #dc2626;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.it__hotel-mgmt-remove:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.it__hotel-mgmt-remove:disabled {
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .it__hotel-mgmt-row {
-    grid-template-columns: 1fr 20px auto;
+    grid-template-columns: 1fr 20px auto auto;
   }
 
   .it__hotel-mgmt-row .it__new-hotel-input:first-child {

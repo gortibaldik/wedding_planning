@@ -341,3 +341,64 @@ async def upsert_hotel(
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     await redis.hset(HOTELS_KEY, hotel.id, compress(hotel.model_dump_json()))
+
+
+def _clear_hotel_references(
+    final_entries: list[FinalInvitationListEntry] | None, hotel_id: str
+) -> tuple[bool, list[FinalInvitationListEntry]]:
+    """Clear references to ``hotel_id`` from the final entries.
+
+    Pure: the input entries are not mutated. Any entry whose accommodation
+    points at ``hotel_id`` is replaced by a copy with ``accommodation`` set to
+    ``None``; every other entry is returned unchanged. A ``None`` input (no
+    final entries stored yet) is treated as an empty list.
+
+    Returns ``(changed, entries)`` where ``changed`` is ``True`` iff at least
+    one entry referenced the hotel — letting the caller skip a persist (and a
+    full-list ``==`` comparison) when nothing changed.
+    """
+    changed = False
+    cleared: list[FinalInvitationListEntry] = []
+    for entry in final_entries or []:
+        if entry.accommodation and entry.accommodation.hotel_id == hotel_id:
+            cleared.append(entry.model_copy(update={"accommodation": None}))
+            changed = True
+        else:
+            cleared.append(entry)
+    return changed, cleared
+
+
+@router.delete("/hotels/{hotel_id}")
+async def delete_hotel(
+    hotel_id: str,
+    redis: Annotated[aioredis.Redis, Depends(get_redis)],
+    user: Annotated[dict, Depends(get_current_user)],
+):
+    """Delete a single hotel by its id.
+
+    Accommodation entries in the final list referencing this hotel are cleared
+    (their ``accommodation`` is set to ``None``) so no entry is left pointing at
+    a hotel that no longer exists.
+    """
+    if not _is_universal_list_setter(user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    removed = await redis.hdel(HOTELS_KEY, hotel_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    # Clear any final entries that still reference the deleted hotel.
+    # (Same cavalier stance on race conditions as the rest of this module.)
+    final_entries = await _get_final_entries(redis)
+    changed, new_final_entries = _clear_hotel_references(final_entries, hotel_id)
+    if changed:
+        await redis.set(
+            FINAL_LIST_ENTRIES_KEY,
+            compress(
+                SetFinalEntriesRequest(
+                    final_entries=new_final_entries
+                ).model_dump_json()
+            ),
+        )
+
+    return {"status": "ok"}

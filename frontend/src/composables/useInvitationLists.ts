@@ -476,6 +476,29 @@ export function useInvitationLists() {
   }
 
   /**
+   * Delete a hotel and clear any local accommodation entries referencing it.
+   *
+   * The backend also clears the persisted references; clearing them locally
+   * keeps the in-memory final entries (the source of truth for the next Save)
+   * consistent so no guest is left pointing at a deleted hotel.
+   */
+  const deleteHotel = async (hotelId: string): Promise<void> => {
+    const res = await authFetch(`/invitation-lists/hotels/${hotelId}`, {
+      method: 'DELETE'
+    })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}))
+      throw new Error(detail.detail || `HTTP ${res.status}`)
+    }
+    for (const entry of Object.values(finalEntries.value)) {
+      if (entry.accommodation?.hotel_id === hotelId) {
+        entry.accommodation = null
+      }
+    }
+    finalHotels.value = finalHotels.value.filter(h => h.id !== hotelId)
+  }
+
+  /**
    * Assign a hotel to a guest, creating the AccommodationEntry if needed.
    *
    * An empty hotelId clears the accommodation back to null.
@@ -536,6 +559,7 @@ export function useInvitationLists() {
     fetchHotels,
     createHotel,
     updateHotel,
+    deleteHotel,
     getHotelById,
     assignHotel,
     setFinalList,

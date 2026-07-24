@@ -14,6 +14,7 @@ const {
   finalInvitedIds,
   createHotel,
   updateHotel,
+  deleteHotel,
   getHotelById,
   assignHotel
 } = useInvitationLists()
@@ -139,6 +140,30 @@ const saveHotel = async (id: string) => {
     alert('Failed to save hotel: ' + (e instanceof Error ? e.message : String(e)))
   } finally {
     savingHotelId.value = null
+  }
+}
+
+/** How many guests currently have this hotel assigned. */
+const hotelUsageCount = (id: string): number =>
+  Object.values(finalEntries.value).filter(e => e.accommodation?.hotel_id === id).length
+
+const deletingHotelId = ref<string | null>(null)
+
+const removeHotel = async (id: string) => {
+  const hotel = getHotelById(id)
+  const name = hotel?.name || 'this hotel'
+  const inUse = hotelUsageCount(id)
+  const warning = inUse
+    ? `\n\n${inUse} guest${inUse === 1 ? ' has' : 's have'} this hotel assigned; it will be cleared for them.`
+    : ''
+  if (!confirm(`Remove "${name}"?${warning}`)) return
+  deletingHotelId.value = id
+  try {
+    await deleteHotel(id)
+  } catch (e) {
+    alert('Failed to remove hotel: ' + (e instanceof Error ? e.message : String(e)))
+  } finally {
+    deletingHotelId.value = null
   }
 }
 </script>
@@ -329,6 +354,15 @@ const saveHotel = async (id: string) => {
         @click="saveHotel(hotel.id)"
       >
         {{ savingHotelId === hotel.id ? 'Saving…' : 'Save' }}
+      </button>
+      <button
+        class="it__hotel-mgmt-remove"
+        type="button"
+        title="Remove hotel"
+        :disabled="deletingHotelId === hotel.id"
+        @click="removeHotel(hotel.id)"
+      >
+        ✕
       </button>
     </div>
   </section>
