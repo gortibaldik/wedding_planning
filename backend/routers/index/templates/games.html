@@ -119,7 +119,7 @@
           + '      <div class="keyrow"><kbd>←</kbd><kbd>→</kbd><span>kormidlo &mdash; zatáčej loď</span></div>'
           + '      <div class="keyrow"><kbd>↑</kbd><kbd>↓</kbd><span>plachta &mdash; přehoď z jedné strany na druhou</span></div>'
           + '    </div>'
-          + '    <div class="hint">Vyplouváš z přístavu vlevo a míříš k cílovým praporkům vpravo. Natoč plachtu tak, aby tě vítr hnal. Když projedeš větrem (zatočíš na druhou stranu), přehoď i plachtu klávesami ↑/↓ přes střed na druhou stranu &ndash; jinak se obrátí naprázdno a loď se zastaví. Proti větru (od východu) musíš křižovat v cik-cak.</div>'
+          + '    <div class="hint">Vyplouváš z přístavu vlevo na otevřené moře &ndash; žádný cíl, jen doplav co nejdál na východ. Natoč plachtu tak, aby tě vítr hnal. Když projedeš větrem (zatočíš na druhou stranu), přehoď i plachtu klávesami ↑/↓ přes střed na druhou stranu &ndash; jinak se obrátí naprázdno a loď se zastaví. Proti větru (od východu) musíš křižovat v cik-cak.</div>'
           + '    <button type="button" class="start-btn">Vyplout (mezerník)</button>'
           + '  </div>'
           + '</div>'
@@ -128,7 +128,7 @@
           + '    <span>Vítr: <b class="wind-val">–</b></span>'
           + '    <span>Rychlost: <b class="speed-val">0.0</b> kn</span>'
           + '    <span>Plachta: <b class="trim-val">45</b>°</span>'
-          + '    <span>Do cíle: <b class="dist-val">0</b> m</span>'
+          + '    <span>Vzdálenost: <b class="dist-val">0</b> m</span>'
           + '  </div>'
           + '  <label class="power-toggle"><input type="checkbox" class="power-chk" /> Síly</label>'
           + '  <span class="msg"></span>'
@@ -150,9 +150,13 @@
 
         function deg2rad(d) { return d * Math.PI / 180; }
 
-        // World: x 0..100 runs left (port) -> right (finish). y 0..100 is lateral, +y = up the screen.
-        var W = 100, H = 100;
-        var PORT_X = 9, FINISH_X = 94, WIND_SPEED = 1.0;
+        // World: x grows without bound to the right, starting at the port on the
+        // left. y 0..100 is lateral, +y = up the screen. VIEW_W world units of x
+        // fit on screen at once; the camera scrolls to keep the boat in view.
+        var VIEW_W = 100, H = 100;
+        var PORT_X = 9, WIND_SPEED = 1.0;
+        var METERS_PER_UNIT = 3;   // world units -> the metres shown in the HUD
+        var MARKER_SPACING = 25;   // distance buoys every N world units
 
         // Wind described by where it BLOWS TOWARD, in math degrees (0 = +x right, 90 = +y up).
         // East wind blows toward the west (180) -> dead headwind, must be beaten upwind by tacking.
@@ -204,11 +208,12 @@
         function reset() {
           var wind = WIND_DIRS[Math.floor(Math.random() * WIND_DIRS.length)];
           var boat = {
-            x: PORT_X, y: 50, heading: 0, speed: 0, sail: 45, won: false,
+            x: PORT_X, y: 50, heading: 0, speed: 0, sail: 45,
             // derived quantities, filled in by the speed model
             sailFull: false, driving: false, thrust: 0
           };
           state = { boat: boat, wind: wind };
+          camX = cameraFor(boat);
           boat.sail = leewardSign(boat.heading) * 45; // start with the sail set on the leeward side
           speedModel(boat, 0); // refresh the derived values so the paused boat renders correctly
           started = false;
@@ -238,10 +243,19 @@
         });
         window.addEventListener('keyup', function(e) { keys[e.key] = false; });
 
-        // ---- world -> screen mapping (flat top-down) ----
+        // ---- world -> screen mapping (flat top-down, scrolling camera) ----
+        // camX is the world x at the left edge of the view. It follows the boat so
+        // the boat sits at BOAT_SCREEN_FRAC across the view, but never scrolls back
+        // past the port, so the start of the course stays framed as before.
         var padX = 16, padTop = 16, padBot = 16;
-        function sx(wx) { return padX + (wx / W) * (canvas.width - 2 * padX); }
+        var BOAT_SCREEN_FRAC = 0.4;
+        var camX = 0;
+        function cameraFor(boat) { return Math.max(0, boat.x - VIEW_W * BOAT_SCREEN_FRAC); }
+        function sx(wx) { return padX + ((wx - camX) / VIEW_W) * (canvas.width - 2 * padX); }
         function sy(wy) { return padTop + ((H - wy) / H) * (canvas.height - padTop - padBot); }
+        function worldXAt(screenX) {
+          return camX + ((screenX - padX) / (canvas.width - 2 * padX)) * VIEW_W;
+        }
 
         // ---- drawing ----
         var waveT = 0;
@@ -265,10 +279,11 @@
         }
 
         function drawPort() {
-          // grass + dock on the left edge
+          // grass + dock at the western shore; scrolls off once we sail away
           var x0 = 0, x1 = sx(PORT_X);
+          if (x1 < -40) return;
           ctx.fillStyle = '#6a8f4f';
-          ctx.fillRect(x0, 0, x1 - 6, canvas.height);
+          ctx.fillRect(x0, 0, Math.max(0, x1 - 6), canvas.height);
           // dock planks jutting out
           ctx.fillStyle = '#8a5a33';
           var dy = sy(50);
@@ -291,24 +306,35 @@
           ctx.closePath(); ctx.fillStyle = '#d23b3b'; ctx.fill();
         }
 
-        function drawFinish() {
-          var fx = sx(FINISH_X);
-          // checkered finish flags top & bottom
-          ctx.strokeStyle = '#e2c044';
-          ctx.lineWidth = 3;
-          ctx.setLineDash([8, 6]);
-          ctx.beginPath(); ctx.moveTo(fx, sy(100)); ctx.lineTo(fx, sy(0)); ctx.stroke();
-          ctx.setLineDash([]);
-          [sy(96), sy(4)].forEach(function(py, idx) {
-            var poleTop = idx === 0 ? py : py - 26;
-            ctx.strokeStyle = '#555'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(fx, py); ctx.lineTo(fx, py + (idx === 0 ? 26 : -26)); ctx.stroke();
-            // flag
-            for (var r = 0; r < 2; r++) for (var c = 0; c < 3; c++) {
-              ctx.fillStyle = (r + c) % 2 ? '#fff' : '#222';
-              ctx.fillRect(fx + c * 7, poleTop + r * 7, 7, 7);
-            }
-          });
+        // Distance buoys every MARKER_SPACING world units — the only fixed things
+        // out on the open sea, so they are what makes the scrolling readable. Only
+        // the ones currently in view are drawn, so the course can run on forever.
+        function drawMarkers() {
+          var first = Math.max(1, Math.ceil((worldXAt(-40) - PORT_X) / MARKER_SPACING));
+          var last = Math.floor((worldXAt(canvas.width + 40) - PORT_X) / MARKER_SPACING);
+          for (var i = first; i <= last; i++) {
+            var wx = PORT_X + i * MARKER_SPACING;
+            var bx = sx(wx);
+            // deterministic lateral placement so a buoy keeps its spot
+            var by = sy(18 + (i * 37) % 64);
+            // mooring line
+            ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by + 12); ctx.stroke();
+            // float
+            ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI * 2);
+            ctx.fillStyle = '#e2c044'; ctx.fill();
+            ctx.strokeStyle = '#8a6a10'; ctx.lineWidth = 1.5; ctx.stroke();
+            // little mast + pennant
+            ctx.strokeStyle = '#8a6a10'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(bx, by - 6); ctx.lineTo(bx, by - 20); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(bx, by - 20); ctx.lineTo(bx + 12, by - 16); ctx.lineTo(bx, by - 12);
+            ctx.closePath(); ctx.fillStyle = '#d23b3b'; ctx.fill();
+            // distance label
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(Math.round(i * MARKER_SPACING * METERS_PER_UNIT) + ' m', bx, by + 26);
+          }
         }
 
         /** Angle in degrees (0 = +x right, 90 = +y up) -> screen-space unit vector
@@ -470,7 +496,7 @@
         function draw() {
           drawWater();
           drawPort();
-          drawFinish();
+          drawMarkers();
           drawBoat();
           if (powerChk.checked) drawForces();
           drawWindBadge();
@@ -599,12 +625,12 @@
           boat.x += fwd.x * boat.speed * dt;
           boat.y += -fwd.y * boat.speed * dt;           // fwd.y is screen-space, flip back to world
 
-          // bounds
+          // bounds: the shore stops us to the west, the sea is open to the east
           if (boat.x < PORT_X) { boat.x = PORT_X; boat.speed *= 0.3; }
           if (boat.y < 3)   { boat.y = 3;   boat.speed *= 0.4; }
           if (boat.y > 97)  { boat.y = 97;  boat.speed *= 0.4; }
 
-          if (boat.x >= FINISH_X) boat.won = true;
+          camX = cameraFor(boat);
         }
 
         function frame(now) {
@@ -613,16 +639,13 @@
           waveT += dt;
 
           var boat = state.boat;
-          if (started && !boat.won) updateBoat(boat, dt);
+          if (started) updateBoat(boat, dt);
 
           // HUD
           trimVal.textContent = Math.round(Math.abs(boat.sail));
           speedVal.textContent = Math.max(0, boat.speed).toFixed(1);
-          distVal.textContent = Math.max(0, Math.round((FINISH_X - boat.x) * 3));
-          if (boat.won) {
-            msgEl.textContent = '🎉 Doplul jsi do cíle!';
-            msgEl.style.color = '#2a6e2a';
-          } else if (started) {
+          distVal.textContent = Math.max(0, Math.round((boat.x - PORT_X) * METERS_PER_UNIT));
+          if (started) {
             if (!boat.sailFull) {
               msgEl.textContent = '⚠️ Plachta plápolá – jsi proti větru, křižuj (cik-cak)!';
               msgEl.style.color = '#b5651d';
