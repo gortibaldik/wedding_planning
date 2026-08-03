@@ -45,14 +45,17 @@ async def landing_page(
     )
 
 
-@router.get("/games")
-async def games_page(request: Request):
-    return templates.TemplateResponse(request, "games.html", {})
-
-
 root_path = Path(__file__).parent.parent.parent.parent
 frontend_public = root_path / "frontend" / "public"
 frontend_dist = root_path / "frontend" / "dist"
+
+
+@router.get("/games")
+async def games_page():
+    # Purely static frontend page, built by Vite as its own entry point
+    # (frontend/games.html). Declared explicitly so it wins over the catch-all
+    # below, which would otherwise fall through to the SPA shell.
+    return FileResponse(frontend_dist / "games.html")
 
 
 @router.get("/{path:path}")
