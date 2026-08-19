@@ -52,6 +52,19 @@ const submitForm = async () => {
   }
 }
 
+// Prefill the add form from an existing item, so near-identical entries
+// (same category/buyer, new date) don't have to be retyped.
+const copyToForm = (item: FinanceItem) => {
+  Object.assign(form, {
+    name: item.name,
+    price: item.price,
+    category: item.category,
+    date: item.date,
+    buyer: item.buyer
+  })
+  showForm.value = true
+}
+
 // ---- Inline edit of an existing item ----
 const editingId = ref<string | null>(null)
 const editForm = reactive<FinanceItemInput>(emptyForm())
@@ -207,6 +220,9 @@ watch([filterYear, filterCategory, filterKind], () => {
               {{ formatPrice(item.price) }}
             </td>
             <td class="fin__row-actions">
+              <button class="fin__icon-btn" title="Copy to new item" @click="copyToForm(item)">
+                ⧉
+              </button>
               <button class="fin__icon-btn" title="Edit" @click="startEdit(item)">✎</button>
               <button class="fin__delete" title="Delete" @click="deleteItem(item.id)">×</button>
             </td>
