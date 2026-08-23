@@ -1,4 +1,4 @@
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -26,5 +26,21 @@ class Config(BaseSettings):
     finance_tracking: list[str] = Field(default_factory=lambda: ["ferotre@gmail.com"])
     """Emails of users allowed to access the home finance tracking data."""
 
+    documents_editors: list[str] = Field(default_factory=lambda: ["ferotre@gmail.com"])
+    """Emails of users allowed to edit the document links and their sections."""
+
+    documents_viewers: list[str] | None = None
+    """Emails of users allowed to see the Wedding Organization tab at all.
+
+    Defaults to :attr:`documents_editors` when left unset; editors can always
+    view, so they don't have to be repeated here.
+    """
+
     google_application_credentials_json: str = ""
     google_drive_i18n_folder_id: str = ""
+
+    @model_validator(mode="after")
+    def _default_documents_viewers(self) -> "Config":
+        if self.documents_viewers is None:
+            self.documents_viewers = list(self.documents_editors)
+        return self

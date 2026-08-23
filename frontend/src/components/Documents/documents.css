@@ -1,0 +1,339 @@
+/* Shared styles for the documents tab and its child components. Global (not
+   scoped) so the children can use them; safe because everything is namespaced
+   under the `doc__` BEM prefix. */
+
+.doc__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.doc__intro {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+  background: #f3f4f6;
+  border-left: 3px solid #d1d5db;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+}
+
+.doc__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doc__card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.doc__section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.doc__section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.doc__chevron {
+  flex-shrink: 0;
+  color: #6b7280;
+  font-size: 12px;
+  transition: transform 0.15s;
+}
+
+.doc__chevron--open {
+  transform: rotate(90deg);
+}
+
+.doc__section-title {
+  display: block;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc__count {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  background: #e5e7eb;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.doc__section-description {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.doc__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.doc__body {
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc__item {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.doc__item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc__item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.doc__item-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.doc__item-link:hover {
+  text-decoration: underline;
+}
+
+.doc__item-meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc__preview {
+  margin-top: 10px;
+  width: 100%;
+  height: 480px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.doc__empty {
+  font-size: 13px;
+  color: #9ca3af;
+  font-style: italic;
+  margin: 0;
+}
+
+.doc__form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f9fafb;
+}
+
+.doc__form-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.doc__form input,
+.doc__form select {
+  flex: 1;
+  min-width: 160px;
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+}
+
+.doc__form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.doc__btn {
+  padding: 7px 14px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.doc__btn:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.doc__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.doc__btn--primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.doc__btn--primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.doc__btn--danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.doc__btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.doc__icon-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.doc__icon-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.doc__icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Deleting is the one destructive action, so it turns red on hover. */
+.doc__icon-btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+/* A labelled pill for "show this document here". Deliberately unlike the
+   icon-only editing controls beside it: viewing and editing must not look
+   alike, since only the second kind changes anything. */
+.doc__toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.doc__toggle-btn:hover {
+  background: #dbeafe;
+}
+
+.doc__caret {
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+
+.doc__caret--open {
+  transform: rotate(180deg);
+}
+
+/* The editing controls live behind a divider, and the two move buttons are
+   welded into one segmented control so they read as a single "reorder" widget
+   rather than two more loose glyphs. */
+.doc__actions-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 0 2px;
+  background: #e5e7eb;
+}
+
+.doc__move-group {
+  display: inline-flex;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f9fafb;
+}
+
+.doc__move-group .doc__icon-btn {
+  width: 24px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font-size: 12px;
+}
+
+.doc__move-group .doc__icon-btn + .doc__icon-btn {
+  border-left: 1px solid #e5e7eb;
+}
+
+.doc__error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+}

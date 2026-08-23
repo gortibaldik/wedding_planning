@@ -9,8 +9,10 @@ import FinalListView from './FinalList/FinalListView.vue'
 import SeatingArrangement from './SeatingArrangement/SeatingArrangement.vue'
 import ManagedFilesEditor from './ManagedFilesEditor.vue'
 import FinanceComponent from './Finance/FinanceComponent.vue'
+import DocumentsView from './Documents/DocumentsView.vue'
 import { useAuth } from '@/composables/useAuth.ts'
 import { useStoredData } from '@/composables/useStoredData.ts'
+import { useDocuments } from '@/composables/useDocuments.ts'
 
 const emit = defineEmits(['logout'])
 
@@ -21,6 +23,7 @@ const canEditManagedFiles = computed(
 const canAccessFinance = computed(
   () => storedUserInfo.value?.roles?.includes('finance-access') ?? false
 )
+const { canViewDocuments } = useDocuments()
 const { initStoredData } = useStoredData()
 const skipAuth = import.meta.env.VITE_SKIP_AUTH === 'true'
 
@@ -39,6 +42,9 @@ const tabs = computed(() => {
     { id: 'final-list', label: 'Final List' },
     { id: 'seating', label: 'Seating Arrangement' }
   ]
+  if (canViewDocuments.value) {
+    base.push({ id: 'wedding-organization', label: 'Wedding Organization' })
+  }
   if (canEditManagedFiles.value) {
     base.push({ id: 'managed-files', label: 'Managed Files' })
   }
@@ -126,6 +132,7 @@ window.addEventListener('hashchange', () => {
       </Suspense>
       <ManagedFilesEditor v-if="activeTab === 'managed-files' && canEditManagedFiles" />
       <FinanceComponent v-if="activeTab === 'finance' && canAccessFinance" />
+      <DocumentsView v-if="activeTab === 'wedding-organization' && canViewDocuments" />
     </div>
   </div>
 </template>
