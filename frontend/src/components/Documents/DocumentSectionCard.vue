@@ -151,7 +151,10 @@ const submitDocument = async () => {
         <form v-if="showAddForm" class="doc__form" @submit.prevent="submitDocument">
           <div class="doc__form-row">
             <input v-model="form.title" placeholder="Title" />
-            <input v-model="form.url" placeholder="https://docs.google.com/..." />
+            <input
+              v-model="form.url"
+              placeholder="https://docs.google.com/... (doc, sheet, slides)"
+            />
           </div>
           <div class="doc__form-row">
             <input v-model="form.description" placeholder="Note (optional)" />

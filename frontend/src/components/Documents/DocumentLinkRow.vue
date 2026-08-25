@@ -19,10 +19,12 @@ const {
   isPreviewed,
   togglePreview,
   embedUrl,
-  linkHost
+  linkHost,
+  isSpreadsheet
 } = useDocuments()
 
 const previewSrc = computed(() => embedUrl(props.link.url))
+const isSheet = computed(() => isSpreadsheet(props.link.url))
 
 const editing = ref(false)
 const form = reactive({ title: '', url: '', description: '' })
@@ -78,6 +80,7 @@ const remove = () => {
           <a class="doc__item-link" :href="link.url" target="_blank" rel="noopener noreferrer">
             {{ link.title }}
           </a>
+          <span v-if="isSheet" class="doc__badge" title="Opens in Google Sheets">Sheet</span>
           <p class="doc__item-meta">
             {{ link.description || linkHost(link.url) }}
           </p>

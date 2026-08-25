@@ -65,15 +65,23 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   return res.json() as Promise<T>
 }
 
+/** Whether the link points at a Google Sheet. */
+export const isSpreadsheet = (url: string): boolean =>
+  /^https:\/\/docs\.google\.com\/spreadsheets\//.test(url)
+
 /**
  * The URL that renders a Google document read-only inside an iframe, or `null`
  * when the link is not something Google can embed (a plain website, say).
+ *
+ * Spreadsheets are deliberately left out: a sheet squeezed into an inline
+ * read-only frame is worse than useless, so they only ever open in Google
+ * Sheets itself.
  */
 export const embedUrl = (url: string): string | null => {
-  const match =
-    /^https:\/\/docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([^/?#]+)/.exec(url)
+  if (isSpreadsheet(url)) return null
+  const match = /^https:\/\/docs\.google\.com\/(document|presentation)\/d\/([^/?#]+)/.exec(url)
   if (match) {
-    // Slides answer on /embed, the other two on /preview.
+    // Slides answer on /embed, Docs on /preview.
     return `https://docs.google.com/${match[1]}/d/${match[2]}/${
       match[1] === 'presentation' ? 'embed' : 'preview'
     }`
@@ -235,6 +243,7 @@ export function useDocuments() {
     isPreviewed,
     togglePreview,
     embedUrl,
-    linkHost
+    linkHost,
+    isSpreadsheet
   }
 }
