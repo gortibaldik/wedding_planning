@@ -40,16 +40,24 @@ const emit = defineEmits<{
 }>()
 
 const dragState = ref<DragState | null>(null)
+
+/** A table that is in the move mode.
+ *
+ * Only table on which the move button was pressed can be moved.
+ */
 const moveModeTableId = ref<string | null>(null)
 
 const onToggleMove = (tableId: string): void => {
   moveModeTableId.value = moveModeTableId.value === tableId ? null : tableId
+  console.info('Moving table', moveModeTableId.value)
 }
 
 const onTablePointerDown = (e: PointerEvent, tableId: string): void => {
   if (!props.editable) return
   if (moveModeTableId.value !== tableId) return
-  if (!(e.target as HTMLElement).closest('.table-header')) return
+
+  // The whole table is the drag handle; only interactive bits opt out.
+  if ((e.target as HTMLElement).closest('button, .seat__guest')) return
   e.preventDefault()
   const table = props.tables.find(t => t.id === tableId)
   if (!table) return
@@ -246,7 +254,6 @@ const renderOffset = computed(() => ({
 const contentStyle = computed(() => {
   const width = stickyBounds.value.maxX - stickyBounds.value.minX + CANVAS_PADDING * 2
   const height = stickyBounds.value.maxY - stickyBounds.value.minY + CANVAS_PADDING * 2
-  console.info('Applied width, height', width, height)
   return {
     transform: `scale(${zoom.value})`,
     transformOrigin: '0 0',

@@ -210,16 +210,12 @@ const handleUnassign = (guestId: string): void => {
 <template>
   <div
     class="table-node"
-    :class="`table-node--${table.shape}`"
+    :class="[`table-node--${table.shape}`, { 'table-node--movable': moveMode }]"
     :style="{ width: containerSize.width + 'px', height: containerSize.height + 'px' }"
   >
     <div class="table-shape" :style="tableShapeStyle" />
 
-    <div
-      class="table-header"
-      :class="{ 'table-header--movable': moveMode }"
-      :style="tableHeaderStyle"
-    >
+    <div class="table-header" :style="tableHeaderStyle">
       <span class="table-name">{{ table.name }} ({{ numberOfSeatedGuests }})</span>
       <button
         v-if="editable"
@@ -309,13 +305,19 @@ const handleUnassign = (guestId: string): void => {
   white-space: nowrap;
 }
 
-.table-header--movable {
+.table-node--movable {
   cursor: grab;
   touch-action: none;
 }
 
-.table-header--movable:active {
+.table-node--movable:active {
   cursor: grabbing;
+}
+
+.table-node--movable button,
+.table-node--movable .seat__guest {
+  cursor: pointer;
+  touch-action: auto;
 }
 
 .table-move {
