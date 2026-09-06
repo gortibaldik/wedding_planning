@@ -32,6 +32,26 @@ export interface Seating {
   metadata: SeatingMetadata
 }
 
+/**
+ * Shift a seating into the non-negative quadrant. Seatings saved before the
+ * canvas origin was fixed at (0,0) can hold negative coordinates, which would
+ * now render outside the scrollable area. Shifting preserves the arrangement;
+ * an already non-negative seating is left untouched.
+ */
+const normalizePositions = (tables: Table[]): void => {
+  if (tables.length === 0) return
+  const minX = Math.min(...tables.map(t => t.position.x))
+  const minY = Math.min(...tables.map(t => t.position.y))
+  // Only negatives are a problem. A seating that already sits clear of the
+  // origin is left exactly where it is — never pulled in towards (0,0).
+  const dx = minX < 0 ? minX : 0
+  const dy = minY < 0 ? minY : 0
+  if (dx === 0 && dy === 0) return
+  for (const t of tables) {
+    t.position = { x: t.position.x - dx, y: t.position.y - dy }
+  }
+}
+
 const tables = ref<Table[]>([])
 const seatingUnsync = ref(false)
 const loadedFromBE = ref<Seating | null>(null)
@@ -135,7 +155,8 @@ export function useSeatingData() {
   const updateTablePosition = (tableId: string, position: { x: number; y: number }) => {
     const table = tables.value.find(t => t.id === tableId)
     if (table) {
-      table.position = position
+      // The scene origin is a hard wall: nothing lives left of or above (0,0).
+      table.position = { x: Math.max(0, position.x), y: Math.max(0, position.y) }
     }
   }
 
@@ -162,6 +183,7 @@ export function useSeatingData() {
       const res = await authFetch(`/seating-arrangement/get?id=${encodeURIComponent(seatingId)}`)
       if (res.ok) {
         const seating: Seating = await res.json()
+        normalizePositions(seating.tables)
         loadedFromBE.value = seating
         tables.value = seating.tables
         currentMetadata.value = seating.metadata

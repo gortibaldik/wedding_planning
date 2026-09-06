@@ -204,27 +204,34 @@ const onCanvasDragOver = (e: DragEvent): void => {
   e.preventDefault()
 }
 
-// Dynamic canvas sizing: fit bounding rectangle of all tables + padding
-const CANVAS_PADDING = 100
+// Dynamic canvas sizing: the scene spans from the origin to the far edge of
+// the outermost table, plus padding. The two paddings differ: nothing can ever
+// cross the origin, so the leading gap is cosmetic, while the trailing gap has
+// to cover the outermost table's own width/height (maxX/maxY are its top-left
+// corner) and leave room to drag further out.
+const LEADING_PADDING = 50
+const TRAILING_PADDING = 400
 
+// The scene origin is pinned at (0,0) and table coordinates are clamped
+// non-negative upstream, so this offset is constant: moving one table can
+// never re-anchor the others.
+const renderOffset = { x: LEADING_PADDING, y: LEADING_PADDING }
+
+// Only the far edge is dynamic — it decides how far the canvas scrolls.
 const bounds = computed(() => {
-  if (props.tables.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0 }
-  let minX = Infinity,
-    minY = Infinity,
-    maxX = -Infinity,
-    maxY = -Infinity
+  let maxX = 0,
+    maxY = 0
   for (const t of props.tables) {
-    if (t.position.x < minX) minX = t.position.x
-    if (t.position.y < minY) minY = t.position.y
     if (t.position.x > maxX) maxX = t.position.x
     if (t.position.y > maxY) maxY = t.position.y
   }
-  return { minX, minY, maxX, maxY }
+  return { maxX, maxY }
 })
 
-// Sticky bounds: frozen while a table is in move mode, so the canvas
-// can expand (via the dragged transform spilling out) but never shrinks
-// mid-move. Recomputed from live bounds the moment move mode ends.
+// Sticky bounds: frozen while a table is in move mode, so the canvas can
+// expand as a table is dragged outward but never shrinks mid-move (which
+// would yank the scroll extent out from under the pointer). Recomputed from
+// live bounds the moment move mode ends.
 const stickyBounds = ref({ ...bounds.value })
 
 watch(
@@ -235,8 +242,6 @@ watch(
     } else {
       const s = stickyBounds.value
       stickyBounds.value = {
-        minX: Math.min(s.minX, b.minX),
-        minY: Math.min(s.minY, b.minY),
         maxX: Math.max(s.maxX, b.maxX),
         maxY: Math.max(s.maxY, b.maxY)
       }
@@ -245,22 +250,19 @@ watch(
   { immediate: true }
 )
 
-// Offset applied to each table so the bounding box starts at CANVAS_PADDING
-const renderOffset = computed(() => ({
-  x: -stickyBounds.value.minX + CANVAS_PADDING,
-  y: -stickyBounds.value.minY + CANVAS_PADDING
+const contentStyle = computed(() => ({
+  transform: `scale(${zoom.value})`,
+  transformOrigin: '0 0',
+  width: `${stickyBounds.value.maxX + LEADING_PADDING + TRAILING_PADDING}px`,
+  height: `${stickyBounds.value.maxY + LEADING_PADDING + TRAILING_PADDING}px`
 }))
 
-const contentStyle = computed(() => {
-  const width = stickyBounds.value.maxX - stickyBounds.value.minX + CANVAS_PADDING * 2
-  const height = stickyBounds.value.maxY - stickyBounds.value.minY + CANVAS_PADDING * 2
-  return {
-    transform: `scale(${zoom.value})`,
-    transformOrigin: '0 0',
-    width: `${width}px`,
-    height: `${height}px`
-  }
-})
+// Dotted guides along the x and y axes, marking how far left and up a table
+// can be dragged.
+const canvasBoundsStyle = computed(() => ({
+  left: `${LEADING_PADDING}px`,
+  top: `${LEADING_PADDING}px`
+}))
 </script>
 
 <template>
@@ -280,6 +282,7 @@ const contentStyle = computed(() => {
   >
     <div class="canvas-content" :style="contentStyle">
       <div v-if="tables.length === 0" class="canvas-empty">Click "Add Table" to get started</div>
+      <div class="canvas-origin" :style="canvasBoundsStyle" aria-hidden="true" />
       <div
         v-for="table in tables"
         :key="table.id"
@@ -345,6 +348,15 @@ const contentStyle = computed(() => {
 
 .canvas-table {
   position: absolute;
+}
+
+.canvas-origin {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  border-left: 2px dashed #9ca3af;
+  border-top: 2px dashed #9ca3af;
+  pointer-events: none;
 }
 
 .zoom-indicator {
