@@ -184,7 +184,10 @@ export function useSeatingData() {
       if (res.ok) {
         const seating: Seating = await res.json()
         normalizePositions(seating.tables)
-        loadedFromBE.value = seating
+        // Snapshot, don't alias: `tables` is mutated in place as the user edits,
+        // and the unsync watcher diffs it against this baseline. Sharing the
+        // array would make every edit invisible to that comparison.
+        loadedFromBE.value = JSON.parse(JSON.stringify(seating))
         tables.value = seating.tables
         currentMetadata.value = seating.metadata
         selectedSeatingId.value = seatingId
