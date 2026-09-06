@@ -53,19 +53,28 @@ const SEAT_HEIGHT = 80
 const SEAT_GAP = 16
 const PADDING = -60
 
+// Circular tables: seats sit on a ring of `circleRadius`, each seat box centred
+// on the ring. So the node has to span the ring plus a full seat box on either
+// side, and the ring's centre is exactly half of that — which keeps the seats
+// contained and the ring centred in the node. The horizontal extent is the
+// larger one (SEAT_WIDTH > SEAT_HEIGHT) and is used for both axes, so the node
+// stays square and its 50% border-radius renders as a circle, which is why a
+// single scalar offset locates the centre on both axes.
+const circleSeatRadius = computed(() => 90 + props.table.seats * 14)
+const circleCenterOffset = computed(() => circleSeatRadius.value + SEAT_WIDTH / 2)
+
 const seatPositions = computed<Position[]>(() => {
   const { shape, seats } = props.table
   const positions: Position[] = []
 
   if (shape === 'circular') {
-    const radius = 90 + seats * 14
-    const centerX = radius + SEAT_WIDTH / 2 + PADDING
-    const centerY = radius + SEAT_HEIGHT / 2 + PADDING + 24
+    const radius = circleSeatRadius.value
+    const center = circleCenterOffset.value // same on both axes: the node is square
     for (let i = 0; i < seats; i++) {
       const angle = (2 * Math.PI * i) / seats - Math.PI / 2
       positions.push({
-        x: centerX + radius * Math.cos(angle) - SEAT_WIDTH / 2,
-        y: centerY + radius * Math.sin(angle) - SEAT_HEIGHT / 2
+        x: center + radius * Math.cos(angle) - SEAT_WIDTH / 2,
+        y: center + radius * Math.sin(angle) - SEAT_HEIGHT / 2
       })
     }
   } else {
@@ -94,9 +103,8 @@ const seatPositions = computed<Position[]>(() => {
 const containerSize = computed<{ width: number; height: number }>(() => {
   const { shape, seats } = props.table
   if (shape === 'circular') {
-    const radius = 90 + seats * 14
-    const size = (radius + SEAT_WIDTH / 2 + PADDING) * 2 + PADDING
-    return { width: size, height: size + 24 }
+    const size = circleCenterOffset.value * 2
+    return { width: size, height: size }
   } else {
     const topCount = Math.ceil(seats / 2)
     const bottomCount = seats - topCount
@@ -111,13 +119,10 @@ const containerSize = computed<{ width: number; height: number }>(() => {
 const tableHeaderStyle = computed<CSSProperties>(() => {
   const { shape, seats } = props.table
   if (shape === 'circular') {
-    const radius = 90 + seats * 14
-    const centerX = radius + SEAT_WIDTH / 2 + PADDING
-    const centerY = radius + SEAT_HEIGHT / 2 + PADDING + 24
     return {
       position: 'absolute',
-      left: `${centerX}px`,
-      top: `${centerY}px`,
+      left: `${circleCenterOffset.value}px`,
+      top: `${circleCenterOffset.value}px`,
       transform: 'translate(-50%, -50%)'
     }
   } else {
@@ -139,14 +144,11 @@ const tableHeaderStyle = computed<CSSProperties>(() => {
 const tableShapeStyle = computed<CSSProperties>(() => {
   const { shape, seats } = props.table
   if (shape === 'circular') {
-    const radius = 90 + seats * 14
-    const size = radius * 1.3
-    const centerX = radius + SEAT_WIDTH / 2 + PADDING
-    const centerY = radius + SEAT_HEIGHT / 2 + PADDING + 24
+    const size = circleSeatRadius.value * 1.3
     return {
       position: 'absolute',
-      left: `${centerX - size / 2}px`,
-      top: `${centerY - size / 2}px`,
+      left: `${circleCenterOffset.value - size / 2}px`,
+      top: `${circleCenterOffset.value - size / 2}px`,
       width: `${size}px`,
       height: `${size}px`,
       borderRadius: '50%'
