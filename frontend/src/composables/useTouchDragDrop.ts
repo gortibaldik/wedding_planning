@@ -98,6 +98,16 @@ export function useTouchDragDrop() {
     cleanup()
   }
 
+  /**
+   * Abort an in-flight drag without dropping the guest anywhere. Used when a
+   * gesture turns out to be something else (a two-finger pinch), so the guest
+   * stays exactly where it was.
+   */
+  function cancelDrag() {
+    if (!draggedGuestId.value) return
+    cleanup()
+  }
+
   function cleanup() {
     draggedGuestId.value = null
     if (dragClone) {
@@ -143,6 +153,7 @@ export function useTouchDragDrop() {
   return {
     draggedGuestId,
     onTouchStart,
+    cancelDrag,
     registerCallbacks
   }
 }
