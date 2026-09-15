@@ -11,6 +11,7 @@ from jose import jwt
 from backend.config import Config
 from backend.dependencies import get_config
 
+from .documents import DOCUMENTS_EDITOR_ROLE, DOCUMENTS_VIEWER_ROLE
 from .family_structure import CHANGE_STATUS_ROLE
 from .finance import FINANCE_ACCESS_ROLE
 from .invitation_lists import UNIVERSAL_INVITATION_LIST_SETTER_ROLE
@@ -40,6 +41,13 @@ def _create_token_and_redirect(
 
     if email in config.finance_tracking:
         roles.append(FINANCE_ACCESS_ROLE)
+
+    if email in config.documents_editors:
+        roles.append(DOCUMENTS_EDITOR_ROLE)
+
+    # Editing implies viewing, so editors never have to be listed twice.
+    if email in config.documents_viewers or email in config.documents_editors:
+        roles.append(DOCUMENTS_VIEWER_ROLE)
 
     jwt_token = jwt.encode(
         {

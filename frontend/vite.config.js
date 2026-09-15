@@ -43,6 +43,7 @@ export default defineConfig({
       '/seating-arrangement': process.env.BACKEND_URL || 'http://localhost:8000',
       '/finance': process.env.BACKEND_URL || 'http://localhost:8000',
       '/managed-files': process.env.BACKEND_URL || 'http://localhost:8000',
+      '/documents': process.env.BACKEND_URL || 'http://localhost:8000',
       '/games': process.env.BACKEND_URL || 'http://localhost:8000'
     },
     watch: {
