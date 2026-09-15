@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import TableNode from './TableNode.vue'
 import type { Table } from '@/composables/useSeatingData'
+import { useTouchDragDrop } from '@/composables/useTouchDragDrop'
 
 interface TablePositionUpdate {
   tableId: string
@@ -54,6 +55,7 @@ const onToggleMove = (tableId: string): void => {
 
 const onTablePointerDown = (e: PointerEvent, tableId: string): void => {
   if (!props.editable) return
+  if (pinching.value) return
   if (moveModeTableId.value !== tableId) return
 
   // The whole table is the drag handle; only interactive bits opt out.
@@ -93,26 +95,67 @@ const onPointerUp = (): void => {
   window.removeEventListener('pointerup', onPointerUp)
 }
 
+// The scroll container; zooming and panning both drive its scroll position.
+const canvasRef = ref<HTMLElement | null>(null)
+
 // Zoom state
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 2
 const ZOOM_STEP = 0.03
 const zoom = ref(1)
 
+/**
+ * Zoom towards a viewport point instead of the content's top-left corner.
+ *
+ * The scene point sitting under (clientX, clientY) is computed before the
+ * change and the scroll position is then set so that same point lands back
+ * under the pointer — so the thing you are pointing at stays put while
+ * everything else grows or shrinks around it.
+ */
+const applyZoom = async (target: number, clientX: number, clientY: number): Promise<void> => {
+  const canvas = canvasRef.value
+  const prev = zoom.value
+  const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, target))
+  if (!canvas || next === prev) return
+
+  // Pointer offset within the canvas viewport, and the scene coordinate it
+  // currently points at (scroll is in scaled px, the scene is unscaled).
+  const rect = canvas.getBoundingClientRect()
+  const pointerX = clientX - rect.left
+  const pointerY = clientY - rect.top
+  const sceneX = (canvas.scrollLeft + pointerX) / prev
+  const sceneY = (canvas.scrollTop + pointerY) / prev
+
+  zoom.value = next
+  // Wait for the new scale to be laid out, or the scroll extent is still the
+  // old one and the browser clamps the assignment below.
+  await nextTick()
+  canvas.scrollLeft = sceneX * next - pointerX
+  canvas.scrollTop = sceneY * next - pointerY
+}
+
 const onWheel = (e: WheelEvent): void => {
   e.preventDefault()
   const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP
-  zoom.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom.value + delta))
+  applyZoom(zoom.value + delta, e.clientX, e.clientY)
 }
 
 const zoomPercent = computed(() => Math.round(zoom.value * 100))
 
 // Pinch-to-zoom for mobile
 let lastPinchDist: number | null = null
+const pinching = ref(false)
+const { cancelDrag } = useTouchDragDrop()
 
 const onTouchStart = (e: TouchEvent): void => {
-  if (e.touches.length === 2) {
+  if (e.touches.length >= 2) {
     e.preventDefault()
+    // A second finger means "zoom", not "drag". Anything the first finger had
+    // already started is abandoned in place, so the pinch cannot reposition a
+    // table or drop a guest into a seat.
+    pinching.value = true
+    onPointerUp()
+    cancelDrag()
     lastPinchDist = Math.hypot(
       e.touches[0].clientX - e.touches[1].clientX,
       e.touches[0].clientY - e.touches[1].clientY
@@ -128,7 +171,12 @@ const onTouchMove = (e: TouchEvent): void => {
       e.touches[0].clientY - e.touches[1].clientY
     )
     const scale = dist / lastPinchDist
-    zoom.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom.value * scale))
+    // Anchor the pinch on the midpoint between the two fingers.
+    applyZoom(
+      zoom.value * scale,
+      (e.touches[0].clientX + e.touches[1].clientX) / 2,
+      (e.touches[0].clientY + e.touches[1].clientY) / 2
+    )
     lastPinchDist = dist
   }
 }
@@ -136,6 +184,7 @@ const onTouchMove = (e: TouchEvent): void => {
 const onTouchEnd = (e: TouchEvent): void => {
   if (e.touches.length < 2) {
     lastPinchDist = null
+    pinching.value = false
   }
 }
 
@@ -148,7 +197,6 @@ interface PanState {
   scrollTop: number
 }
 const panState = ref<PanState | null>(null)
-const canvasRef = ref<HTMLElement | null>(null)
 
 const onCanvasPointerDown = (e: PointerEvent): void => {
   if (e.pointerType !== 'mouse') return
@@ -279,6 +327,7 @@ const canvasBoundsStyle = computed(() => ({
     @touchstart="onTouchStart"
     @touchmove="onTouchMove"
     @touchend="onTouchEnd"
+    @touchcancel="onTouchEnd"
   >
     <div class="canvas-content" :style="contentStyle">
       <div v-if="tables.length === 0" class="canvas-empty">Click "Add Table" to get started</div>
