@@ -19,9 +19,8 @@ vi.mock('../useAuth', () => ({
   })
 }))
 
-const { useManagedFiles, useI18nEditor, newSection, newInfoGridRow } = await import(
-  '../useManagedFiles'
-)
+const { useManagedFiles, useI18nEditor, newSection, newInfoGridRow } =
+  await import('../useManagedFiles')
 
 describe('useManagedFiles array editing', () => {
   let mf: ReturnType<typeof useI18nEditor>
@@ -30,6 +29,13 @@ describe('useManagedFiles array editing', () => {
     const { workspace, loadAll } = useManagedFiles()
     await loadAll()
     mf = useI18nEditor(toRef(() => workspace.value!))
+  })
+
+  it('inserts a map section that can then be moved up the page', () => {
+    mf.insertInArray(['sections'], 2, newSection('venue-map'))
+    expect(mf.currentDoc.value.sections[2]).toEqual({ type: 'venue-map', title: '', text: '' })
+    mf.moveInArray(['sections'], 2, 0)
+    expect(mf.currentDoc.value.sections[0].type).toBe('venue-map')
   })
 
   it('appends a new section and marks the doc dirty', () => {

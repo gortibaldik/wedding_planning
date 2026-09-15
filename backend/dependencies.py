@@ -10,6 +10,10 @@ from jose import JWTError, jwt
 from .config import Config
 from .drive import build_drive_service, read_json_file
 
+# The venue itinerary lives beside the `{lang}.json` files and is cached with
+# them, under a key that cannot collide with a language code.
+VENUE_ROUTE_KEY = "venue_route"
+
 config: Config | None = None
 redis_client: aioredis.Redis | None = None
 drive_service = None
@@ -37,17 +41,18 @@ def get_drive_service():
 async def init_i18n(langs: list[str], default_lang: str):
     global i18n_cache
     unique_langs = list(dict.fromkeys(langs))
+    files = [f"{lang}.json" for lang in unique_langs] + ["venue_route.json"]
     results = await asyncio.gather(
         *[
             read_json_file(
                 config.google_application_credentials_json,
                 config.google_drive_i18n_folder_id,
-                f"{lang}.json",
+                filename,
             )
-            for lang in unique_langs
+            for filename in files
         ]
     )
-    i18n_cache = dict(zip(unique_langs, results, strict=False))
+    i18n_cache = dict(zip(unique_langs + [VENUE_ROUTE_KEY], results, strict=False))
     if default_lang not in i18n_cache:
         raise RuntimeError(  # noqa: TRY003
             f"Default i18n lang '{default_lang}' not found in Drive folder"

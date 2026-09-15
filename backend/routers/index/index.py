@@ -12,6 +12,7 @@ from backend.config import Config
 from backend.dependencies import get_config, get_i18n
 
 from .geo_utils import country_code
+from .venue_route import venue_route
 
 COUNTRY_TO_LANG = {"SK": "sk", "CZ": "cs", "RU": "ru"}
 DEFAULT_LANG = "cs"
@@ -41,7 +42,13 @@ async def landing_page(
     return templates.TemplateResponse(
         request,
         "landing.html",
-        {"enable_local_auth": config.enable_local_auth, **text},
+        {
+            "enable_local_auth": config.enable_local_auth,
+            # Itinerary cached from Drive at startup; the language files only
+            # decide where (and whether) it shows, via a `venue-map` section.
+            "venue_route": venue_route(lang, DEFAULT_LANG),
+            **text,
+        },
     )
 
 

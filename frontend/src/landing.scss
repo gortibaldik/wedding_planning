@@ -416,6 +416,322 @@ html[lang="ru"] {
   }
 }
 
+$color-map-paper: #f5f1e4;
+
+.venue-map {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  // The section's own intro, stacked above the map: keep it centred over the
+  // full-width canvas instead of stretched or flush left.
+  .section-text {
+    align-self: center;
+  }
+
+  .venue-map-canvas {
+    width: 100%;
+    height: 22rem;
+    border: 1px solid rgba($color-green-dark, 0.35);
+    border-radius: 10px;
+    overflow: hidden;
+    background: $color-map-paper;
+
+    @media (max-width: 640px) {
+      height: 16rem;
+    }
+  }
+
+  // Expanded to the whole screen, the framing would only waste the edges.
+  // MapLibre itself pins the size and position (with !important) in both the
+  // real and the pseudo fullscreen.
+  .venue-map-canvas:fullscreen,
+  .venue-map-canvas.maplibregl-pseudo-fullscreen {
+    border: 0;
+    border-radius: 0;
+  }
+
+  // Nothing ever painted the canvas: drop the empty box and leave the list.
+  &--unavailable .venue-map-canvas {
+    display: none;
+  }
+
+  // MapLibre's own chrome, re-dressed to match the invitation.
+  .maplibregl-ctrl-group {
+    background: $color-white-overlay;
+    border: 1px solid rgba($color-green-dark, 0.3);
+    border-radius: 6px;
+    box-shadow: none;
+
+    button + button {
+      border-top: 1px solid rgba($color-green-dark, 0.2);
+    }
+
+    button .maplibregl-ctrl-icon {
+      filter: saturate(0);
+      opacity: 0.7;
+    }
+  }
+
+  .maplibregl-ctrl-attrib {
+    background: rgba(255, 255, 255, 0.75);
+    font-size: 0.65rem;
+
+    a {
+      color: $color-green-dark;
+    }
+  }
+}
+
+// MapLibre anchors a marker with `translate(-50%, -100%)` on the whole element,
+// so the element's box has to be exactly the pin: anything else in normal flow
+// (a label beside it) would shift the pin off its coordinate by half its width.
+// The label is therefore taken out of flow and positioned against the pin.
+.venue-map-marker {
+  position: relative;
+  width: 26px;
+  height: 35px;
+  line-height: 0;
+  cursor: default;
+
+  .venue-map-marker-pin {
+    display: block;
+    width: 26px;
+    height: 35px;
+
+    svg {
+      display: block;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+
+      path {
+        fill: $color-pink;
+      }
+
+      circle {
+        fill: $color-map-paper;
+      }
+
+      text {
+        fill: $color-green-dark;
+        font-family: 'Carelia-Upright', serif;
+        font-size: 9px;
+        font-weight: 700;
+      }
+    }
+  }
+
+  .venue-map-marker-label {
+    position: absolute;
+    // Vertically centred on the pin's head, clear of its right edge.
+    left: calc(100% + 0.4rem);
+    top: 13px;
+    transform: translateY(-50%);
+    font-family: 'Carelia-Upright', serif;
+    font-size: 0.95rem;
+    line-height: 1;
+    white-space: nowrap;
+    color: $color-green-dark;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba($color-green-dark, 0.3);
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    text-decoration: none;
+
+    &:hover {
+      background: $color-green-light;
+    }
+  }
+}
+
+// Points of interest beside the route (parking, the wedding): a small badge, no
+// number and no label, so it never competes with the itinerary's pins.
+.venue-map-poi {
+  line-height: 0;
+  cursor: default;
+
+  .venue-map-poi-badge {
+    display: block;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1.5px solid $color-map-paper;
+    background: $color-green-dark;
+    color: $color-map-paper;
+    font-family: sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 17px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+    svg {
+      display: inline-block;
+      vertical-align: middle;
+    }
+  }
+
+  &.venue-map-poi--wedding .venue-map-poi-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: $color-pink;
+  }
+}
+
+// Zoomed out, the stops are only tens of metres apart and their labels would
+// pile on top of each other. The numbered pins carry the meaning on their own -
+// the itinerary below the map spells out what each number is.
+.venue-map--compact .venue-map-marker-label {
+  display: none;
+}
+
+// The itinerary: numbered stops with the travel leg drawn between them. This is
+// the server-rendered content the map merely illustrates, so it has to read on
+// its own.
+.venue-route {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: $color-green-dark;
+
+  .venue-route-stop {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .venue-route-number {
+    flex: none;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: $color-pink;
+    color: $color-map-paper;
+    font-family: 'Carelia-Upright', serif;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .venue-route-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  .venue-route-label {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .venue-route-note {
+    font-size: 0.85rem;
+    opacity: 0.8;
+  }
+
+  // At the ends of the route the whole row is the link - name, note and the
+  // navigate hint inside one target, which is easier to hit on a phone than a
+  // button beside the text.
+  .venue-route-link {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: inherit;
+    background: rgba($color-green-light, 0.25);
+    border: 1px solid rgba($color-green-dark, 0.18);
+    border-radius: 8px;
+    padding: 0.45rem 0.7rem;
+    text-decoration: none;
+    transition: background 0.2s, border-color 0.2s;
+
+    &:hover,
+    &:focus-visible {
+      background: rgba($color-green-light, 0.55);
+      border-color: rgba($color-green-dark, 0.35);
+    }
+  }
+
+  // Quiet until you look for it; the arrow carries the meaning.
+  .venue-route-link-cta {
+    flex: none;
+    font-family: 'Carelia-Upright', serif;
+    font-size: 0.85rem;
+    color: $color-green-lighter-dark;
+    opacity: 0.75;
+    white-space: nowrap;
+  }
+
+  // The connector line is drawn on the leg row itself, aligned with the centre
+  // of the numbered badges above and below it.
+  .venue-route-leg {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    margin: 0.35rem 0;
+    padding: 0.35rem 0 0.35rem 2.35rem;
+    font-size: 0.9rem;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0.8rem;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      border-left: 2px dotted rgba($color-green-dark, 0.55);
+    }
+
+    &--tram::before,
+    &--bus::before,
+    &--train::before,
+    &--metro::before {
+      border-left-style: solid;
+      border-left-color: $color-pink;
+    }
+  }
+
+  .venue-route-leg-icon {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .venue-route-leg-label {
+    opacity: 0.85;
+  }
+
+  // The link stays in the stop's own row at every width: wrapped onto a line of
+  // its own it would push the next leg down and cut the dotted path between one
+  // number and the next. It shrinks instead, and long stop names wrap.
+  @media (max-width: 640px) {
+    .venue-route-stop {
+      gap: 0.5rem;
+    }
+
+    .venue-route-label,
+    .venue-route-note {
+      overflow-wrap: anywhere;
+    }
+
+    .venue-route-link {
+      padding: 0.45rem 0.55rem;
+    }
+
+    .venue-route-link-cta {
+      font-size: 0.8rem;
+    }
+  }
+}
+
 .games-cta {
   display: flex;
   flex-direction: column;

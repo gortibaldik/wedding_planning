@@ -1,3 +1,4 @@
+{% from "venue_map.html" import venue_map_body %}
 <!DOCTYPE html>
 <html lang="{{ lang }}">
 <head>
@@ -8,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC&family=Great+Vibes&display=swap" />
   <link rel="stylesheet" href="/landing.css" />
+  <script src="/landing-map.js" defer></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -137,7 +139,9 @@
     <img src="/kacicky.png" alt="" class="kacky-img" />
     {% endif %}
     <div class="sections">
-      {% for section in sections %}
+      {# A venue-map section with no wording for this language is dropped rather
+         than rendered as an empty block. #}
+      {% for section in sections if section.type != "venue-map" or venue_route %}
       <div class="section-divider"><span>🪶</span></div>
       <div class="section">
         <h3 class="section-title">{{ section.title }}</h3>
@@ -151,6 +155,8 @@
           </div>
           {% elif section.type == "text" %}
           <div class="section-text">{{ section.text | markdown }}</div>
+          {% elif section.type == "venue-map" and venue_route %}
+          {{ venue_map_body(venue_route, section.text) }}
           {% endif %}
         </div>
       </div>
