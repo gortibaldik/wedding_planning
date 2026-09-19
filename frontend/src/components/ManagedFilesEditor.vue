@@ -18,6 +18,8 @@ const {
   save,
   updateAtPath,
   moveInArray,
+  insertInArray,
+  removeFromArray,
   downloading,
   previewing,
   dbErrorMsg,
@@ -147,7 +149,13 @@ onUnmounted(() => window.removeEventListener('hashchange', onHashChange))
       <div v-if="loading" class="mf__loading">Loading...</div>
 
       <div v-if="!loading && selectedLang && currentDoc" class="mf__editor">
-        <ManagedFilesNodeEditor :value="currentDoc" @update="updateAtPath" @move="moveInArray" />
+        <ManagedFilesNodeEditor
+          :value="currentDoc"
+          @update="updateAtPath"
+          @move="moveInArray"
+          @insert="insertInArray"
+          @remove="removeFromArray"
+        />
       </div>
     </template>
   </div>

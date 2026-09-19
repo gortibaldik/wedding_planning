@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import type { I18nFile, I18nValue } from '@/composables/useManagedFiles'
+import { nextTick, ref } from 'vue'
+import type { I18nArrayItem, I18nFile, I18nValue } from '@/composables/useManagedFiles'
+import { SECTION_TYPES, newInfoGridRow, newSection } from '@/composables/useManagedFiles'
 
 defineProps<{
   value: I18nFile
@@ -8,14 +10,54 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'update', path: (string | number)[], val: I18nValue): void
   (e: 'move', arrayPath: (string | number)[], from: number, to: number): void
+  (e: 'insert', arrayPath: (string | number)[], index: number, item: I18nArrayItem): void
+  (e: 'remove', arrayPath: (string | number)[], index: number): void
 }>()
 
 const onText = (path: (string | number)[], ev: Event) => {
   emit('update', path, (ev.target as HTMLInputElement | HTMLTextAreaElement).value)
 }
 
+// Texts longer than this get an Expand button that grows the textarea to fit.
+const EXPAND_THRESHOLD = 200
+const expandedTexts = ref(new Set<number>())
+const textareas: Record<number, HTMLTextAreaElement | null> = {}
+
+const fitToContent = (el: HTMLTextAreaElement | null | undefined) => {
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight + 2}px`
+}
+
+const toggleExpanded = async (i: number) => {
+  if (expandedTexts.value.has(i)) {
+    expandedTexts.value.delete(i)
+    const el = textareas[i]
+    if (el) el.style.height = ''
+    return
+  }
+  expandedTexts.value.add(i)
+  await nextTick()
+  fitToContent(textareas[i])
+}
+
+const onSectionText = (i: number, ev: Event) => {
+  onText(['sections', i, 'text'], ev)
+  if (expandedTexts.value.has(i)) fitToContent(ev.target as HTMLTextAreaElement)
+}
+
 const move = (arrayPath: (string | number)[], from: number, to: number) => {
   emit('move', arrayPath, from, to)
+}
+
+const append = (arrayPath: (string | number)[], length: number, item: I18nArrayItem) => {
+  emit('insert', arrayPath, length, item)
+}
+
+const remove = (arrayPath: (string | number)[], index: number, what: string) => {
+  if (window.confirm(`Remove ${what}? Nothing is lost until you save.`)) {
+    emit('remove', arrayPath, index)
+  }
 }
 </script>
 
@@ -124,6 +166,15 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
             >
               ↓
             </button>
+            <span class="mfne__btn-divider" />
+            <button
+              type="button"
+              class="mfne__move-btn mfne__remove-btn"
+              title="Remove section"
+              @click="remove(['sections'], i, `section ${i + 1}`)"
+            >
+              ✕
+            </button>
           </span>
         </summary>
         <label class="mfne__field">
@@ -138,12 +189,27 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
         <template v-if="section.type === 'text'">
           <label class="mfne__field">
             <span class="mfne__label">Text</span>
-            <textarea
-              class="mfne__input"
-              :value="section.text"
-              rows="4"
-              @input="onText(['sections', i, 'text'], $event)"
-            />
+            <div class="mfne__text-wrap">
+              <textarea
+                :ref="el => (textareas[i] = el as HTMLTextAreaElement | null)"
+                class="mfne__input"
+                :value="section.text"
+                rows="4"
+                @input="onSectionText(i, $event)"
+              />
+              <span
+                v-if="section.text.length > EXPAND_THRESHOLD || expandedTexts.has(i)"
+                class="mfne__reorder mfne__expand-box"
+              >
+                <button
+                  type="button"
+                  class="mfne__move-btn mfne__expand-btn"
+                  @click.prevent="toggleExpanded(i)"
+                >
+                  {{ expandedTexts.has(i) ? 'Collapse ▴' : 'Expand ▾' }}
+                </button>
+              </span>
+            </div>
           </label>
         </template>
 
@@ -171,6 +237,15 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
                   >
                     ↓
                   </button>
+                  <span class="mfne__btn-divider" />
+                  <button
+                    type="button"
+                    class="mfne__move-btn mfne__remove-btn"
+                    title="Remove row"
+                    @click="remove(['sections', i, 'rows'], j, `row ${j + 1}`)"
+                  >
+                    ✕
+                  </button>
                 </span>
               </div>
               <label class="mfne__field">
@@ -190,9 +265,27 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
                 />
               </label>
             </div>
+            <button
+              type="button"
+              class="mfne__add-btn"
+              @click="append(['sections', i, 'rows'], section.rows.length, newInfoGridRow())"
+            >
+              + Add row
+            </button>
           </div>
         </template>
       </details>
+      <div class="mfne__add-group">
+        <button
+          v-for="type in SECTION_TYPES"
+          :key="type"
+          type="button"
+          class="mfne__add-btn"
+          @click="append(['sections'], value.sections.length, newSection(type))"
+        >
+          + Add {{ type }} section
+        </button>
+      </div>
     </details>
 
     <details class="mfne__group" open>
@@ -404,11 +497,20 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
 
 .mfne__reorder {
   display: inline-flex;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f3f4f6;
   margin-left: auto;
 }
 
 .mfne__move-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   width: 24px;
   height: 24px;
   border: 1px solid #d1d5db;
@@ -429,6 +531,64 @@ const move = (arrayPath: (string | number)[], from: number, to: number) => {
 .mfne__move-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.mfne__btn-divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 2px;
+  background: #d1d5db;
+}
+
+.mfne__remove-btn {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.mfne__remove-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #f87171;
+  color: #b91c1c;
+}
+
+.mfne__text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mfne__expand-box {
+  align-self: flex-end;
+}
+
+.mfne__expand-btn {
+  width: auto;
+  padding: 0 8px;
+}
+
+.mfne__add-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mfne__add-btn {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border: 1px dashed #93c5fd;
+  background: #eff6ff;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d4ed8;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mfne__add-btn:hover {
+  background: #dbeafe;
 }
 
 .mfne__row-header {

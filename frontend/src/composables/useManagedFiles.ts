@@ -39,6 +39,20 @@ export interface I18nTextSection {
 
 export type I18nSection = I18nInfoGridSection | I18nTextSection
 
+/** Anything the CMS editor can insert into an array of the doc. */
+export type I18nArrayItem = I18nValue | I18nSection | I18nInfoGridRow
+
+export const SECTION_TYPES: readonly I18nSection['type'][] = ['text', 'info-grid']
+
+/** Blank row, as appended by the CMS editor. */
+export const newInfoGridRow = (): I18nInfoGridRow => ({ label: '', value: '' })
+
+/** Blank section of the given type, as appended by the CMS editor. */
+export const newSection = (type: I18nSection['type']): I18nSection =>
+  type === 'text'
+    ? { type: 'text', title: '', text: '' }
+    : { type: 'info-grid', title: '', rows: [newInfoGridRow()] }
+
 /**
  * Concrete shape of one language's i18n JSON file, mirroring the placeholders
  * used in `backend/routers/index/templates/landing.html`.
@@ -147,15 +161,32 @@ export function useManagedFiles() {
     }
   }
 
-  const moveInArray = (arrayPath: (string | number)[], from: number, to: number) => {
-    let arr: I18nValue[] = filesByLang.value[selectedLang.value] as unknown as I18nValue[]
+  const resolveArray = (arrayPath: (string | number)[]): I18nValue[] | undefined => {
+    let node: I18nValue | undefined = filesByLang.value[selectedLang.value] as unknown as I18nObject
     for (const segment of arrayPath) {
-      arr = (arr as unknown as I18nObject)[segment as string] as I18nValue[]
+      node = (node as I18nObject | undefined)?.[segment as string]
     }
-    if (!Array.isArray(arr)) return
+    return Array.isArray(node) ? node : undefined
+  }
+
+  const moveInArray = (arrayPath: (string | number)[], from: number, to: number) => {
+    const arr = resolveArray(arrayPath)
+    if (!arr) return
     if (to < 0 || to >= arr.length || from === to) return
     const [item] = arr.splice(from, 1)
     arr.splice(to, 0, item)
+  }
+
+  const insertInArray = (arrayPath: (string | number)[], index: number, item: I18nArrayItem) => {
+    const arr = resolveArray(arrayPath)
+    if (!arr) return
+    arr.splice(Math.max(0, Math.min(index, arr.length)), 0, item as I18nValue)
+  }
+
+  const removeFromArray = (arrayPath: (string | number)[], index: number) => {
+    const arr = resolveArray(arrayPath)
+    if (!arr || index < 0 || index >= arr.length) return
+    arr.splice(index, 1)
   }
 
   const updateAtPath = (path: (string | number)[], newValue: I18nValue) => {
@@ -258,6 +289,8 @@ export function useManagedFiles() {
     save,
     updateAtPath,
     moveInArray,
+    insertInArray,
+    removeFromArray,
     downloading,
     previewing,
     dbErrorMsg,
