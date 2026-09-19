@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import { useAuth } from './useAuth'
 
 const { authFetch } = useAuth()
@@ -79,11 +79,21 @@ interface I18nResponse {
   files: Record<string, I18nFile>
 }
 
-const langs = ref<string[]>([])
-const defaultLang = ref<string>('')
-const filesByLang = ref<Record<string, I18nFile>>({})
-const savedSnapshotByLang = ref<Record<string, string>>({})
-const selectedLang = ref<string>('')
+/**
+ * Everything the CMS editor works on, available only once `loadAll` has
+ * succeeded. `selectedLang` is always a key of `files`, so the selected
+ * document always exists.
+ */
+export interface I18nWorkspace {
+  langs: string[]
+  defaultLang: string
+  files: Record<string, I18nFile>
+  savedSnapshots: Record<string, string>
+  selectedLang: string
+}
+
+/** `null` until the first successful `loadAll`. */
+const workspace = ref<I18nWorkspace | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const errorMsg = ref<string>('')
@@ -93,67 +103,47 @@ const previewing = ref(false)
 const dbErrorMsg = ref<string>('')
 const dumpPreview = ref<string>('')
 
-const currentDoc = computed<I18nFile | undefined>(() => filesByLang.value[selectedLang.value])
-
-const isDirty = computed(() => {
-  if (!selectedLang.value) return false
-  return (
-    JSON.stringify(filesByLang.value[selectedLang.value]) !==
-    savedSnapshotByLang.value[selectedLang.value]
-  )
-})
-
-const snapshotCurrent = () => {
-  savedSnapshotByLang.value[selectedLang.value] = JSON.stringify(
-    filesByLang.value[selectedLang.value]
-  )
-}
-
-export function useManagedFiles() {
-  const loadAll = async () => {
-    loading.value = true
-    errorMsg.value = ''
-    try {
-      const res = await authFetch('/managed-files/i18n')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data: I18nResponse = await res.json()
-      langs.value = data.langs
-      defaultLang.value = data.default_lang
-      filesByLang.value = { ...data.files }
-      savedSnapshotByLang.value = Object.fromEntries(
-        data.langs.map(l => [l, JSON.stringify(data.files[l] ?? ({} as I18nFile))])
-      )
-      if (!selectedLang.value && data.langs.length > 0) {
-        selectedLang.value = data.default_lang || data.langs[0]
-      }
-    } catch (e) {
-      errorMsg.value = 'Failed to load: ' + (e instanceof Error ? e.message : String(e))
-    } finally {
-      loading.value = false
+/**
+ * Editing operations on a loaded workspace. Callers get hold of a workspace
+ * only after `workspace` is non-null, so nothing here deals with a missing
+ * document.
+ */
+export function useI18nEditor(ws: Readonly<Ref<I18nWorkspace>>) {
+  const selectedLang = computed<string>({
+    get: () => ws.value.selectedLang,
+    set: lang => {
+      ws.value.selectedLang = lang
     }
-  }
+  })
+
+  const currentDoc = computed<I18nFile>({
+    get: () => ws.value.files[ws.value.selectedLang],
+    set: doc => {
+      ws.value.files[ws.value.selectedLang] = doc
+    }
+  })
+
+  const isDirty = computed(
+    () => JSON.stringify(currentDoc.value) !== ws.value.savedSnapshots[ws.value.selectedLang]
+  )
 
   const revert = () => {
-    const snap = savedSnapshotByLang.value[selectedLang.value]
-    if (snap !== undefined) {
-      filesByLang.value[selectedLang.value] = JSON.parse(snap)
-    }
+    currentDoc.value = JSON.parse(ws.value.savedSnapshots[ws.value.selectedLang])
   }
 
   const save = async () => {
-    if (!selectedLang.value || !isDirty.value) return
+    if (!isDirty.value) return
+    const lang = ws.value.selectedLang
+    const body = JSON.stringify(currentDoc.value)
     saving.value = true
     errorMsg.value = ''
     try {
-      const res = await authFetch(`/managed-files/i18n/${selectedLang.value}`, {
-        method: 'PUT',
-        body: JSON.stringify(filesByLang.value[selectedLang.value])
-      })
+      const res = await authFetch(`/managed-files/i18n/${lang}`, { method: 'PUT', body })
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}))
         throw new Error(detail.detail || `HTTP ${res.status}`)
       }
-      snapshotCurrent()
+      ws.value.savedSnapshots[lang] = body
     } catch (e) {
       errorMsg.value = 'Failed to save: ' + (e instanceof Error ? e.message : String(e))
     } finally {
@@ -162,7 +152,7 @@ export function useManagedFiles() {
   }
 
   const resolveArray = (arrayPath: (string | number)[]): I18nValue[] | undefined => {
-    let node: I18nValue | undefined = filesByLang.value[selectedLang.value] as unknown as I18nObject
+    let node: I18nValue | undefined = currentDoc.value as unknown as I18nObject
     for (const segment of arrayPath) {
       node = (node as I18nObject | undefined)?.[segment as string]
     }
@@ -191,14 +181,54 @@ export function useManagedFiles() {
 
   const updateAtPath = (path: (string | number)[], newValue: I18nValue) => {
     if (path.length === 0) {
-      filesByLang.value[selectedLang.value] = newValue as unknown as I18nFile
+      currentDoc.value = newValue as unknown as I18nFile
       return
     }
-    let parent = filesByLang.value[selectedLang.value] as unknown as I18nObject | I18nValue[]
+    let parent = currentDoc.value as unknown as I18nObject | I18nValue[]
     for (let i = 0; i < path.length - 1; i++) {
       parent = (parent as I18nObject)[path[i] as string] as I18nObject | I18nValue[]
     }
     ;(parent as I18nObject)[path[path.length - 1] as string] = newValue
+  }
+
+  return {
+    selectedLang,
+    currentDoc,
+    isDirty,
+    saving,
+    revert,
+    save,
+    updateAtPath,
+    moveInArray,
+    insertInArray,
+    removeFromArray
+  }
+}
+
+export function useManagedFiles() {
+  const loadAll = async () => {
+    loading.value = true
+    errorMsg.value = ''
+    try {
+      const res = await authFetch('/managed-files/i18n')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data: I18nResponse = await res.json()
+      const previousLang = workspace.value?.selectedLang
+      workspace.value = {
+        langs: data.langs,
+        defaultLang: data.default_lang,
+        files: { ...data.files },
+        savedSnapshots: Object.fromEntries(data.langs.map(l => [l, JSON.stringify(data.files[l])])),
+        selectedLang:
+          previousLang && data.langs.includes(previousLang)
+            ? previousLang
+            : data.default_lang || data.langs[0]
+      }
+    } catch (e) {
+      errorMsg.value = 'Failed to load: ' + (e instanceof Error ? e.message : String(e))
+    } finally {
+      loading.value = false
+    }
   }
 
   const fetchRedisDump = async (): Promise<unknown> => {
@@ -276,21 +306,10 @@ export function useManagedFiles() {
   }
 
   return {
-    langs,
-    defaultLang,
-    selectedLang,
-    currentDoc,
+    workspace,
     loading,
-    saving,
     errorMsg,
-    isDirty,
     loadAll,
-    revert,
-    save,
-    updateAtPath,
-    moveInArray,
-    insertInArray,
-    removeFromArray,
     downloading,
     previewing,
     dbErrorMsg,

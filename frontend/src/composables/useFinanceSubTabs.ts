@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-/** Sub-tabs of the finance tab, kept in the URL hash (like ManagedFilesEditor). */
+/** Sub-tabs of the finance tab, kept in the URL hash (like ManagedFilesView). */
 export const FINANCE_SUB_TABS = ['trends', 'items', 'breakdown', 'import'] as const
 export type FinanceSubTab = (typeof FINANCE_SUB_TABS)[number]
 

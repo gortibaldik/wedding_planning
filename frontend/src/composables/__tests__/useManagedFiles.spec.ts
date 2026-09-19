@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { toRef } from 'vue'
 import type { I18nFile, I18nInfoGridSection } from '../useManagedFiles'
 
 const doc = (): Partial<I18nFile> => ({
@@ -18,20 +19,23 @@ vi.mock('../useAuth', () => ({
   })
 }))
 
-const { useManagedFiles, newSection, newInfoGridRow } = await import('../useManagedFiles')
+const { useManagedFiles, useI18nEditor, newSection, newInfoGridRow } = await import(
+  '../useManagedFiles'
+)
 
 describe('useManagedFiles array editing', () => {
-  let mf: ReturnType<typeof useManagedFiles>
+  let mf: ReturnType<typeof useI18nEditor>
 
   beforeEach(async () => {
-    mf = useManagedFiles()
-    await mf.loadAll()
+    const { workspace, loadAll } = useManagedFiles()
+    await loadAll()
+    mf = useI18nEditor(toRef(() => workspace.value!))
   })
 
   it('appends a new section and marks the doc dirty', () => {
     mf.insertInArray(['sections'], 2, newSection('text'))
-    expect(mf.currentDoc.value!.sections).toHaveLength(3)
-    expect(mf.currentDoc.value!.sections[2]).toEqual({ type: 'text', title: '', text: '' })
+    expect(mf.currentDoc.value.sections).toHaveLength(3)
+    expect(mf.currentDoc.value.sections[2]).toEqual({ type: 'text', title: '', text: '' })
     expect(mf.isDirty.value).toBe(true)
   })
 
@@ -45,7 +49,7 @@ describe('useManagedFiles array editing', () => {
 
   it('inserts and removes rows inside a nested section', () => {
     mf.insertInArray(['sections', 1, 'rows'], 1, newInfoGridRow())
-    const rows = () => (mf.currentDoc.value!.sections[1] as I18nInfoGridSection).rows
+    const rows = () => (mf.currentDoc.value.sections[1] as I18nInfoGridSection).rows
     expect(rows()).toHaveLength(2)
     mf.removeFromArray(['sections', 1, 'rows'], 0)
     expect(rows()).toEqual([{ label: '', value: '' }])
@@ -53,9 +57,9 @@ describe('useManagedFiles array editing', () => {
 
   it('removes a section and revert restores it', () => {
     mf.removeFromArray(['sections'], 0)
-    expect(mf.currentDoc.value!.sections.map(s => s.title)).toEqual(['B'])
+    expect(mf.currentDoc.value.sections.map(s => s.title)).toEqual(['B'])
     mf.revert()
-    expect(mf.currentDoc.value!.sections.map(s => s.title)).toEqual(['A', 'B'])
+    expect(mf.currentDoc.value.sections.map(s => s.title)).toEqual(['A', 'B'])
     expect(mf.isDirty.value).toBe(false)
   })
 

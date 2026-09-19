@@ -1,0 +1,97 @@
+/* Shared by the Managed Files tab and its sub-tabs (ManagedFilesCms, ManagedFilesDatabase). */
+
+.mf__controls {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  background: white;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.mf__select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.mf__label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+.mf__btn-group {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.mf__save-btn,
+.mf__revert-btn,
+.mf__reload-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.mf__save-btn {
+  color: white;
+  background: #3b82f6;
+}
+
+.mf__save-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.mf__save-btn--disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.mf__revert-btn {
+  color: #374151;
+  background: #e5e7eb;
+}
+
+.mf__revert-btn:hover:not(:disabled) {
+  background: #d1d5db;
+}
+
+.mf__revert-btn--disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.mf__reload-btn {
+  color: #374151;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.mf__reload-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.mf__error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+}

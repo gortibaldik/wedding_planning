@@ -7,7 +7,7 @@ import InvitationComparisonTable from './InvitationComparisonTable.vue'
 import InvitationListsManager from './InvitationListsManager.vue'
 import FinalListView from './FinalList/FinalListView.vue'
 import SeatingArrangement from './SeatingArrangement/SeatingArrangement.vue'
-import ManagedFilesEditor from './ManagedFilesEditor.vue'
+import ManagedFilesView from './ManagedFiles/ManagedFilesView.vue'
 import FinanceComponent from './Finance/FinanceComponent.vue'
 import DocumentsView from './Documents/DocumentsView.vue'
 import { useAuth } from '@/composables/useAuth.ts'
@@ -130,7 +130,7 @@ window.addEventListener('hashchange', () => {
       <Suspense>
         <SeatingArrangement v-if="activeTab === 'seating'" />
       </Suspense>
-      <ManagedFilesEditor v-if="activeTab === 'managed-files' && canEditManagedFiles" />
+      <ManagedFilesView v-if="activeTab === 'managed-files' && canEditManagedFiles" />
       <FinanceComponent v-if="activeTab === 'finance' && canAccessFinance" />
       <DocumentsView v-if="activeTab === 'wedding-organization' && canViewDocuments" />
     </div>
