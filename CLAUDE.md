@@ -185,3 +185,14 @@ with `Unexpected token '<', "<!doctype "... is not valid JSON`. Production is un
 `index.py`'s SPA catch-all is registered last in `main.py`, so it only sees paths no router
 claimed — which is also why every `app.include_router(...)` must come *before*
 `app.include_router(index.router)`.
+
+## Checks
+
+After changing Python code, run `pre-commit run --all-files` from the repo root (it's on
+`PATH`; ruff is not installed separately, so this is how to lint). It runs `ruff --fix`
+and `ruff-format` as configured in `.pre-commit-config.yaml`, so it may rewrite files;
+check `git diff` afterwards. Ruff's rule selection and per-file ignores live in
+`pyproject.toml`.
+
+Backend tests live in `tests/` (mirroring `backend/`, e.g. `tests/routers/index/index_test.py`),
+are named `*_test.py`, and run with `pytest` from the repo root inside `workon wedding_planning`.
