@@ -67,8 +67,12 @@ async def games_page():
 
 @router.get("/{path:path}")
 async def serve_frontend(path: str):
+    # `path` is attacker-controlled and arrives percent-decoded, so `..%2f` and
+    # a leading `/` (which makes pathlib discard `base`) both reach here. Only
+    # serve what resolves to inside the folder.
+    # Covered by tests/routers/index/index_test.py.
     for base in [frontend_public, frontend_dist]:
-        file = base / path
-        if file.is_file():
+        file = (base / path).resolve()
+        if file.is_relative_to(base.resolve()) and file.is_file():
             return FileResponse(file)
     return FileResponse(frontend_dist / "index.html")
