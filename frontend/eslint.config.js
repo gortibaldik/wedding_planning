@@ -52,6 +52,24 @@ export default [
     }
   },
 
+  // Standalone scripts loaded directly by the server-rendered Jinja pages: no
+  // bundler, no imports, and a few browser globals the SPA never touches.
+  {
+    files: ['public/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        Promise: 'readonly',
+        JSON: 'readonly',
+        Object: 'readonly',
+        Error: 'readonly',
+        IntersectionObserver: 'readonly',
+        encodeURIComponent: 'readonly',
+        maplibregl: 'readonly'
+      }
+    }
+  },
+
   // Vue files
   ...pluginVue.configs['flat/recommended'],
   {

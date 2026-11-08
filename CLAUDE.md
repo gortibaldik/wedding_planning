@@ -91,6 +91,55 @@ Their shared styling comes from `frontend/src/landing.scss`, which a small Vite 
 compiles to `frontend/public/landing.css` (see `frontend/vite.config.js`). Edit the
 `.scss`, never the generated `.css`.
 
+The landing page's body is driven by the `sections` list in the per-language i18n JSON
+(which lives in Google Drive, not in this repo). Each entry has a `title` and a `type`,
+and `landing.html` has one rendering branch per type: `info-grid` (`rows: [{label,
+value}]`), `text` (rendered through the `markdown` filter) and `venue-map` (the venue
+map, see below — it carries a title and an optional `text`, at most one per file).
+
+The games block sits after that loop and is toggled by `enable_games` in the same i18n
+files rather than being a section.
+
+### The venue map
+
+A `venue-map` section shows a map of the route guests take on the day. **Only its
+placement, title and the optional `text` above the map are CMS-editable** — adding
+the section is what shows the map, removing it hides it, and the ↑/↓ arrows decide
+where on the page it lands. The itinerary itself is **not in this repo** — it lives
+in `venue_route.json` beside the `{lang}.json` files in the Drive i18n folder,
+because this repo is public.
+`init_i18n` fetches it in the same step as the language files and caches it in
+`i18n_cache` under `VENUE_ROUTE_KEY` (`"venue_route"`, which cannot collide with a
+language code); `venue_route()` reads it from there, so nothing has to pass the document
+around. Only the `{lang}` keys are handed to the CMS, so the itinerary is not editable
+there. A missing file fails startup, like a missing `{lang}.json`. Edit it in Drive and
+restart to pick up changes.
+
+The document holds the coordinates once and the wording per language: `places`
+(`[{lat, lng}]`), `leg_modes`, `leg_paths` (waypoints per leg, keyed by leg index as a
+string, **lat-first** like `places`; `venue_route()` flips them to GeoJSON `[lng, lat]`),
+`pois` (`[{kind, lat, lng}]`), and `text.{lang}` with `title`, `link_label`, per-stop
+`places[].label/note`, `legs[]` labels, `pois` labels by `kind`, `gesture_hints` and
+`fullscreen`. `venue_route()` in `backend/routers/index/venue_route.py` zips them
+together for one language, `index.py` passes the result to the template, and the markup
+lives in the `venue_map_body()` macro in `templates/venue_map.html`, which `landing.html`
+imports. The route is linear: `legs[i]` joins `places[i]` to `places[i + 1]`, so there is
+always one leg fewer than there are stops.
+
+The map is drawn by `frontend/public/landing-map.js` with MapLibre GL (loaded from a CDN,
+lazily, once the section is near the viewport) on **OpenFreeMap** vector tiles — no API
+key, no registration, no request limit, attribution only. The style in that file is
+hand-written against the OpenMapTiles schema so the map uses the `landing.scss` palette;
+don't swap it for one of OpenFreeMap's stock styles. Legs are fed to it as a GeoJSON
+source and styled by `mode` (walking dashed, transit solid pink); a leg may carry an
+explicit `path` of `[lng, lat]` pairs to trace a real route instead of a straight hop.
+The numbered itinerary is rendered server-side and is the fallback when WebGL or the CDN
+is unavailable, so that block must stay useful with the canvas hidden.
+
+Scripts under `frontend/public/` are hand-written assets served as-is to the Jinja pages
+(`landing.css` is the odd one out, being generated); they get their own ESLint block in
+`frontend/eslint.config.js` because they are classic scripts, not modules.
+
 `index.py`'s catch-all `/{path:path}` serves `frontend/public/` then `frontend/dist/`,
 falling back to the SPA's `index.html`.
 
@@ -136,3 +185,14 @@ with `Unexpected token '<', "<!doctype "... is not valid JSON`. Production is un
 `index.py`'s SPA catch-all is registered last in `main.py`, so it only sees paths no router
 claimed — which is also why every `app.include_router(...)` must come *before*
 `app.include_router(index.router)`.
+
+## Checks
+
+After changing Python code, run `pre-commit run --all-files` from the repo root (it's on
+`PATH`; ruff is not installed separately, so this is how to lint). It runs `ruff --fix`
+and `ruff-format` as configured in `.pre-commit-config.yaml`, so it may rewrite files;
+check `git diff` afterwards. Ruff's rule selection and per-file ignores live in
+`pyproject.toml`.
+
+Backend tests live in `tests/` (mirroring `backend/`, e.g. `tests/routers/index/index_test.py`),
+are named `*_test.py`, and run with `pytest` from the repo root inside `workon wedding_planning`.

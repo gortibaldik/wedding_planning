@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import type { I18nArrayItem, I18nFile, I18nValue } from '@/composables/useManagedFiles'
 import { SECTION_TYPES, newInfoGridRow, newSection } from '@/composables/useManagedFiles'
 
-defineProps<{
+const props = defineProps<{
   value: I18nFile
 }>()
+
+/** There is one map, so its section is offered only while the page has none. */
+const hasMapSection = computed(() => props.value.sections.some(s => s.type === 'venue-map'))
 
 const emit = defineEmits<{
   (e: 'update', path: (string | number)[], val: I18nValue): void
@@ -186,9 +189,16 @@ const remove = (arrayPath: (string | number)[], index: number, what: string) => 
           />
         </label>
 
-        <template v-if="section.type === 'text'">
+        <template v-if="section.type === 'text' || section.type === 'venue-map'">
+          <p v-if="section.type === 'venue-map'" class="mfne__hint">
+            The route itself (stops, tram line, walking legs) is fixed in the app and the same for
+            every language. Use the arrows above to move the map around the page, or remove this
+            section to hide it.
+          </p>
           <label class="mfne__field">
-            <span class="mfne__label">Text</span>
+            <span class="mfne__label">
+              {{ section.type === 'venue-map' ? 'Text above the map' : 'Text' }}
+            </span>
             <div class="mfne__text-wrap">
               <textarea
                 :ref="el => (textareas[i] = el as HTMLTextAreaElement | null)"
@@ -198,7 +208,7 @@ const remove = (arrayPath: (string | number)[], index: number, what: string) => 
                 @input="onSectionText(i, $event)"
               />
               <span
-                v-if="section.text.length > EXPAND_THRESHOLD || expandedTexts.has(i)"
+                v-if="(section.text?.length ?? 0) > EXPAND_THRESHOLD || expandedTexts.has(i)"
                 class="mfne__reorder mfne__expand-box"
               >
                 <button
@@ -281,6 +291,8 @@ const remove = (arrayPath: (string | number)[], index: number, what: string) => 
           :key="type"
           type="button"
           class="mfne__add-btn"
+          :disabled="type === 'venue-map' && hasMapSection"
+          :title="type === 'venue-map' && hasMapSection ? 'Already on the page' : undefined"
           @click="append(['sections'], value.sections.length, newSection(type))"
         >
           + Add {{ type }} section
@@ -587,8 +599,21 @@ const remove = (arrayPath: (string | number)[], index: number, what: string) => 
   transition: background 0.15s;
 }
 
-.mfne__add-btn:hover {
+.mfne__add-btn:hover:not(:disabled) {
   background: #dbeafe;
+}
+.mfne__add-btn:disabled {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: default;
+}
+
+.mfne__hint {
+  margin: 4px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
 }
 
 .mfne__row-header {

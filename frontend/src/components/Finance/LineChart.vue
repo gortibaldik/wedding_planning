@@ -24,13 +24,18 @@ const props = withDefaults(
 const WIDTH = 640
 const HEIGHT = 260
 const PADDING = { top: 16, right: 16, bottom: 40, left: 56 }
+// Y-axis labels are right-aligned this far left of the plot area.
+const TICK_GAP = 8
+// Upper bound on the width of one character of an 11px axis label, in viewBox
+// units (the SVG is drawn at its native size, so units ~ px). Deliberately
+// generous: overestimating only adds a little whitespace, underestimating clips
+// the leading digits off the SVG's left edge.
+const TICK_CHAR_WIDTH = 7
 
 const isSingle = computed(() => props.series.length === 1)
 const hasData = computed(() => props.series.some(s => s.points.length))
 
 const plot = computed(() => {
-  const innerW = WIDTH - PADDING.left - PADDING.right
-  const innerH = HEIGHT - PADDING.top - PADDING.bottom
   const series = props.series
   const labels = series[0]?.points.map(p => p.label) ?? []
   const count = labels.length
@@ -38,7 +43,19 @@ const plot = computed(() => {
   const allValues = series.flatMap(s => s.points.map(p => p.value))
   const maxValue = Math.max(1, ...allValues)
 
-  const x = (i: number) => PADDING.left + (count <= 1 ? innerW / 2 : (i / (count - 1)) * innerW)
+  // 4 horizontal grid lines / y-axis ticks
+  const tickValues = Array.from({ length: 5 }, (_, i) => (maxValue / 4) * i)
+  const tickLabels = tickValues.map(v => props.formatValue(v))
+
+  // Widen the left margin to fit the longest y-axis label: a fixed margin
+  // clipped six-digit amounts like "123,456.00" down to "23,456.00".
+  const longestTick = Math.max(...tickLabels.map(l => l.length))
+  const left = Math.max(PADDING.left, TICK_GAP + Math.ceil(longestTick * TICK_CHAR_WIDTH))
+
+  const innerW = WIDTH - left - PADDING.right
+  const innerH = HEIGHT - PADDING.top - PADDING.bottom
+
+  const x = (i: number) => left + (count <= 1 ? innerW / 2 : (i / (count - 1)) * innerW)
   const y = (value: number) => PADDING.top + innerH - (value / maxValue) * innerH
 
   const lines = series.map(s => {
@@ -51,13 +68,9 @@ const plot = computed(() => {
     return { name: s.name, color: s.color, coords, linePath, areaPath }
   })
 
-  // 4 horizontal grid lines / y-axis ticks
-  const ticks = Array.from({ length: 5 }, (_, i) => {
-    const value = (maxValue / 4) * i
-    return { value, y: y(value) }
-  })
+  const ticks = tickValues.map((value, i) => ({ value, label: tickLabels[i], y: y(value) }))
 
-  return { labels, count, lines, ticks, baseY: PADDING.top + innerH, x }
+  return { labels, count, lines, ticks, left, baseY: PADDING.top + innerH, x }
 })
 
 // --- interactive tooltip ---------------------------------------------------
@@ -65,12 +78,26 @@ const plot = computed(() => {
 // rendered box maps 1:1 to the viewBox: mouse -> viewBox and coords -> % via ratios.
 const containerRef = ref<HTMLElement | null>(null)
 const hoverIndex = ref<number | null>(null)
+// Cursor position in viewBox units, used to pick the line under the cursor.
+const hoverPoint = ref<{ x: number; y: number } | null>(null)
 
-const updateHover = (clientX: number) => {
+/** Height of a line at viewBox x, interpolated between its neighbouring points. */
+const lineYAt = (coords: { cx: number; cy: number }[], vbX: number): number => {
+  if (vbX <= coords[0].cx) return coords[0].cy
+  for (let j = 0; j < coords.length - 1; j++) {
+    const a = coords[j]
+    const b = coords[j + 1]
+    if (vbX <= b.cx) return a.cy + ((vbX - a.cx) / (b.cx - a.cx)) * (b.cy - a.cy)
+  }
+  return coords[coords.length - 1].cy
+}
+
+const updateHover = (clientX: number, clientY: number) => {
   const el = containerRef.value
   if (!el || !plot.value.count) return
   const rect = el.getBoundingClientRect()
   const vbX = ((clientX - rect.left) / rect.width) * WIDTH
+  hoverPoint.value = { x: vbX, y: ((clientY - rect.top) / rect.height) * HEIGHT }
   let best = 0
   let bestDist = Infinity
   for (let i = 0; i < plot.value.count; i++) {
@@ -83,13 +110,31 @@ const updateHover = (clientX: number) => {
   hoverIndex.value = best
 }
 
-const onMove = (e: MouseEvent) => updateHover(e.clientX)
+const onMove = (e: MouseEvent) => updateHover(e.clientX, e.clientY)
 const onTouch = (e: TouchEvent) => {
-  if (e.touches.length) updateHover(e.touches[0].clientX)
+  if (e.touches.length) updateHover(e.touches[0].clientX, e.touches[0].clientY)
 }
 const onLeave = () => {
   hoverIndex.value = null
+  hoverPoint.value = null
 }
+
+/** Name of the line closest to the cursor; null when there is only one line. */
+const activeLine = computed(() => {
+  const point = hoverPoint.value
+  if (!point || isSingle.value) return null
+  let best: string | null = null
+  let bestDist = Infinity
+  for (const line of plot.value.lines) {
+    if (!line.coords.length) continue
+    const dist = Math.abs(lineYAt(line.coords, point.x) - point.y)
+    if (dist < bestDist) {
+      bestDist = dist
+      best = line.name
+    }
+  }
+  return best
+})
 
 /** The x-position and per-series values at the hovered index. */
 const hovered = computed(() => {
@@ -97,7 +142,12 @@ const hovered = computed(() => {
   if (i === null || i >= plot.value.count) return null
   const cx = plot.value.x(i)
   const rows = plot.value.lines
-    .map(l => ({ name: l.name, color: l.color, coord: l.coords[i] }))
+    .map(l => ({
+      name: l.name,
+      color: l.color,
+      coord: l.coords[i],
+      active: l.name === activeLine.value
+    }))
     .filter(r => r.coord)
   if (!rows.length) return null
   const label = rows[0].coord.label
@@ -134,9 +184,9 @@ const tooltipStyle = computed(() => {
       <!-- grid + y ticks -->
       <g class="line-chart__grid">
         <template v-for="tick in plot.ticks" :key="tick.value">
-          <line :x1="PADDING.left" :y1="tick.y" :x2="WIDTH - PADDING.right" :y2="tick.y" />
-          <text :x="PADDING.left - 8" :y="tick.y + 4" text-anchor="end">
-            {{ formatValue(tick.value) }}
+          <line :x1="plot.left" :y1="tick.y" :x2="WIDTH - PADDING.right" :y2="tick.y" />
+          <text :x="plot.left - TICK_GAP" :y="tick.y + 4" text-anchor="end">
+            {{ tick.label }}
           </text>
         </template>
       </g>
@@ -199,7 +249,12 @@ const tooltipStyle = computed(() => {
 
     <div v-if="hovered" class="line-chart__tooltip" :style="tooltipStyle">
       <span class="line-chart__tooltip-label">{{ hovered.label }}</span>
-      <div v-for="row in hovered.rows" :key="`tt-${row.name}`" class="line-chart__tooltip-row">
+      <div
+        v-for="row in hovered.rows"
+        :key="`tt-${row.name}`"
+        class="line-chart__tooltip-row"
+        :class="{ 'line-chart__tooltip-row--active': row.active }"
+      >
         <span
           v-if="row.name"
           class="line-chart__tooltip-swatch"
@@ -268,6 +323,25 @@ const tooltipStyle = computed(() => {
   display: flex;
   align-items: center;
   gap: 6px;
+  /* Padding offset by negative margin, so the active highlight has room
+     without shifting rows out of line with the label above. */
+  padding: 1px 4px;
+  margin: 0 -4px;
+  border-radius: 4px;
+}
+
+/* The row for the line under the cursor. */
+.line-chart__tooltip-row--active {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.line-chart__tooltip-row--active .line-chart__tooltip-name {
+  color: #f9fafb;
+}
+
+.line-chart__tooltip-row--active .line-chart__tooltip-value {
+  font-weight: 700;
+  color: #fff;
 }
 
 .line-chart__tooltip-swatch {

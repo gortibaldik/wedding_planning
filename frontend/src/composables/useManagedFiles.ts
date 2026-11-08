@@ -37,21 +37,35 @@ export interface I18nTextSection {
   text: string
 }
 
-export type I18nSection = I18nInfoGridSection | I18nTextSection
+/**
+ * Shows the venue map, wherever it sits among the sections. The itinerary itself
+ * is static (`backend/routers/index/venue_route.py`), so the only editable field
+ * are the heading and the intro text above it; adding the section is what shows
+ * the map, removing it hides it.
+ */
+export interface I18nVenueMapSection {
+  type: 'venue-map'
+  title: string
+  /** Optional markdown shown above the map, for anything guests should know. */
+  text?: string
+}
+
+export type I18nSection = I18nInfoGridSection | I18nTextSection | I18nVenueMapSection
 
 /** Anything the CMS editor can insert into an array of the doc. */
 export type I18nArrayItem = I18nValue | I18nSection | I18nInfoGridRow
 
-export const SECTION_TYPES: readonly I18nSection['type'][] = ['text', 'info-grid']
+export const SECTION_TYPES: readonly I18nSection['type'][] = ['text', 'info-grid', 'venue-map']
 
 /** Blank row, as appended by the CMS editor. */
 export const newInfoGridRow = (): I18nInfoGridRow => ({ label: '', value: '' })
 
 /** Blank section of the given type, as appended by the CMS editor. */
-export const newSection = (type: I18nSection['type']): I18nSection =>
-  type === 'text'
-    ? { type: 'text', title: '', text: '' }
-    : { type: 'info-grid', title: '', rows: [newInfoGridRow()] }
+export const newSection = (type: I18nSection['type']): I18nSection => {
+  if (type === 'text') return { type: 'text', title: '', text: '' }
+  if (type === 'venue-map') return { type: 'venue-map', title: '', text: '' }
+  return { type: 'info-grid', title: '', rows: [newInfoGridRow()] }
+}
 
 /**
  * Concrete shape of one language's i18n JSON file, mirroring the placeholders

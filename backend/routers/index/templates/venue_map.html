@@ -1,0 +1,38 @@
+{# Body of the venue-map section. Imported by landing.html; everything it
+   needs comes in as `route` (see venue_route.py).
+
+   The itinerary below is the real content: it renders without JS, and
+   /landing-map.js only upgrades it with an interactive map.
+   The route is linear - legs[i] joins places[i] to places[i + 1]. #}
+{% macro venue_map_body(route, text=None) %}
+{% set leg_icons = {"walk": "🚶", "tram": "🚋", "bus": "🚌",
+                    "train": "🚆", "metro": "🚇", "car": "🚗"} %}
+<div class="venue-map" data-venue-map>
+  {# Inside the map's own column, so it stacks above the canvas and shares its gap. #}
+  {% if text %}<div class="section-text">{{ text | markdown }}</div>{% endif %}
+  <script type="application/json" class="venue-map-config">{{ route | tojson }}</script>
+  <div class="venue-map-canvas" aria-hidden="true"></div>
+  <ol class="venue-route">
+    {% for place in route.places %}
+    <li class="venue-route-stop">
+      <span class="venue-route-number" aria-hidden="true">{{ loop.index }}</span>
+      <a class="venue-route-link" target="_blank" rel="noopener"
+         href="https://www.google.com/maps/search/?api=1&amp;query={{ place.lat }},{{ place.lng }}">
+        <span class="venue-route-text">
+          <span class="venue-route-label">{{ place.label }}</span>
+          {% if place.note %}<span class="venue-route-note">{{ place.note }}</span>{% endif %}
+        </span>
+        <span class="venue-route-link-cta">{{ route.link_label }} &rarr;</span>
+      </a>
+    </li>
+    {% set leg = route.legs[loop.index0] %}
+    {% if not loop.last and leg %}
+    <li class="venue-route-leg venue-route-leg--{{ leg.mode }}">
+      <span class="venue-route-leg-icon" aria-hidden="true">{{ leg_icons.get(leg.mode) or leg_icons["walk"] }}</span>
+      <span class="venue-route-leg-label">{{ leg.label }}</span>
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ol>
+</div>
+{% endmacro %}
